@@ -1,7 +1,7 @@
-name = "CenteredDifferences"
+name = "HEOM"
 uuid = "70578a31-f1f2-4961-8c4c-9f0d1a93a64a"
 authors = ["Louie Slocombe"]
-version = "1.0.0"
+version = "0.1.0"
 
 [deps]
 BandedMatrices = "aae01518-5342-5314-be14-df237901396f"
