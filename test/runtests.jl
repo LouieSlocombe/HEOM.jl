@@ -1,6 +1,6 @@
-using CenteredDifferences
+using HEOM
 using Test
 
-@testset "CenteredDifferences.jl" begin
+@testset "HEOM.jl" begin
     # Write your tests here.
 end
