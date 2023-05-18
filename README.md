@@ -7,3 +7,17 @@ The hierarchy is typically truncated at a certain level to make the calculations
 By solving the hierarchical equations of motion, one can obtain the dynamics of the reduced density matrix, which provides information about the system's evolution, including decoherence, relaxation, and other environmental dissipative effects. This information is crucial for understanding and predicting the behaviour of open quantum systems and their interactions with the surrounding environment.
 
 In this code repo, we work in phase-space!
+
+# Linear-linear Coupling in High-Temperature Markovian Limit
+$$
+\frac{\partial}{\partial t} W^{(0)}=  -\hat{\mathcal{L}}_{\mathrm{QM}} W^{(0)}
++\zeta \frac{\partial}{\partial p}\left(p+\frac{m}{\beta} \frac{\partial}{\partial p}\right) W^{(0)}
+$$
+
+# Linear-linear Coupling in High-Temperature non-Markovian Limit
+$$
+\frac{\partial}{\partial t} W^{(n)}=
+-\left(\hat{\mathcal{L}}_{\mathrm{QM}}+n \gamma\right) W^{(n)}\\
++\frac{\partial}{\partial p} W^{(n+1)}\\
++n \gamma \zeta\left(p+\frac{m}{\beta} \frac{\partial}{\partial p}\right) W^{(n-1)}
+$$
