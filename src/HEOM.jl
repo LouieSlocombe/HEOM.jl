@@ -1,5 +1,8 @@
 module HEOM
 using StaticArrays, LinearAlgebra, SparseArrays, BandedMatrices
+using SciMLOperators, FFTW, Plots, Symbolics, ModelingToolkit
+using BenchmarkTools, LaTeXStrings, Latexify
+using MethodOfLines, OrdinaryDiffEq, DomainSets
 using SciMLBase: AbstractDiffEqLinearOperator
 
 if Sys.iswindows()
