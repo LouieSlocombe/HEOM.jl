@@ -1,4 +1,4 @@
-module CenteredDifferences
+module HEOM
 using StaticArrays, LinearAlgebra, SparseArrays, BandedMatrices
 using SciMLBase: AbstractDiffEqLinearOperator
 import Base: +, -, *, /, \, size, getindex, setindex!, Matrix, convert, ==
@@ -395,6 +395,6 @@ end
 
 Base.convert(::Type{AbstractMatrix}, A::DerivativeOperator) = BandedMatrix(A)
 
-export CenteredDifference
+export HEOM
 
 end
