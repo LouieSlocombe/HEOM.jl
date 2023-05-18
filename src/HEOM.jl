@@ -29,8 +29,11 @@ include("symbolic.jl")
 # Functions for derivatives
 include("derivatives.jl")
 
+# Wigner Moyal equation
+include("core_eq/wigner_moyal.jl")
+
 # Linear-linear Coupling in High-Temperature Markovian Limit
-include("core_eq_LL_HT_M.jl")
+include("core_eq/LL_HT_M.jl")
 
 # Linear-linear Coupling in High-Temperature non-Markovian Limit
 
