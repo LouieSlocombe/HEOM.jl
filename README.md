@@ -1,1 +1,1 @@
-# CenteredDifferences
+# HEOM.jl
