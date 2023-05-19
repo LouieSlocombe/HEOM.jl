@@ -111,7 +111,7 @@ function prepare_fft_der_2d_y(x, y, Lx, Ly; order=1)
 end
 
 
-function prepare_fft_dq_bad(q_vec, eq_vec; order=1)
+function prepare_fft_dq(q_vec, eq_vec; order=1)
     # Preparing the derivative operator
     dq = q_vec[2] - q_vec[1]
     q_range = q_vec[end] - q_vec[1] + dq
@@ -137,7 +137,7 @@ function dq_fft!(du, u, ft, fdq, ik)
 end
 
 
-function prepare_fft_dp_bad(p_vec, eq_vec; order=1)
+function prepare_fft_dp(p_vec, eq_vec; order=1)
     # Preparing the derivative operator
     dp = p_vec[2] - p_vec[1]
     p_range = p_vec[end] - p_vec[1] + dp

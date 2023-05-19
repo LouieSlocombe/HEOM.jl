@@ -1,8 +1,7 @@
 using HEOM
-using Test
+using Test, SafeTestsets
 
-@testset "HEOM.jl" begin
-    @time @test
-
-
+begin
+    @time @safetestset "Derivatives" begin include("derivatives.jl") end
+    #@time @safetestset "" begin include(".jl") end
 end
