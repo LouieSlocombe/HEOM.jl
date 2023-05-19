@@ -17,6 +17,9 @@ end
 # Include unit system
 include("unit_system.jl")
 
+# Functions for grid generation
+include("grid.jl")
+
 # Replacement for diff eq operators to calculate the derivative of a vector/matrix
 include("central_finite_differences.jl")
 
