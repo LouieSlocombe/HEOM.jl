@@ -46,16 +46,23 @@ function prep_wm_fd(q_vec, p_vec, v_vec, mass, h_bar; apx=2)
 end
 
 function wm_fd_trunc!(du, u, p, t)
+    # Calculate dW_dq
     dq_fd!(p.DqW, u, p.d_dq)
+    # Calculate dW_dp
     dp_fd!(p.DpW, u, p.d_dp)
+    
+    # Main equation
     @. du = -p.Pm * p.DqW + p.DqV * p.DpW
 end
 
 function wm_fd!(du, u, p, t)
+    # Calculate dW_dq
     dq_fd!(p.DqW, u, p.d_dq)
+    # Calculate dW_dp
     dp_fd!(p.DpW, u, p.d_dp)
-
-    # Higher order terms
+    # Calculate d3W_dp3
     dq_fd!(p.DqqqW, u, p.d_dqqq)
+
+    # Main equation
     @. du = -p.Pm * p.DqW + p.DqV * p.DpW - p.DqqqV * p.DqqqW
 end
