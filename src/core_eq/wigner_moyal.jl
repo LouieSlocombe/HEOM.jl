@@ -1,3 +1,5 @@
+####################################################################################
+# Simple WM equation using finite difference method
 function prep_wm_fd(q_vec, p_vec, v_vec, mass, h_bar; apx=2)
     n = length(q_vec)
     dq = q_vec[2] - q_vec[1]
@@ -50,7 +52,7 @@ function wm_fd_trunc!(du, u, p, t)
     dq_fd!(p.DqW, u, p.d_dq)
     # Calculate dW_dp
     dp_fd!(p.DpW, u, p.d_dp)
-    
+
     # Main equation
     @. du = -p.Pm * p.DqW + p.DqV * p.DpW
 end
@@ -66,3 +68,6 @@ function wm_fd!(du, u, p, t)
     # Main equation
     @. du = -p.Pm * p.DqW + p.DqV * p.DpW - p.DqqqV * p.DqqqW
 end
+
+####################################################################################
+# Simple WM equation using FFT method
