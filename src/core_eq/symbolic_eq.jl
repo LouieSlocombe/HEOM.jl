@@ -65,3 +65,25 @@ function generate_LL_HT_M_trunc_eq(W, args; f_simple=false)
     end
     return L_QM
 end
+
+# Symbolic form of the LL_HT_NM master equation
+function generate_LL_HT_NM_n_hierarchy(n, N, W, args; f_simple=false)
+    # Makes the nth hierarchy
+    i_n = n - 1
+    #LW = generate_wm_eq(n)
+    if n == 1
+        # Chop off the terms below the zeroth hierarchy 
+        hier = -(args.L + i_n * args.γ) * W(args.q, args.p, args.t)[n] + args.Dp(W(args.q, args.p, args.t)[n+1])
+    elseif n == N
+        # Chop off the terms above the Nth hierarchy
+        hier = -(args.L + i_n * args.γ) * W(args.q, args.p, args.t)[n] + i_n * args.γ * args.ζ * args.p * W(args.q, args.p, args.t)[n-1] + i_n * args.γ * args.ζ * args.m / args.β * args.Dp(W(args.q, args.p, args.t)[n-1])
+    else
+        # All terms above and below
+        hier = -(args.L + i_n * args.γ) * W(args.q, args.p, args.t)[n] + args.Dp(W(args.q, args.p, args.t)[n+1]) + i_n * args.γ * args.ζ * args.p * W(args.q, args.p, args.t)[n-1] + i_n * args.γ * args.ζ * args.m / args.β * args.Dp(W(args.q, args.p, args.t)[n-1])
+    end
+    # Check to simplify
+    if f_simple
+        hier = eq_simple(hier)
+    end
+    return hier
+end
