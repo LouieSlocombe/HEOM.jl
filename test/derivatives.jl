@@ -103,7 +103,7 @@ H.dp_fd!(fd_der, eq2d_vec, d_dp)
 
 ####################################################################################
 # 2D d2/dq2 + d2/dp2 + d/dq + d/dp
-d2_eq2d = expand_derivatives(Dqq(eq2d) + Dpp(eq2d)+ Dq(eq2d) + Dp(eq2d))
+d2_eq2d = expand_derivatives(Dqq(eq2d) + Dpp(eq2d) + Dq(eq2d) + Dp(eq2d))
 d2_eq2d_vec = H.make_discretised_2d(d2_eq2d, [q, p], q_vec, p_vec, [])
 
 ft, FDq, ik = H.prepare_fft_dq(q_vec, eq2d_vec; order=2)
