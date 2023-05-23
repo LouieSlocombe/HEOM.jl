@@ -29,11 +29,11 @@ include("phase_space_plots.jl")
 # Functions for symbolic utilities
 include("symbolic_utils.jl")
 
-# Functions for symbolic forms of the equations
-include("symbolic_eq.jl")
-
 # Functions for derivatives
 include("derivatives.jl")
+
+# Functions for symbolic forms of the equations
+include("core_eq/symbolic_eq.jl")
 
 # Wigner Moyal equation
 include("core_eq/wigner_moyal.jl")
