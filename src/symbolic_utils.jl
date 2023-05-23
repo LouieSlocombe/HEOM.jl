@@ -79,6 +79,7 @@ function latexify_nice(eq; f_compress=true, rm_params=true)
         expr = replace(expr, "(q)" => "")
         expr = replace(expr, "(p)" => "")
         expr = replace(expr, "(t)" => "")
+        expr = replace(expr, "\\left( q, t \\right)" => "")
     end
 
     if f_compress
