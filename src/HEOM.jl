@@ -26,8 +26,11 @@ include("central_finite_differences.jl")
 # Functions for plotting
 include("phase_space_plots.jl")
 
-# Functions for symbolics
-include("symbolic.jl")
+# Functions for symbolic utilities
+include("symbolic_utils.jl")
+
+# Functions for symbolic forms of the equations
+include("symbolic_eq.jl")
 
 # Functions for derivatives
 include("derivatives.jl")
@@ -35,10 +38,14 @@ include("derivatives.jl")
 # Wigner Moyal equation
 include("core_eq/wigner_moyal.jl")
 
-# Linear-linear Coupling in High-Temperature Markovian Limit
+# Linear-linear Coupling in the High-Temperature Markovian Limit
 include("core_eq/LL_HT_M.jl")
 
-# Linear-linear Coupling in High-Temperature non-Markovian Limit
+# Linear-linear Coupling in the High-Temperature non-Markovian Limit
+# include("core_eq/LL_HT_NM.jl")
+
+# Linear-linear Coupling in the Low-Temperature non-Markovian Limit
+# include("core_eq/LL_LT_NM.jl")
 
 export HEOM
 

@@ -9,7 +9,7 @@ const H = HEOM
 ####################################################################################
 # Check the equation works for a simple case
 
-println("Running...")
-slow_prob = ODEProblem(wigner_moyal, W, (t0, t1), p)
-@time sol =
-    solve(slow_prob, alg, saveat = saveat, progress = true, reltol = tol, abstol = tol)
+# println("Running...")
+# slow_prob = ODEProblem(wigner_moyal, W, (t0, t1), p)
+# @time sol =
+#     solve(slow_prob, alg, saveat = saveat, progress = true, reltol = tol, abstol = tol)
