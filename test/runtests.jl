@@ -3,7 +3,7 @@ using Test, SafeTestsets
 
 begin
     @time @safetestset "Derivatives" begin include("derivatives.jl") end
-    @time @safetestset "Symbolic eq check" begin include("symbolic_check.jl") end
+    @time @safetestset "Symbolic eq check" begin include("core_eq/symbolic_check.jl") end
 
     # @time @safetestset "Simple eq check" begin include("core_eq/simple_check.jl") end
     # @time @safetestset "Free Particle" begin include("core_eq/free_particle.jl") end

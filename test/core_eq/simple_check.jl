@@ -13,7 +13,6 @@ q_vec, p_vec, Q, P, dq, dp = H.create_basis_even(n, q_range, p_range)
 # Define the equation and its derivatives
 @parameters t q p γ m β ω ħ ζ σ q0 p0 L
 @variables W(..)
-
 Dt = Differential(t)
 Dq = Differential(q)
 Dqq = Differential(q)^2
