@@ -1,7 +1,6 @@
 using HEOM, Symbolics, ModelingToolkit, LinearAlgebra
 using Test
 const H = HEOM
-
 # Set things up
 
 # Make the grid
@@ -23,19 +22,6 @@ Dppp = Differential(p)^3
 
 # Define the potential
 v = 0.5 * m * ω^2 * q^2
-# Define the potential derivatives
-vdq = Dq(v)
-vdqq = Dqq(v)
-vdqqq = Dqqq(v)
-
-
-vdq = expand_derivatives(vdq)
-vdqq = expand_derivatives(vdqq)
-vdqqq = expand_derivatives(vdqqq)
-println("V = ", v)
-println("Dq(V) = ", vdq)
-println("Dqq(V) = ", vdqq)
-println("Dqqq(V) = ", vdqqq)
 
 # Parameters
 params = [γ => gamma, m => mass, β => beta, ω => omega, ħ => h_bar, ζ => zeta, σ => sigma, q0 => q_0, p0 => p_0]
