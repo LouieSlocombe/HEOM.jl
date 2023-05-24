@@ -29,9 +29,9 @@ v(q,t) = 0.5 * m * ω^2 * q^2
 args = (t=t, q=q, p=p, m=m, Dq=Dq, Dp=Dp, ħ=ħ, V=v, Dqqq=Dqqq, Dppp=Dppp)
 eq = H.generate_wm_eq(W, args; f_simple=true)
 eq_check = (-p * Differential(q)(W(q, p, t))) / m + m * q * (ω^2) * Differential(p)(W(q, p, t))
-println("eq = ", eq)
-println(latexify(eq))
-println(H.latexify_nice(eq))
+# println("eq = ", eq)
+# println(latexify(eq))
+# println(H.latexify_nice(eq))
 @test H.eq_simple(eq - eq_check) == 0
 
 ####################################################################################
