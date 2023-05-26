@@ -51,7 +51,7 @@ V(q,t) = 0.5 * m * ω^2 * q^2
 # v_vec = v_vec[:,1]
 
 
-v_vec = make_discretised_potential(v, q, t, q_vec, params)
+v_vec = H.make_discretised_potential(V, q, t, q_vec, params)
 
 fig = plot(q_vec, v_vec, xlabel="q", ylabel="V(q)", title="Potential", legend=false)
 display(fig)
