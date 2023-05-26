@@ -45,9 +45,13 @@ params = [γ => gamma, m => mass, β => beta, ω => omega, ħ => h_bar, ζ => ze
 
 # Define the potential
 V(q,t) = 0.5 * m * ω^2 * q^2
-V_tmp = substitute(V(q,t) , Dict(m => mass, ω => omega))
-v_vec = H.make_discretised_2d(V_tmp, [q,t], q_vec, p_vec, [])
-v_vec = v_vec[:,1]
+# # V_tmp = substitute(V(q,t) , Dict(m => mass, ω => omega))
+# V_tmp = substitute(V(q,t), params)
+# v_vec = H.make_discretised_2d(V_tmp, [q,t], q_vec, [0.0], [])
+# v_vec = v_vec[:,1]
+
+
+v_vec = make_discretised_potential(v, q, t, q_vec, params)
 
 fig = plot(q_vec, v_vec, xlabel="q", ylabel="V(q)", title="Potential", legend=false)
 display(fig)

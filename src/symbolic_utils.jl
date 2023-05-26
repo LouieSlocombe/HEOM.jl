@@ -130,3 +130,13 @@ function eq_inserter(eq, sub, expr)
     # Simplify the equation
     return eq_simple(eq_out)
 end
+
+function make_discretised_potential(v, q, t, q_vec, params)
+    # Substitute in the parameters
+    v_tmp = substitute(v(q, t), params)
+    # Call the discretisation function
+    v_vec = make_discretised_2d(v_tmp, [q, t], q_vec, [0.0], [])
+    # Select the first column
+    v_vec = v_vec[:, 1]
+    return v_vec
+end
