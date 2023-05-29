@@ -16,7 +16,7 @@ function prep_wm_fd(q_vec, p_vec, v_vec, mass, h_bar; apx=2)
     DpW = zeros(n, n)
     DqV = zeros(n, n)
     DqqqV = zeros(n, n)
-    DqqqW = zeros(n, n)
+    DpppW = zeros(n, n)
 
     # Make the large potential matrix
     V_vec = repeat(v_vec, 1, n)
@@ -44,7 +44,7 @@ function prep_wm_fd(q_vec, p_vec, v_vec, mass, h_bar; apx=2)
         DpW=DpW,
         DqV=DqV,
         DqqqV=DqqqV,
-        DqqqW=DqqqW,
+        DpppW=DpppW,
     )
     return p
 end
@@ -65,18 +65,16 @@ function wm_fd!(du, u, p, t)
     # Calculate dW_dp
     dp_fd!(p.DpW, u, p.d_dp)
     # Calculate d3W_dp3
-    dq_fd!(p.DqqqW, u, p.d_dqqq)
+    dq_fd!(p.DpppW, u, p.d_dppp)
 
     # Main equation
-    @. du = -p.Pm * p.DqW + p.DqV * p.DpW - p.DqqqV * p.DqqqW
+    @. du = -p.Pm * p.DqW + p.DqV * p.DpW - p.DqqqV * p.DpppW
 end
 
 ####################################################################################
 # Simple WM equation using FFT method
 function prep_wm_fft(q_vec, p_vec, v_vec, W0, mass, h_bar)
     n = length(q_vec)
-    dq = q_vec[2] - q_vec[1]
-    dp = p_vec[2] - p_vec[1]
 
     # Make the large grid matrices
     Q = repeat(q_vec, 1, n)
@@ -89,51 +87,59 @@ function prep_wm_fft(q_vec, p_vec, v_vec, W0, mass, h_bar)
     DpW = zeros(n, n)
     DqV = zeros(n, n)
     DqqqV = zeros(n, n)
-    DqqqW = zeros(n, n)
+    DpppW = zeros(n, n)
 
     # Make the large potential matrix
     V_vec = repeat(v_vec, 1, n)
 
     # Prepare the derivative operators
     d_dq_ft, d_dq_FDq, d_dq_ik = H.prepare_fft_dq(q_vec, W0; order=1)
-    # H.dq_fft!(DqW, u, d_dq_ft, d_dq_FDq, d_dq_ik)
+    # dq_fft!(p.DqW, u, p.d_dq_ft, p.d_dq_FDq, p.d_dq_ik)
 
     d_dp_ft, d_dp_FDq, d_dp_ik = H.prepare_fft_dp(p_vec, W0; order=1)
-    # H.dp_fft!(DpW, u, d_dp_ft, d_dp_FDq, d_dp_ik)
+    # dp_fft!(p.DpW, u, p.d_dp_ft, p.d_dp_FDq, p.d_dp_ik)
 
     d_dqqq_ft, d_dqqq_FDq, d_dqqq_ik = H.prepare_fft_dq(q_vec, W0; order=3)
-    # H.dq_fft!(DqqqW, u, d_dqqq_ft, d_dqqq_FDq, d_dqqq_ik)
+    # dq_fft!(p.DqqqW, u, p.d_dqqq_ft, p.d_dqqq_FDq, p.d_dqqq_ik)
 
     d_dppp_ft, d_dppp_FDq, d_dppp_ik = H.prepare_fft_dp(p_vec, W0; order=3)
-    # H.dp_fft!(DpppW, u, d_dppp_ft, d_dppp_FDq, d_dppp_ik)
+    # dp_fft!(p.DpppW, u, p.d_dppp_ft, p.d_dppp_FDq, p.d_dppp_ik)
 
     # Take potential derivative
     dq_fft!(DqV, V_vec, d_dq_ft, d_dq_FDq, d_dq_ik)
-    dq_fd!(DqV, V_vec, d_dq)
-    dq_fd!(DqqqV, V_vec, d_dqqq)
+    dq_fft!(DqqqV, V_vec, d_dqqq_ft, d_dqqq_FDq, d_dqqq_ik)
 
     DqqqV = @. DqqqV * mh_bar
 
     p = (
         Pm=Pm,
-        d_dq=d_dq,
-        d_dp=d_dp,
-        d_dqqq=d_dqqq,
+        d_dq_ft=d_dq_ft,
+        d_dq_FDq=d_dq_FDq,
+        d_dq_ik=d_dq_ik,
+        d_dp_ft=d_dp_ft,
+        d_dp_FDq=d_dp_FDq,
+        d_dp_ik=d_dp_ik,
+        d_dqqq_ft=d_dqqq_ft,
+        d_dqqq_FDq=d_dqqq_FDq,
+        d_dqqq_ik=d_dqqq_ik,
         d_dppp=d_dppp,
+        d_dppp_ft=d_dppp_ft,
+        d_dppp_FDq=d_dppp_FDq,
+        d_dppp_ik=d_dppp_ik,
         DqW=DqW,
         DpW=DpW,
         DqV=DqV,
         DqqqV=DqqqV,
-        DqqqW=DqqqW,
+        DpppW=DpppW,
     )
     return p
 end
 
 function wm_fft_trunc!(du, u, p, t)
     # Calculate dW_dq
-    dq_fd!(p.DqW, u, p.d_dq)
+    dq_fft!(p.DqW, u, p.d_dq_ft, p.d_dq_FDq, p.d_dq_ik)
     # Calculate dW_dp
-    dp_fd!(p.DpW, u, p.d_dp)
+    dp_fft!(p.DpW, u, p.d_dp_ft, p.d_dp_FDq, p.d_dp_ik)
 
     # Main equation
     @. du = -p.Pm * p.DqW + p.DqV * p.DpW
@@ -141,12 +147,12 @@ end
 
 function wm_fft!(du, u, p, t)
     # Calculate dW_dq
-    dq_fd!(p.DqW, u, p.d_dq)
+    dq_fft!(p.DqW, u, p.d_dq_ft, p.d_dq_FDq, p.d_dq_ik)
     # Calculate dW_dp
-    dp_fd!(p.DpW, u, p.d_dp)
+    dp_fft!(p.DpW, u, p.d_dp_ft, p.d_dp_FDq, p.d_dp_ik)
     # Calculate d3W_dp3
-    dq_fd!(p.DqqqW, u, p.d_dqqq)
+    dq_fd!(p.DpppW, u, p.d_dppp)
 
     # Main equation
-    @. du = -p.Pm * p.DqW + p.DqV * p.DpW - p.DqqqV * p.DqqqW
+    @. du = -p.Pm * p.DqW + p.DqV * p.DpW - p.DqqqV * p.DpppW
 end
