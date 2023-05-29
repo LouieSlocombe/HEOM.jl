@@ -122,7 +122,6 @@ function prep_wm_fft(q_vec, p_vec, v_vec, W0, mass, h_bar)
         d_dqqq_ft=d_dqqq_ft,
         d_dqqq_FDq=d_dqqq_FDq,
         d_dqqq_ik=d_dqqq_ik,
-        d_dppp=d_dppp,
         d_dppp_ft=d_dppp_ft,
         d_dppp_FDq=d_dppp_FDq,
         d_dppp_ik=d_dppp_ik,
@@ -151,7 +150,7 @@ function wm_fft!(du, u, p, t)
     # Calculate dW_dp
     dp_fft!(p.DpW, u, p.d_dp_ft, p.d_dp_FDq, p.d_dp_ik)
     # Calculate d3W_dp3
-    dq_fd!(p.DpppW, u, p.d_dppp)
+    dp_fft!(p.DpppW, u, p.d_dppp_ft, p.d_dppp_FDq, p.d_dppp_ik)
 
     # Main equation
     @. du = -p.Pm * p.DqW + p.DqV * p.DpW - p.DqqqV * p.DpppW
