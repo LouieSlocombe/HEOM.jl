@@ -2,9 +2,10 @@ using HEOM, Symbolics, ModelingToolkit, LinearAlgebra, Latexify, LaTeXStrings, P
 using Test
 const H = HEOM
 # Set things up
+tol = 1e-2
 
 # Make the grid
-n = 2^9
+n = 2^6
 q_range = 12.0
 p_range = 60.0
 q_vec, p_vec, Q, P, dq, dp = H.create_basis_even(n, q_range, p_range)
@@ -45,52 +46,71 @@ params = [γ => gamma, m => mass, β => beta, ω => omega, ħ => h_bar, ζ => ze
 
 # Define the potential
 V(q,t) = 0.5 * m * ω^2 * q^2
-# # V_tmp = substitute(V(q,t) , Dict(m => mass, ω => omega))
-# V_tmp = substitute(V(q,t), params)
-# v_vec = H.make_discretised_2d(V_tmp, [q,t], q_vec, [0.0], [])
-# v_vec = v_vec[:,1]
-
-
 v_vec = H.make_discretised_potential(V, q, t, q_vec, params)
-
-fig = plot(q_vec, v_vec, xlabel="q", ylabel="V(q)", title="Potential", legend=false)
-display(fig)
-
-# V_tmp = 0.5 * m * ω^2 * q^2
-# v_vec = H.make_discretised_1d(substitute(V_tmp, Dict(t=>0.0,m => mass, ω => omega)), [q], q_vec, [])
-
-
-
 
 
 # Make symbolic intial gaussian
 w_ic = 1 / (pi * ħ) * exp(-2 * σ * (q - q0)^2 - 1 / (2 * ħ^2 * σ) * (p - p0)^2)
 w_ic = exp(-q^2 - 0.05 * p^2)
-println("w_ic = ", w_ic)
 w_ic = substitute(w_ic, params)
 W0 = H.make_discretised_2d(w_ic, [q, p], q_vec, p_vec, [])
 
 ####################################################################################
-# Check the equation works for generate_wm_eq
+# Check the generate_wm_eq and prep_wm_fd works
 args = (t=t, q=q, p=p, m=m, Dq=Dq, Dp=Dp, ħ=ħ, V=V, Dqqq=Dqqq, Dppp=Dppp)
 eq = H.generate_wm_eq(W, args; f_simple=true)
+# Insert the initial condition W0
 eq = H.eq_inserter(eq, W(q,p,t), w_ic)
 
-println("eq = ", eq)
-println(H.latexify_nice(eq))
 # Substitute in the parameters
 eq = substitute(eq, params)
-println("eq = ", eq)
-println(H.latexify_nice(eq))
 
+# Make the discretised equation
 eq_vec = H.make_discretised_2d(eq, [q, p], q_vec, p_vec, [])
-H.plot_wigner_heatmap(q_vec, p_vec, eq_vec, title="W0")
 
 # prepare numerical eq
 prep = H.prep_wm_fd(q_vec, p_vec, v_vec, mass, h_bar)
 W_out = zeros(size(W0))
 H.wm_fd_trunc!(W_out, W0, prep, 0.0)
-H.plot_wigner_heatmap(q_vec, p_vec, W_out, title="W0")
 
+# Check that they are the same
+@test ≈(W_out, eq_vec; atol=tol)
 
-H.plot_wigner_heatmap(q_vec, p_vec, eq_vec .- W_out, title="W0")
+####################################################################################
+# Check the generate_wm_trunc_eq and prep_wm_fd works
+args = (t=t, q=q, p=p, m=m, Dq=Dq, Dp=Dp, V=V)
+eq = H.generate_wm_trunc_eq(W, args; f_simple=true)
+# Insert the initial condition W0
+eq = H.eq_inserter(eq, W(q,p,t), w_ic)
+# Substitute in the parameters
+eq = substitute(eq, params)
+# Make the discretised equation
+eq_vec = H.make_discretised_2d(eq, [q, p], q_vec, p_vec, [])
+# prepare numerical eq
+W_out = zeros(size(W0))
+H.wm_fd_trunc!(W_out, W0, prep, 0.0)
+
+# Check that they are the same
+@test ≈(W_out, eq_vec; atol=tol)
+
+####################################################################################
+# Check the generate_LL_HT_M_eq and prep_LL_HT_M_fd works
+args = (t=t, q=q, p=p, m=m, Dq=Dq, Dp=Dp, ħ=ħ, ζ=ζ, β=β, V=V, Dpp=Dpp, Dqqq=Dqqq, Dppp=Dppp)
+eq = H.generate_LL_HT_M_eq(W, args; f_simple=true)
+# Insert the initial condition W0
+eq = H.eq_inserter(eq, W(q,p,t), w_ic)
+# Substitute in the parameters
+eq = substitute(eq, params)
+# Make the discretised equation
+eq_vec = H.make_discretised_2d(eq, [q, p], q_vec, p_vec, [])
+# prepare numerical eq
+prep = H.prep_LL_HT_M_fd(q_vec, p_vec, v_vec, mass, h_bar, gamma, beta)
+W_out = zeros(size(W0))
+H.LL_HT_M_fd!(W_out, W0, prep, 0.0)
+
+# Check that they are the same
+@test ≈(W_out, eq_vec; atol=tol)
+
+# plot the results
+H.plot_wigner_heatmap(q_vec, p_vec, W_out; title="numeric")
+H.plot_wigner_heatmap(q_vec, p_vec, eq_vec; title="symbolic")

@@ -65,7 +65,7 @@ function LL_HT_M_fd_trunc!(du, u, p, t)
     dp_fd!(p.DpW, u, p.d_dp)
 
     # Dissipation term
-    @. p.Wp = p * u
+    @. p.Wp = p.p * u
     dp_fd!(p.DpWp, p.pW, p.d_dp)
     # Decoherence term
     dp_fd!(p.DppW, p.W, p.d_dpp)
@@ -81,7 +81,7 @@ function LL_HT_M_fd!(du, u, p, t)
     dq_fd!(p.DqqqW, u, p.d_dqqq)
 
     # Dissipation term
-    @. p.Wp = p * u
+    @. p.Wp = p.p * u
     dp_fd!(p.DpWp, p.pW, p.d_dp)
     # Decoherence term
     dp_fd!(p.DppW, p.W, p.d_dpp)
