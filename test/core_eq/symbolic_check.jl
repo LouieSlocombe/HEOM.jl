@@ -25,7 +25,7 @@ eq_check = (-p * Differential(q)(W(q, p, t))) / m + Differential(q)(V(q, t)) * D
 
 #####################################################################################
 # Check the formalism allows for a potential and cancels out terms
-v(q,t) = 0.5 * m * ω^2 * q^2
+v(q, t) = 0.5 * m * ω^2 * q^2
 args = (t=t, q=q, p=p, m=m, Dq=Dq, Dp=Dp, ħ=ħ, V=v, Dqqq=Dqqq, Dppp=Dppp)
 eq = H.generate_wm_eq(W, args; f_simple=true)
 eq_check = (-p * Differential(q)(W(q, p, t))) / m + m * q * (ω^2) * Differential(p)(W(q, p, t))
@@ -36,13 +36,13 @@ eq_check = (-p * Differential(q)(W(q, p, t))) / m + m * q * (ω^2) * Differentia
 
 #####################################################################################
 # Check the formalism allows for a potential, IC, and cancels out terms
-v(q,t) = 0.5 * m * ω^2 * q^2
+v(q, t) = 0.5 * m * ω^2 * q^2
 args = (t=t, q=q, p=p, m=m, Dq=Dq, Dp=Dp, ħ=ħ, V=v, Dqqq=Dqqq, Dppp=Dppp)
 eq = H.generate_wm_eq(W, args; f_simple=true)
 w_ic = exp(-q^2 - 0.05 * p^2)
-eq = H.eq_inserter(eq, W(q,p,t), w_ic)
-eq_check = (2p*q*exp(-0.05(p^2) - (q^2))) / m - 0.1m*p*q*(ω^2)*exp(-0.05(p^2) - (q^2))
-@test H.eq_simple(eq-eq_check)  == 0
+eq = H.eq_inserter(eq, W(q, p, t), w_ic)
+eq_check = (2p * q * exp(-0.05(p^2) - (q^2))) / m - 0.1m * p * q * (ω^2) * exp(-0.05(p^2) - (q^2))
+@test H.eq_simple(eq - eq_check) == 0
 
 ####################################################################################
 # Check the truncated Wigner master equation

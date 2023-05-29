@@ -2,10 +2,10 @@ using HEOM, Symbolics, ModelingToolkit, LinearAlgebra, Latexify, LaTeXStrings, P
 using Test
 const H = HEOM
 # Set things up
-tol = 1e-2
+tol = 1e-3
 
 # Make the grid
-n = 2^6
+n = 2^8
 q_range = 12.0
 p_range = 60.0
 q_vec, p_vec, Q, P, dq, dp = H.create_basis_even(n, q_range, p_range)
@@ -45,7 +45,7 @@ params = [γ => gamma, m => mass, β => beta, ω => omega, ħ => h_bar, ζ => ze
 
 
 # Define the potential
-V(q,t) = 0.5 * m * ω^2 * q^2
+V(q, t) = 0.5 * m * ω^2 * q^2
 v_vec = H.make_discretised_potential(V, q, t, q_vec, params)
 
 
@@ -60,7 +60,7 @@ W0 = H.make_discretised_2d(w_ic, [q, p], q_vec, p_vec, [])
 args = (t=t, q=q, p=p, m=m, Dq=Dq, Dp=Dp, ħ=ħ, V=V, Dqqq=Dqqq, Dppp=Dppp)
 eq = H.generate_wm_eq(W, args; f_simple=true)
 # Insert the initial condition W0
-eq = H.eq_inserter(eq, W(q,p,t), w_ic)
+eq = H.eq_inserter(eq, W(q, p, t), w_ic)
 
 # Substitute in the parameters
 eq = substitute(eq, params)
@@ -81,7 +81,7 @@ H.wm_fd_trunc!(W_out, W0, prep, 0.0)
 args = (t=t, q=q, p=p, m=m, Dq=Dq, Dp=Dp, V=V)
 eq = H.generate_wm_trunc_eq(W, args; f_simple=true)
 # Insert the initial condition W0
-eq = H.eq_inserter(eq, W(q,p,t), w_ic)
+eq = H.eq_inserter(eq, W(q, p, t), w_ic)
 # Substitute in the parameters
 eq = substitute(eq, params)
 # Make the discretised equation
@@ -98,7 +98,7 @@ H.wm_fd_trunc!(W_out, W0, prep, 0.0)
 args = (t=t, q=q, p=p, m=m, Dq=Dq, Dp=Dp, ħ=ħ, ζ=ζ, β=β, V=V, Dpp=Dpp, Dqqq=Dqqq, Dppp=Dppp)
 eq = H.generate_LL_HT_M_eq(W, args; f_simple=true)
 # Insert the initial condition W0
-eq = H.eq_inserter(eq, W(q,p,t), w_ic)
+eq = H.eq_inserter(eq, W(q, p, t), w_ic)
 # Substitute in the parameters
 eq = substitute(eq, params)
 # Make the discretised equation
@@ -110,7 +110,10 @@ H.LL_HT_M_fd!(W_out, W0, prep, 0.0)
 
 # Check that they are the same
 @test ≈(W_out, eq_vec; atol=tol)
+println("Max difference: ", maximum(abs.(W_out .- eq_vec)))
 
-# plot the results
-H.plot_wigner_heatmap(q_vec, p_vec, W_out; title="numeric")
-#H.plot_wigner_heatmap(q_vec, p_vec, eq_vec; title="symbolic")
+# # plot the results
+# H.plot_wigner_heatmap(q_vec, p_vec, W_out; title="numeric")
+# H.plot_wigner_heatmap(q_vec, p_vec, eq_vec; title="symbolic")
+# # plot the difference
+# H.plot_wigner_heatmap(q_vec, p_vec, W_out .- eq_vec; title="difference")
