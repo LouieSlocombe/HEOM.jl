@@ -4,10 +4,14 @@ const H = HEOM
 # Set things up
 tol = 1e-3
 
+# n = 2^8
+# q_range = 12.0
+# p_range = 60.0
+
 # Make the grid
-n = 2^8
-q_range = 12.0
-p_range = 60.0
+n = 2^7
+q_range = 40.0
+p_range = 80.0
 q_vec, p_vec, Q, P, dq, dp = H.create_basis_even(n, q_range, p_range)
 
 # Define the equation and its derivatives
@@ -54,7 +58,7 @@ w_ic = substitute(w_ic, params)
 W0 = H.make_discretised_2d(w_ic, [q, p], q_vec, p_vec, [])
 
 ####################################################################################
-# Check the generate_wm_eq and wm_fd 
+# Check the generate_wm_eq vs wm_fd and wm_fft
 args = (t=t, q=q, p=p, m=m, Dq=Dq, Dp=Dp, ħ=ħ, V=V, Dqqq=Dqqq, Dppp=Dppp)
 eq = H.generate_wm_eq(W, args; f_simple=true)
 # Insert the initial condition W0
@@ -65,22 +69,28 @@ eq = substitute(eq, params)
 eq_vec = H.make_discretised_2d(eq, [q, p], q_vec, p_vec, [])
 
 # Prepare numerical finite difference eq
+println("Preparing WM finite difference eq")
 prep = H.prep_wm_fd(q_vec, p_vec, v_vec, mass, h_bar)
 W_out = zeros(size(W0))
 H.wm_fd!(W_out, W0, prep, 0.0)
 # Check that they are the same
+println("Max difference: ", maximum(abs.(W_out .- eq_vec)))
 @test ≈(W_out, eq_vec; atol=tol)
 
+
 # Prepare numerical FFT eq
+println("Preparing WM FFT eq")
 prep = H.prep_wm_fft(q_vec, p_vec, v_vec, W0, mass, h_bar)
 W_out = zeros(size(W0))
 H.wm_fft!(W_out, W0, prep, 0.0)
 # Check that they are the same
-@test ≈(W_out, eq_vec; atol=tol)
+println("Max difference: ", maximum(abs.(W_out .- eq_vec)))
+@test ≈(Array{Float64}(W_out), eq_vec; atol=tol)
+
 
 
 ####################################################################################
-# Check the generate_wm_trunc_eq and wm_fd_trunc
+# Check the generate_wm_trunc_eq vs wm_fd_trunc and wm_fft_trunc
 args = (t=t, q=q, p=p, m=m, Dq=Dq, Dp=Dp, V=V)
 eq = H.generate_wm_trunc_eq(W, args; f_simple=true)
 # Insert the initial condition W0
@@ -91,21 +101,26 @@ eq = substitute(eq, params)
 eq_vec = H.make_discretised_2d(eq, [q, p], q_vec, p_vec, [])
 
 # Prepare numerical finite difference eq
+println("Preparing WM trunc finite difference eq")
 prep = H.prep_wm_fd(q_vec, p_vec, v_vec, mass, h_bar)
 W_out = zeros(size(W0))
 H.wm_fd_trunc!(W_out, W0, prep, 0.0)
 # Check that they are the same
+println("Max difference: ", maximum(abs.(W_out .- eq_vec)))
 @test ≈(W_out, eq_vec; atol=tol)
 
 # Prepare numerical FFT eq
+println("Preparing WM trunc FFT eq")
 prep = H.prep_wm_fft(q_vec, p_vec, v_vec, W0, mass, h_bar)
 W_out = zeros(size(W0))
 H.wm_fft_trunc!(W_out, W0, prep, 0.0)
 # Check that they are the same
+println("Max difference: ", maximum(abs.(W_out .- eq_vec)))
 @test ≈(W_out, eq_vec; atol=tol)
 
+
 ####################################################################################
-# Check the generate_LL_HT_M_eq and LL_HT_M_fd
+# Check the generate_LL_HT_M_eq vs LL_HT_M_fd and LL_HT_M_fft
 args = (t=t, q=q, p=p, m=m, Dq=Dq, Dp=Dp, ħ=ħ, ζ=ζ, β=β, V=V, Dpp=Dpp, Dqqq=Dqqq, Dppp=Dppp)
 eq = H.generate_LL_HT_M_eq(W, args; f_simple=true)
 # Insert the initial condition W0
@@ -114,17 +129,30 @@ eq = H.eq_inserter(eq, W(q, p, t), w_ic)
 eq = substitute(eq, params)
 # Make the discretised equation
 eq_vec = H.make_discretised_2d(eq, [q, p], q_vec, p_vec, [])
-# prepare numerical eq
+
+# Prepare numerical finite difference eq
+println("Preparing LL_HT_M finite difference eq")
 prep = H.prep_LL_HT_M_fd(q_vec, p_vec, v_vec, mass, h_bar, gamma, beta)
 W_out = zeros(size(W0))
 H.LL_HT_M_fd!(W_out, W0, prep, 0.0)
-
 # Check that they are the same
-@test ≈(W_out, eq_vec; atol=tol)
 println("Max difference: ", maximum(abs.(W_out .- eq_vec)))
+@test ≈(W_out, eq_vec; atol=tol)
+
+# Prepare numerical FFT eq
+println("Preparing LL_HT_M FFT eq")
+prep = H.prep_LL_HT_M_fft(q_vec, p_vec, v_vec, W0, mass, h_bar, gamma, beta)
+W_out = zeros(size(W0))
+H.LL_HT_M_fft!(W_out, W0, prep, 0.0)
+# Check that they are the same
+println("Max difference: ", maximum(abs.(W_out .- eq_vec)))
+@test ≈(W_out, eq_vec; atol=tol)
+
+
+
+
 
 # # plot the results
 # H.plot_wigner_heatmap(q_vec, p_vec, W_out; title="numeric")
 # H.plot_wigner_heatmap(q_vec, p_vec, eq_vec; title="symbolic")
-# # plot the difference
 # H.plot_wigner_heatmap(q_vec, p_vec, W_out .- eq_vec; title="difference")

@@ -93,37 +93,37 @@ function prep_wm_fft(q_vec, p_vec, v_vec, W0, mass, h_bar)
     V_vec = repeat(v_vec, 1, n)
 
     # Prepare the derivative operators
-    d_dq_ft, d_dq_FDq, d_dq_ik = prepare_fft_dq(q_vec, W0; order=1)
-    # dq_fft!(p.DqW, u, p.d_dq_ft, p.d_dq_FDq, p.d_dq_ik)
+    d_dq_ft, d_dq_FD, d_dq_ik = prepare_fft_dq(q_vec, W0; order=1)
+    # dq_fft!(p.DqW, u, p.d_dq_ft, p.d_dq_FD, p.d_dq_ik)
 
-    d_dp_ft, d_dp_FDq, d_dp_ik = prepare_fft_dp(p_vec, W0; order=1)
-    # dp_fft!(p.DpW, u, p.d_dp_ft, p.d_dp_FDq, p.d_dp_ik)
+    d_dp_ft, d_dp_FD, d_dp_ik = prepare_fft_dp(p_vec, W0; order=1)
+    # dp_fft!(p.DpW, u, p.d_dp_ft, p.d_dp_FD, p.d_dp_ik)
 
-    d_dqqq_ft, d_dqqq_FDq, d_dqqq_ik = prepare_fft_dq(q_vec, W0; order=3)
-    # dq_fft!(p.DqqqW, u, p.d_dqqq_ft, p.d_dqqq_FDq, p.d_dqqq_ik)
+    d_dqqq_ft, d_dqqq_FD, d_dqqq_ik = prepare_fft_dq(q_vec, W0; order=3)
+    # dq_fft!(p.DqqqW, u, p.d_dqqq_ft, p.d_dqqq_FD, p.d_dqqq_ik)
 
-    d_dppp_ft, d_dppp_FDq, d_dppp_ik = prepare_fft_dp(p_vec, W0; order=3)
-    # dp_fft!(p.DpppW, u, p.d_dppp_ft, p.d_dppp_FDq, p.d_dppp_ik)
+    d_dppp_ft, d_dppp_FD, d_dppp_ik = prepare_fft_dp(p_vec, W0; order=3)
+    # dp_fft!(p.DpppW, u, p.d_dppp_ft, p.d_dppp_FD, p.d_dppp_ik)
 
     # Take potential derivative
-    dq_fft!(DqV, V_vec, d_dq_ft, d_dq_FDq, d_dq_ik)
-    dq_fft!(DqqqV, V_vec, d_dqqq_ft, d_dqqq_FDq, d_dqqq_ik)
+    dq_fft!(DqV, V_vec, d_dq_ft, d_dq_FD, d_dq_ik)
+    dq_fft!(DqqqV, V_vec, d_dqqq_ft, d_dqqq_FD, d_dqqq_ik)
 
     DqqqV = @. DqqqV * mh_bar
 
     p = (
         Pm=Pm,
         d_dq_ft=d_dq_ft,
-        d_dq_FDq=d_dq_FDq,
+        d_dq_FDq=d_dq_FD,
         d_dq_ik=d_dq_ik,
         d_dp_ft=d_dp_ft,
-        d_dp_FDq=d_dp_FDq,
+        d_dp_FDq=d_dp_FD,
         d_dp_ik=d_dp_ik,
         d_dqqq_ft=d_dqqq_ft,
-        d_dqqq_FDq=d_dqqq_FDq,
+        d_dqqq_FDq=d_dqqq_FD,
         d_dqqq_ik=d_dqqq_ik,
         d_dppp_ft=d_dppp_ft,
-        d_dppp_FDq=d_dppp_FDq,
+        d_dppp_FDq=d_dppp_FD,
         d_dppp_ik=d_dppp_ik,
         DqW=DqW,
         DpW=DpW,
@@ -136,9 +136,9 @@ end
 
 function wm_fft_trunc!(du, u, p, t)
     # Calculate dW_dq
-    dq_fft!(p.DqW, u, p.d_dq_ft, p.d_dq_FDq, p.d_dq_ik)
+    dq_fft!(p.DqW, u, p.d_dq_ft, p.d_dq_FD, p.d_dq_ik)
     # Calculate dW_dp
-    dp_fft!(p.DpW, u, p.d_dp_ft, p.d_dp_FDq, p.d_dp_ik)
+    dp_fft!(p.DpW, u, p.d_dp_ft, p.d_dp_FD, p.d_dp_ik)
 
     # Main equation
     @. du = -p.Pm * p.DqW + p.DqV * p.DpW
@@ -146,11 +146,11 @@ end
 
 function wm_fft!(du, u, p, t)
     # Calculate dW_dq
-    dq_fft!(p.DqW, u, p.d_dq_ft, p.d_dq_FDq, p.d_dq_ik)
+    dq_fft!(p.DqW, u, p.d_dq_ft, p.d_dq_FD, p.d_dq_ik)
     # Calculate dW_dp
-    dp_fft!(p.DpW, u, p.d_dp_ft, p.d_dp_FDq, p.d_dp_ik)
+    dp_fft!(p.DpW, u, p.d_dp_ft, p.d_dp_FD, p.d_dp_ik)
     # Calculate d3W_dp3
-    dp_fft!(p.DpppW, u, p.d_dppp_ft, p.d_dppp_FDq, p.d_dppp_ik)
+    dp_fft!(p.DpppW, u, p.d_dppp_ft, p.d_dppp_FD, p.d_dppp_ik)
 
     # Main equation
     @. du = -p.Pm * p.DqW + p.DqV * p.DpW - p.DqqqV * p.DpppW
