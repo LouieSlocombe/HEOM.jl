@@ -113,4 +113,4 @@ H.LL_HT_M_fd!(W_out, W0, prep, 0.0)
 
 # plot the results
 H.plot_wigner_heatmap(q_vec, p_vec, W_out; title="numeric")
-H.plot_wigner_heatmap(q_vec, p_vec, eq_vec; title="symbolic")
+#H.plot_wigner_heatmap(q_vec, p_vec, eq_vec; title="symbolic")

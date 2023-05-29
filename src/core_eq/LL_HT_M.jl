@@ -55,6 +55,7 @@ function prep_LL_HT_M_fd(q_vec, p_vec, v_vec, mass, h_bar, gamma, beta; apx=2)
         DqV=DqV,
         DqqqV=DqqqV,
         DqqqW=DqqqW,
+        P=P,
     )
     return p
 end
@@ -65,10 +66,10 @@ function LL_HT_M_fd_trunc!(du, u, p, t)
     dp_fd!(p.DpW, u, p.d_dp)
 
     # Dissipation term
-    @. p.Wp = p.p * u
-    dp_fd!(p.DpWp, p.pW, p.d_dp)
+    @. p.Wp = p.P * u
+    dp_fd!(p.DpWp, p.Wp, p.d_dp)
     # Decoherence term
-    dp_fd!(p.DppW, p.W, p.d_dpp)
+    dp_fd!(p.DppW, unique!, p.d_dpp)
     # Put it all together
     @. du = -p.Pm * p.DqW + p.DqV * p.DpW + p.t_diss * p.DpWp + p.t_deco * p.DppW
 end
@@ -81,10 +82,10 @@ function LL_HT_M_fd!(du, u, p, t)
     dq_fd!(p.DqqqW, u, p.d_dqqq)
 
     # Dissipation term
-    @. p.Wp = p.p * u
-    dp_fd!(p.DpWp, p.pW, p.d_dp)
+    @. p.Wp = p.P * u
+    dp_fd!(p.DpWp, p.Wp, p.d_dp)
     # Decoherence term
-    dp_fd!(p.DppW, p.W, p.d_dpp)
+    dp_fd!(p.DppW, u, p.d_dpp)
     # Put it all together
     @. du = -p.Pm * p.DqW + p.DqV * p.DpW - p.DqqqV * p.DqqqW + p.t_diss * p.DpWp + p.t_deco * p.DppW
 end
