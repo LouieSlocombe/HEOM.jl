@@ -34,7 +34,7 @@ function prep_LL_HT_M_fd(q_vec, p_vec, v_vec, mass, h_bar, gamma, beta; apx=2)
 
     # Take potential derivative
     dq_fd!(DqV, V_vec, d_dq)
-    dp_fd!(DqqqV, V_vec, d_dqqq)
+    dq_fd!(DqqqV, V_vec, d_dqqq)
 
     DqqqV = @. DqqqV * mh_bar
 
