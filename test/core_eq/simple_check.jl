@@ -56,7 +56,7 @@ w_ic = substitute(w_ic, params)
 W0 = H.make_discretised_2d(w_ic, [q, p], q_vec, p_vec, [])
 
 ####################################################################################
-# Check the generate_wm_eq and prep_wm_fd works
+# Check the generate_wm_eq and wm_fd_trunc 
 args = (t=t, q=q, p=p, m=m, Dq=Dq, Dp=Dp, ħ=ħ, V=V, Dqqq=Dqqq, Dppp=Dppp)
 eq = H.generate_wm_eq(W, args; f_simple=true)
 # Insert the initial condition W0
@@ -77,7 +77,7 @@ H.wm_fd_trunc!(W_out, W0, prep, 0.0)
 @test ≈(W_out, eq_vec; atol=tol)
 
 ####################################################################################
-# Check the generate_wm_trunc_eq and prep_wm_fd works
+# Check the generate_wm_trunc_eq and wm_fd_trunc
 args = (t=t, q=q, p=p, m=m, Dq=Dq, Dp=Dp, V=V)
 eq = H.generate_wm_trunc_eq(W, args; f_simple=true)
 # Insert the initial condition W0
@@ -94,7 +94,7 @@ H.wm_fd_trunc!(W_out, W0, prep, 0.0)
 @test ≈(W_out, eq_vec; atol=tol)
 
 ####################################################################################
-# Check the generate_LL_HT_M_eq and prep_LL_HT_M_fd works
+# Check the generate_LL_HT_M_eq and LL_HT_M_fd
 args = (t=t, q=q, p=p, m=m, Dq=Dq, Dp=Dp, ħ=ħ, ζ=ζ, β=β, V=V, Dpp=Dpp, Dqqq=Dqqq, Dppp=Dppp)
 eq = H.generate_LL_HT_M_eq(W, args; f_simple=true)
 # Insert the initial condition W0
