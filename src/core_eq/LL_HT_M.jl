@@ -1,3 +1,6 @@
+####################################################################################
+# Simple LL_HT_M equation using finite difference method
+
 function prep_LL_HT_M_fd(q_vec, p_vec, v_vec, mass, h_bar, gamma, beta; apx=2)
     n = length(q_vec)
     dq = q_vec[2] - q_vec[1]
@@ -19,7 +22,7 @@ function prep_LL_HT_M_fd(q_vec, p_vec, v_vec, mass, h_bar, gamma, beta; apx=2)
     DppW = zeros(n, n)
     DqV = zeros(n, n)
     DqqqV = zeros(n, n)
-    DqqqW = zeros(n, n)
+    DpppW = zeros(n, n)
     Wp = zeros(n, n)
     DpWp = zeros(n, n)
 
@@ -54,7 +57,7 @@ function prep_LL_HT_M_fd(q_vec, p_vec, v_vec, mass, h_bar, gamma, beta; apx=2)
         DppW=DppW,
         DqV=DqV,
         DqqqV=DqqqV,
-        DqqqW=DqqqW,
+        DpppW=DpppW,
         P=P,
     )
     return p
@@ -79,7 +82,7 @@ function LL_HT_M_fd!(du, u, p, t)
     dp_fd!(p.DpW, u, p.d_dp)
 
     # Higher order terms
-    dq_fd!(p.DqqqW, u, p.d_dqqq)
+    dq_fd!(p.DpppW, u, p.d_dppp)
 
     # Dissipation term
     @. p.Wp = p.P * u
@@ -87,5 +90,8 @@ function LL_HT_M_fd!(du, u, p, t)
     # Decoherence term
     dp_fd!(p.DppW, u, p.d_dpp)
     # Put it all together
-    @. du = -p.Pm * p.DqW + p.DqV * p.DpW - p.DqqqV * p.DqqqW + p.t_diss * p.DpWp + p.t_deco * p.DppW
+    @. du = -p.Pm * p.DqW + p.DqV * p.DpW - p.DqqqV * p.DpppW + p.t_diss * p.DpWp + p.t_deco * p.DppW
 end
+
+####################################################################################
+# Simple LL_HT_M equation using finite difference method
