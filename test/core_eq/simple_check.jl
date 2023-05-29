@@ -68,13 +68,20 @@ eq = substitute(eq, params)
 # Make the discretised equation
 eq_vec = H.make_discretised_2d(eq, [q, p], q_vec, p_vec, [])
 
-# prepare numerical eq
+# Prepare numerical finite difference eq
 prep = H.prep_wm_fd(q_vec, p_vec, v_vec, mass, h_bar)
 W_out = zeros(size(W0))
 H.wm_fd_trunc!(W_out, W0, prep, 0.0)
-
 # Check that they are the same
 @test ≈(W_out, eq_vec; atol=tol)
+
+# Prepare numerical finite difference eq
+prep = H.prep_wm_fft(q_vec, p_vec, v_vec, W0, mass, h_bar)
+W_out = zeros(size(W0))
+H.wm_fft_trunc!(W_out, W0, prep, 0.0)
+# Check that they are the same
+@test ≈(W_out, eq_vec; atol=tol)
+
 
 ####################################################################################
 # Check the generate_wm_trunc_eq and wm_fd_trunc

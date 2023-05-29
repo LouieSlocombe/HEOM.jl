@@ -94,4 +94,4 @@ function LL_HT_M_fd!(du, u, p, t)
 end
 
 ####################################################################################
-# Simple LL_HT_M equation using finite difference method
+# Simple LL_HT_M equation using FFT method

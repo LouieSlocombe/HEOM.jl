@@ -93,16 +93,16 @@ function prep_wm_fft(q_vec, p_vec, v_vec, W0, mass, h_bar)
     V_vec = repeat(v_vec, 1, n)
 
     # Prepare the derivative operators
-    d_dq_ft, d_dq_FDq, d_dq_ik = H.prepare_fft_dq(q_vec, W0; order=1)
+    d_dq_ft, d_dq_FDq, d_dq_ik = prepare_fft_dq(q_vec, W0; order=1)
     # dq_fft!(p.DqW, u, p.d_dq_ft, p.d_dq_FDq, p.d_dq_ik)
 
-    d_dp_ft, d_dp_FDq, d_dp_ik = H.prepare_fft_dp(p_vec, W0; order=1)
+    d_dp_ft, d_dp_FDq, d_dp_ik = prepare_fft_dp(p_vec, W0; order=1)
     # dp_fft!(p.DpW, u, p.d_dp_ft, p.d_dp_FDq, p.d_dp_ik)
 
-    d_dqqq_ft, d_dqqq_FDq, d_dqqq_ik = H.prepare_fft_dq(q_vec, W0; order=3)
+    d_dqqq_ft, d_dqqq_FDq, d_dqqq_ik = prepare_fft_dq(q_vec, W0; order=3)
     # dq_fft!(p.DqqqW, u, p.d_dqqq_ft, p.d_dqqq_FDq, p.d_dqqq_ik)
 
-    d_dppp_ft, d_dppp_FDq, d_dppp_ik = H.prepare_fft_dp(p_vec, W0; order=3)
+    d_dppp_ft, d_dppp_FDq, d_dppp_ik = prepare_fft_dp(p_vec, W0; order=3)
     # dp_fft!(p.DpppW, u, p.d_dppp_ft, p.d_dppp_FDq, p.d_dppp_ik)
 
     # Take potential derivative
