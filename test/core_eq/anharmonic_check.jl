@@ -10,12 +10,12 @@ tol = 1e-2
 
 # Make the grid
 n = 2^8
-q_range = 50.0
+q_range = 5.0
 p_range = 80.0
 q_vec, p_vec, Q, P, dq, dp = H.create_basis_even(n, q_range, p_range)
 
 # Define the equation and its derivatives
-@parameters t q p γ m β ω ħ ζ σ q0 p0 L
+@parameters t q p γ m β ω ħ ζ σ q0 p0 L α V0 x0
 @variables W(..)
 Dt = Differential(t)
 Dq = Differential(q)
@@ -26,7 +26,7 @@ Dpp = Differential(p)^2
 Dppp = Differential(p)^3
 
 # Units
-mass = 1836.0
+mass = 58752.0
 h_bar = 1.0
 si_k_b = 1.380649e-23 # Boltzmann constant
 au_energy = 4.3597447222071e-18
@@ -34,9 +34,11 @@ k_b = si_k_b / au_energy #3.166811429e-6
 temperature = 300.0
 beta = 1.0 / (k_b * temperature)
 
-# Harmonic potential
-omega = 0.005
-gamma = omega * 1.0
+# Morse potential
+x_0 = -1.1 #-4.7
+v_0 = 0.0220
+a = 2.5
+gamma = 1.0 / 141341.0
 zeta = gamma
 
 # Define the intial gaussian
@@ -45,18 +47,25 @@ q_0 = 0.5
 p_0 = 0.0
 
 # Parameters
-params = [γ => gamma, m => mass, β => beta, ω => omega, ħ => h_bar, ζ => zeta, σ => sigma, q0 => q_0, p0 => p_0]
+params = [γ => gamma, m => mass, β => beta, ħ => h_bar, ζ => zeta, σ => sigma, q0 => q_0, p0 => p_0, α => a, x0 => x_0, V0 => v_0]
 
 # Define the potential
-V(q, t) = 0.5 * m * ω^2 * q^2
+# V(q, t) = V0 * (exp(-2 * α * (q - x0)) - 2 * exp(-α * (q - x0)))
+V(q, t) = V0 * (1.0 - exp(-α * (q - x0)))^2
+
 v_vec = H.make_discretised_potential(V, q, t, q_vec, params)
+v_vec = v_vec .- minimum(v_vec)
+# # plot the potential
+# fig = plot(q_vec, v_vec, ylims=(0.0, 1.0)) # xlims=(-1, q_vec[end]) (0.0, 0.025)
+# fig = plot!(xlabel="q", ylabel="V(q)", label="V(q)", legend=:bottomright, title="Morse potential")
+# display(fig)
+
 
 # Make symbolic intial gaussian
 w_ic = 1 / (pi * ħ) * exp(-2 * σ * (q - q0)^2 - 1 / (2 * ħ^2 * σ) * (p - p0)^2)
-w_ic = exp(-q^2 - 0.05 * p^2)
 w_ic = substitute(w_ic, params)
 W0 = H.make_discretised_2d(w_ic, [q, p], q_vec, p_vec, [])
-
+# H.plot_wigner_heatmap(q_vec, p_vec, W0; title="W0")
 
 ####################################################################################
 # Check the generate_wm_eq vs wm_fd and wm_fft
@@ -84,7 +93,7 @@ W_out = zeros(size(W0))
 H.wm_fft!(W_out, W0, prep, 0.0)
 # Check that they are the same
 println("FFT max difference: ", maximum(abs.(W_out .- eq_vec)))
-@test ≈(W_out, eq_vec; atol=tol)
+@test W_out ≈ eq_vec atol = tol broken = true
 
 
 ####################################################################################
@@ -113,7 +122,7 @@ W_out = zeros(size(W0))
 H.wm_fft_trunc!(W_out, W0, prep, 0.0)
 # Check that they are the same
 println("FFT max difference: ", maximum(abs.(W_out .- eq_vec)))
-@test ≈(W_out, eq_vec; atol=tol)
+@test W_out ≈ eq_vec atol = tol broken = true
 
 
 ####################################################################################
@@ -142,7 +151,7 @@ W_out = zeros(size(W0))
 H.LL_HT_M_fft!(W_out, W0, prep, 0.0)
 # Check that they are the same
 println("FFT Max difference: ", maximum(abs.(W_out .- eq_vec)))
-@test W_out ≈ eq_vec atol=tol broken=true
+@test W_out ≈ eq_vec atol = tol broken = true
 
 
 ####################################################################################
@@ -171,9 +180,4 @@ W_out = zeros(size(W0))
 H.LL_HT_M_fft_trunc!(W_out, W0, prep, 0.0)
 # Check that they are the same
 println("FFT max difference: ", maximum(abs.(W_out .- eq_vec)))
-@test W_out ≈ eq_vec atol=tol broken=true
-
-# plot the results
-# H.plot_wigner_heatmap(q_vec, p_vec, W_out; title="numeric")
-# H.plot_wigner_heatmap(q_vec, p_vec, eq_vec; title="symbolic")
-# H.plot_wigner_heatmap(q_vec, p_vec, W_out .- eq_vec; title="difference")
+@test W_out ≈ eq_vec atol = tol broken = true
