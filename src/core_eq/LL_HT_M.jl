@@ -138,8 +138,8 @@ function prep_LL_HT_M_fft(q_vec, p_vec, v_vec, W0, mass, h_bar, gamma, beta; apx
     # dp_fft!(p.DpppW, u, p.d_dppp_ft, p.d_dppp_FD, p.d_dppp_ik)
 
     # Take potential derivative
-    dq_fd!(DqV, V_vec, d_dq)
-    dq_fd!(DqqqV, V_vec, d_dqqq)
+    dq_fft!(DqV, V_vec, d_dq_ft, d_dq_FD, d_dq_ik)
+    dq_fft!(DqqqV, V_vec, d_dqqq_ft, d_dqqq_FD, d_dqqq_ik)
 
     DqqqV = @. DqqqV * mh_bar
 
