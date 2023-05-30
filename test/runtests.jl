@@ -15,10 +15,9 @@ begin
     @time @safetestset "Anharmonic eq check" begin
         include("core_eq/anharmonic_check.jl")
     end
-
-    # @time @safetestset "Free Particle" begin
-    #     include("core_eq/free_particle.jl")
-    # end
+    @time @safetestset "Free Particle" begin
+        include("core_eq/free_particle.jl")
+    end
     # @time @safetestset "Harmonic well" begin include("core_eq/harmonic_well.jl") end
     # Morse potential
     # Double well case

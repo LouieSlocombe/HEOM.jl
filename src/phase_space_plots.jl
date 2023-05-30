@@ -59,7 +59,7 @@ function animate_wigner_heatmap(
             tmp = heatmap(
                 q,
                 p,
-                z_vals[:, :, i],
+                permutedims(z_vals[:, :, i], (2, 1)),
                 seriescolor=:inferno,
                 xlabel=xlab,
                 ylabel=ylab,
