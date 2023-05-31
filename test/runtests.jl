@@ -18,8 +18,12 @@ begin
     @time @safetestset "Free Particle" begin
         include("core_eq/free_particle.jl")
     end
-    # @time @safetestset "Harmonic well" begin include("core_eq/harmonic_well.jl") end
+    # Harmonic well
+    #@time @safetestset "Harmonic well" begin include("core_eq/harmonic_well.jl") end
     # Morse potential
+    @time @safetestset "Morse potential" begin
+        include("core_eq/morse_potential.jl")
+    end
     # Double well case
 
 end
