@@ -66,7 +66,7 @@ v_vec = H.make_discretised_potential(V, q, t, q_vec, params)
 w_ic = 1 / (pi * ħ) * exp(-2 * σ * (q - q0)^2 - 1 / (2 * ħ^2 * σ) * (p - p0)^2)
 w_ic = substitute(w_ic, params)
 W0 = H.make_discretised_2d(w_ic, [q, p], q_vec, p_vec, [])
-H.plot_wigner_heatmap(q_vec, p_vec, W0; title="W0")
+# H.plot_wigner_heatmap(q_vec, p_vec, W0; title="W0")
 
 ####################################################################################
 # Check the generate_wm_eq vs wm_fd and wm_fft
@@ -77,8 +77,15 @@ eq = H.generate_wm_eq(W, args; f_simple=true)
 eq = H.eq_inserter(eq, W(q, p, t), w_ic)
 # Substitute in the parameters
 eq = substitute(eq, params)
+
+# Multiply by time "integrate"
+# eq = eq * saveat[2] * 0.5 + w_ic
+# eq = substitute(eq, t=>10000.0)
 # Make the discretised equation
-eq_vec = H.make_discretised_2d(eq, [q, p], q_vec, p_vec, [])
+# eq_vec = H.make_discretised_2d(eq, [q, p], q_vec, p_vec, [])
+
+# Plot the analytic solution
+# H.plot_wigner_heatmap(q_vec, p_vec, eq_vec; title="Analytic solution")
 
 # Prepare numerical finite difference eq
 prep = H.prep_wm_fd(q_vec, p_vec, v_vec, mass, h_bar)
@@ -88,11 +95,13 @@ println("Running...")
 prob = ODEProblem(H.wm_fd!, W0, (t0, t1), prep)
 @time sol = solve(prob, algo, progress = true, saveat=saveat)
 
+@test sol[1] ≈ W0 atol = tol #broken = true
+
 # Plot the results
-H.plot_wigner_heatmap(q_vec, p_vec, sol[end]; title="W_FD")
+# H.plot_wigner_heatmap(q_vec, p_vec, sol[end]; title="W_FD")
+# H.plot_wigner_heatmap(q_vec, p_vec, eq_vec .- sol[2]; title="Analytic - W_FD")
+# H.animate_wigner_heatmap(q_vec, p_vec, sol; time = saveat)
 
-
-# solu = [i for i in sol.u]
-# println("size solu = $(size(solu))")
-# solu = permutedims(solu, (2, 1, 3))
-H.animate_wigner_heatmap(q_vec, p_vec, sol; time = saveat)
+# TODO 
+# Check the normalisation condition
+# Check the system spread on Q
