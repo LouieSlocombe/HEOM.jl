@@ -83,15 +83,23 @@ H.plot_wigner_heatmap(q_vec, p_vec, W0; title="W0")
 # prob = ODEProblem(H.wm_fd_trunc!, W0, (t0, t1), prep)
 # @time sol = solve(prob, algo, progress = true, saveat=saveat, abstol=tol, reltol=tol)
 
-# @test sol[1] ≈ W0 atol = tol #broken = true
-
 prep = H.prep_LL_HT_M_fd(q_vec, p_vec, v_vec, mass, h_bar, gamma, beta)
 prob = ODEProblem(H.LL_HT_M_fd_trunc!, W0, (t0, t1), prep)
 @time sol = solve(prob, algo, progress = true, saveat=saveat, abstol=tol, reltol=tol)
 
-
+@test sol[1] ≈ W0 atol = tol
 
 # Plot the results
 H.plot_wigner_heatmap(q_vec, p_vec, sol[end]; title="W end")
 H.animate_wigner_heatmap(q_vec, p_vec, sol; time = saveat)
 
+# Try WM 
+prep = H.prep = H.prep_wm_fd(q_vec, p_vec, v_vec, mass, h_bar)
+prob = ODEProblem(H.wm_fd_trunc!, W0, (t0, t1), prep)
+@time sol = solve(prob, algo, progress=true, saveat=saveat, abstol=tol, reltol=tol)
+
+@test sol[1] ≈ W0 atol = tol
+
+# Plot the results
+H.plot_wigner_heatmap(q_vec, p_vec, sol[end]; title="W end")
+H.animate_wigner_heatmap(q_vec, p_vec, sol; time=saveat)
