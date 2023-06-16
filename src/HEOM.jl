@@ -32,6 +32,9 @@ include("symbolic_utils.jl")
 # Functions for derivatives
 include("derivatives.jl")
 
+# Functions for integration
+include("integration.jl")
+
 # Functions for symbolic forms of the equations
 include("core_eq/symbolic_eq.jl")
 
