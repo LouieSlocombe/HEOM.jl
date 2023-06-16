@@ -17,13 +17,13 @@ end
 # Include unit system
 include("unit_system.jl")
 
-# Functions for grid generation
+# Functions for phase space grid generation
 include("grid.jl")
 
 # Replacement for diff eq operators to calculate the derivative of a vector/matrix
 include("central_finite_differences.jl")
 
-# Functions for plotting
+# Functions for plotting in phase space
 include("phase_space_plots.jl")
 
 # Functions for symbolic utilities
