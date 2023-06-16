@@ -35,6 +35,9 @@ include("derivatives.jl")
 # Functions for integration
 include("integration.jl")
 
+# Functions for the wigner tools
+include("wigner_tools.jl")
+
 # Functions for symbolic forms of the equations
 include("core_eq/symbolic_eq.jl")
 
