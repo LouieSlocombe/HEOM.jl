@@ -128,7 +128,7 @@ function calc_wigner_s2_entropy(q, p, W)
     return 1.0 - calc_wigner_purity(q, p, W)
 end
 
-function calc_autocorrelation(q_vec, p_vec, sol)
+function calc_wigner_autocorrelation(q, p, sol)
     """
     Calculates the autocorrelation function
     C(t) = ∫∫ W(q, p, t) W(q, p, 0) dq dp
@@ -138,19 +138,22 @@ function calc_autocorrelation(q_vec, p_vec, sol)
     # Get the Wigner function
     W = sol.u
     # Calculate the autocorrelation
-    C = [int_2d(q_vec, p_vec, W[:, :, i] .* W[:, :, 1]) for i = 1:nt]
+    C = [int_2d(q, p, W[:, :, i] .* W[:, :, 1]) for i = 1:nt]
     C = zeros(nt)
     for i = 1:nt
-        C[i] = int_2d(q_vec, p_vec, W[:, :, i] .* W[:, :, 1])
+        C[i] = int_2d(q, p, W[:, :, i] .* W[:, :, 1])
     end
     # Normalise
     return C ./ C[1]
 end
 
-function calc_probability(q, p, W, h)
+function calc_wigner_probability(q, p, W, q0)
     """
     Calculates the probability of finding the particle in a region of phase space
-    P = ∫∫ W(q, p) h(q, p) dq dp
+    P = ∫∫ W(q, p) h_q0(q, p) dq dp
     """
-    return calc_wigner_o_expect(q, p, W, h)
+    # Calculate the step function
+    h_q0 = step_function(q, W, q0)
+    # Calculate the probability
+    return int_2d(q, p, h_q0)
 end
