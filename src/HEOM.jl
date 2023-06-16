@@ -1,6 +1,6 @@
 module HEOM
 using StaticArrays, LinearAlgebra, SparseArrays, BandedMatrices
-using SciMLOperators, FFTW, Plots, Symbolics, ModelingToolkit
+using SciMLOperators, FFTW, Plots, Symbolics, ModelingToolkit, Dierckx, Interpolations
 using BenchmarkTools, LaTeXStrings, Latexify
 using MethodOfLines, OrdinaryDiffEq, DomainSets
 using SciMLBase: AbstractDiffEqLinearOperator
