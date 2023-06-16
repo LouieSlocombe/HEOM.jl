@@ -53,6 +53,9 @@ include("core_eq/LL_HT_M.jl")
 # Linear-linear Coupling in the Low-Temperature non-Markovian Limit
 # include("core_eq/LL_LT_NM.jl")
 
+# Misc functions
+include("misc.jl")
+
 export HEOM
 
 end
