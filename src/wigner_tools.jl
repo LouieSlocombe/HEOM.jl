@@ -3,24 +3,24 @@ function wigner_normalise(q, p, W)
     Normalise the Wigner function using the 2D integral
     """
     # Determine the norm
-    N = int_2d(q, p, W)
+    norm = int_2d(q, p, W)
     # Divide by norm
-    return W ./ N
+    return W ./ norm
 end
 
 function calc_wigner_wqp(q, p, W)
     """
     Calculates the Wigner function in the q and p plane
-    Wq(p) = int dq W(q, p)
-    Wp(q) = int dp W(q, p)
+    Wq(p) = ∫ W(q, p) dq
+    Wp(q) = ∫ W(q, p) dp
     """
-
+    # Get the number of q and p points
+    Nq = length(q)
+    Np = length(p)
     # Find Wq
-    Wq = [int_1d(p, W[i, :]) for i = 1:N]
-
+    Wq = [int_1d(p, W[i, :]) for i = 1:Nq]
     # Find Wp
-    Wp = [int_1d(q, W[:, i]) for i = 1:N]
-
+    Wp = [int_1d(q, W[:, i]) for i = 1:Np]
     return Wq, Wp
 end
 
@@ -30,51 +30,49 @@ function calc_wigner_wqp_norm(q, p, W)
     """
     # Find Wq and Wp
     Wq, Wp = calc_wigner_wqp(q, p, W)
-
     # Calculate the norms
     q_norm = int_1d(q, Wq)
     p_norm = int_1d(p, Wp)
-
     return q_norm, p_norm
+end
+
+function calc_wigner_o_expect(q, p, W, O)
+    """
+    Calculates the expecation value of an operator O
+    <O> = ∫∫ W(q, p) O(q, p) dq dp
+    """
+    # Integrate over q and p
+    return int_2d(q, p, W .* O)
 end
 
 function calc_wigner_wqp_expect(q, p, W)
     """
     Calculates the expectation value of q and p
-    <q> = int dq Wq(q) q
-    <p> = int dp Wp(p) p
+    <q> = ∫∫ W(q, p) q dq dp
+    <p> = ∫∫ W(q, p) p dq dp
     """
-    # Find W_q and W_p
-    Wq, Wp = calc_wigner_wqp(q, p, W)
-
     # Calculate the expectation value
-    q_ex = int_1d(q, Wq .* q)
-    p_ex = int_1d(p, Wp .* p)
-
+    q_ex = calc_wigner_o_expect(q, p, W, q)
+    p_ex = calc_wigner_o_expect(q, p, W, p)
     return q_ex, p_ex
 end
-
 
 function calc_wigner_wqp2_expect(q, p, W)
     """
     Calculates the second moment of q and p
-    <q^2> = int dq Wq(q) q^2
-    <p^2> = int dp Wp(p) p^2
+    <q^2> = ∫∫ W(q, p) q^2 dq dp
+    <p^2> = ∫∫ W(q, p) p^2 dq dp
     """
-    # Find Wq and Wp
-    Wq, Wp = calc_wigner_wqp(q, p, W)
-
     # Calculate the second moment
-    q2_ex = int_1d(q, Wq .* q .^ 2)
-    p2_ex = int_1d(p, Wp .* p .^ 2)
+    q2_ex = calc_wigner_o_expect(q, p, W, q .^ 2)
+    p2_ex = calc_wigner_o_expect(q, p, W, p .^ 2)
     return q2_ex, p2_ex
 end
-
 
 function calc_wigner_uncertainty_principle(q, p, W)
     """
     Calculates the uncertainty principle
-    sqrt(<q^2> - <q>^2) * sqrt(<p^2> - <p>^2) =? 1/2
+    sqrt(<q^2> - <q>^2) * sqrt(<p^2> - <p>^2) >= ħ/2
     """
     # Find the q and p expectation values
     q_ex, p_ex = calc_wigner_wqp_expect(q, p, W)
@@ -87,8 +85,72 @@ function calc_wigner_entropy(q, p, W)
     """
     !!!DOUBLE CHECK THIS!!!
     Calculates the entropy of the Wigner function
-    S = -int dq dp W(q, p) log(W(q, p))
+    S = -∫∫ W(q, p) log(W(q, p)) dq dp
     """
+    # Calculate the log of the Wigner function
+    W_log = @. W * log(abs(W))
     # Find the entropy
-    return -int_2d(q, p, W .* log.(abs.(W)))
+    return -int_2d(q, p, W_log)
+end
+
+function calc_classical_hamiltonian(P, v, mass)
+    """
+    Calculates the classical Hamiltonian
+    H = P^2 / (2m) + V
+    """
+    return @. P^2 / (2.0 * mass) + v
+end
+
+function calc_wigner_energy_expect(q, p, P, v, mass, W)
+    """
+    Calculates the energy expectation value
+    <H> = ∫∫ W(q, p) H(q, p) dq dp
+    """
+    # Calculate the classical Hamiltonian
+    H = calc_classical_hamiltonian(P, v, mass)
+    # Calculate the expectation value
+    return calc_wigner_o_expect(q, p, W, H)
+end
+
+function calc_wigner_purity(q, p, W)
+    """
+    Calculates the purity of the Wigner function
+    P = 2πħ ∫∫ W(q, p)^2 dq dp
+    """
+    return 2.0 * pi * h_bar * calc_wigner_o_expect(q, p, W, W)
+end
+
+function calc_wigner_s2_entropy(q, p, W)
+    """
+    Calculates the entropy of the Wigner function
+    S = 1 - 2πħ ∫∫ W(q, p)^2 dq dp
+    """
+    return 1.0 - calc_wigner_purity(q, p, W)
+end
+
+function calc_autocorrelation(q_vec, p_vec, sol)
+    """
+    Calculates the autocorrelation function
+    C(t) = ∫∫ W(q, p, t) W(q, p, 0) dq dp
+    """
+    # Get the number of time steps
+    nt = length(sol.t)
+    # Get the Wigner function
+    W = sol.u
+    # Calculate the autocorrelation
+    C = [int_2d(q_vec, p_vec, W[:, :, i] .* W[:, :, 1]) for i = 1:nt]
+    C = zeros(nt)
+    for i = 1:nt
+        C[i] = int_2d(q_vec, p_vec, W[:, :, i] .* W[:, :, 1])
+    end
+    # Normalise
+    return C ./ C[1]
+end
+
+function calc_probability(q, p, W, h)
+    """
+    Calculates the probability of finding the particle in a region of phase space
+    P = ∫∫ W(q, p) h(q, p) dq dp
+    """
+    return calc_wigner_o_expect(q, p, W, h)
 end
