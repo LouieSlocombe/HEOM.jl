@@ -152,7 +152,7 @@ function plot_wigner_wq_expectation(
     end
 
     # Calculate the expectation value
-    q_ex, _ = [calc_wigner_wqp_expect(q, p, W) for W in sol]
+    q_ex, _ = [calc_wigner_wqp_expect(q, p, sol[i]) for i in sol]
 
     # Plot Q
     fig = plot_general(
@@ -185,7 +185,7 @@ function plot_wigner_wp_expectation(
     end
 
     # Calculate the expectation value
-    _, p_ex = [calc_wigner_wqp_expect(q, p, W) for W in sol]
+    _, p_ex = [calc_wigner_wqp_expect(q, p, sol[i]) for i in sol]
 
     # Plot Q
     fig = plot_general(
@@ -215,7 +215,7 @@ function plot_wigner_normalisation(
     else
         tlab = latexstring("\\mathrm{Time}, t, [AUT]")
     end
-    norm = [int_2d(q, p, W) for W in sol]
+    norm = [int_2d(q, p, sol[i]) for i in sol]
     y_vals = [abs.(i - 1.0) for i in norm]
     replace!(y_vals, Inf => NaN)
     fig = plot_general(time_sim, y_vals, tlab, ylab)
