@@ -84,3 +84,52 @@ function animate_wigner_heatmap(
     os_display(fig)
     return fig
 end
+
+
+function plot_wigner_wq(
+    q, 
+    p, 
+    W,
+    qlab = latexstring("Q \\: \\left[\\alpha_0 \\right]"),
+    ylab = latexstring("\\int W \\left( q,p,t \\right) \\, dp"),
+    title = "wq_expectation.pdf",
+    yscale = :identity,
+    )
+
+    Wq, _ = calc_wigner_wqp(q, p, W)
+
+    # Plot Q
+    fig = plot_general(
+        q,
+        Wq,
+        qlab,
+        ylab,
+    )
+    fig = plot!(fig, yscale=yscale)
+    os_display(fig)
+    savefig(fig, joinpath(plot_dump, title))
+    return fig
+end
+
+function plot_wigner_wp(
+    q, 
+    p, 
+    W,
+    plab = latexstring("P \\: \\left[\\alpha_0 \\right]"),
+    ylab = latexstring("\\int W \\left( q,p,t \\right) \\, dq"),
+    title = "wp_expectation.pdf",
+    )
+
+    _, Wp = calc_wigner_wqp(q, p, W)
+
+    # Plot P
+    fig = plot_general(
+        p,
+        Wp,
+        plab,
+        ylab,
+    )
+    fig = plot!(fig, yscale=yscale)
+    os_display(fig)
+    savefig(fig, joinpath(plot_dump, title))
+end
