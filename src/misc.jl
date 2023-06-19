@@ -48,6 +48,7 @@ function plot_general(x, y, xlab, ylab)
         linecolor=:black,
         xlabel=xlab,
         ylabel=ylab,
+        left_margin=2Plots.mm
     )
     return p
 end

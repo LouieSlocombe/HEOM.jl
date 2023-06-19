@@ -2,10 +2,8 @@ function w0_thermal(q, p, v, mass, beta)
     """
     Calculates the Wigner function for a thermal state
     """
-    # Make square grid
-    P = repeat(reshape(p, 1, :), length(q), 1)
     # Calculate the classical Hamiltonian
-    ham = calc_classical_hamiltonian(P, v, mass)
+    ham = calc_classical_hamiltonian(p, v, mass)
     # Calculate the Wigner function
     W0 = @. exp(-beta * ham)
     # Normalise 

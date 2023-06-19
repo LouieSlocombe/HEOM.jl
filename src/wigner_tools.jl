@@ -93,21 +93,22 @@ function calc_wigner_entropy(q, p, W)
     return -int_2d(q, p, W_log)
 end
 
-function calc_classical_hamiltonian(P, v, mass)
+function calc_classical_hamiltonian(p, v, mass)
     """
     Calculates the classical Hamiltonian
     H = P^2 / (2m) + V
     """
+    P = repeat(reshape(p, 1, :), n, 1)
     return @. P^2 / (2.0 * mass) + v
 end
 
-function calc_wigner_energy_expect(q, p, P, v, mass, W)
+function calc_wigner_energy_expect(q, p, v, mass, W)
     """
     Calculates the energy expectation value
     <H> = ∫∫ W(q, p) H(q, p) dq dp
     """
     # Calculate the classical Hamiltonian
-    H = calc_classical_hamiltonian(P, v, mass)
+    H = calc_classical_hamiltonian(p, v, mass)
     # Calculate the expectation value
     return calc_wigner_o_expect(q, p, W, H)
 end
