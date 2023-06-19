@@ -174,7 +174,6 @@ function dq_fd!(du, u, d_dq)
     return mul!(du, d_dq, u)
 end
 
-
 function prepare_fd_dp(order, apx, dp, n)
     A = sparse(Array(CenteredDifference{1}(order, apx, dp, n)))
     A = A[1:end, 1:end.!=1]
@@ -185,4 +184,11 @@ end
 
 function dp_fd!(du, u, d_dp)
     return mul!(du, u, d_dp)
+end
+
+function derivative_1d_interp(x, y, order; k=5)
+    """
+    Calculates the derivative of a function using interpolation
+    """
+    return derivative(Spline1D(x, y; k=k, bc="extrapolate"), x; nu=order)
 end

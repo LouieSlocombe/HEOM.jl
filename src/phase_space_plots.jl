@@ -273,7 +273,7 @@ function plot_wigner_uncertainty_principle(
     f_units="SI",
     ylab=latexstring("\\mathrm{Uncertainty}, \\, \\sigma_{Q}\\sigma_{P}"),
     title="uncertainty_principle.pdf",
-    yscale=:identity,
+    yscale=:identity
 )
     # Get the time
     time_sim = sol.t
@@ -289,6 +289,67 @@ function plot_wigner_uncertainty_principle(
     uncert = [calc_wigner_uncertainty_principle(q, p, sol[i]) for i = 1:length(time_sim)]
 
     fig = plot_general(time_sim, uncert, tlab, ylab)
+    fig = plot!(fig, yscale=yscale)
+    os_display(fig)
+    savefig(fig, joinpath(plot_dump, title))
+    return fig
+end
+
+function plot_wigner_step_occupation(
+    q,
+    p,
+    q0,
+    sol;
+    f_units="SI",
+    ylab=latexstring("\\int \\int W \\hat{h} \\, dq dp"),
+    title="step_occupation.pdf",
+    yscale=:identity
+)
+    # Get the time
+    time_sim = sol.t
+    # Sort out the time saving
+    if f_units == "SI"
+        time_sim, prefix, _ = best_time_units(time_sim)
+        tlab = latexstring("\\mathrm{Time}, t, [$(prefix)s]")
+    else
+        tlab = latexstring("\\mathrm{Time}, t, [AUT]")
+    end
+
+    # Get the probability
+    prob = [calc_wigner_probability(q, p, q0, sol[i]) for i = 1:length(time_sim)]
+
+    fig = plot_general(time_sim, prob, tlab, ylab)
+    fig = plot!(fig, yscale=yscale)
+    os_display(fig)
+    savefig(fig, joinpath(plot_dump, title))
+    return fig
+end
+
+function plot_k_qm(
+    q,
+    p,
+    q0,
+    sol;
+    f_units="SI",
+    ylab=latexstring("\\int \\int W \\, \\hat{h} \\, dq \\, dp"),
+    title="step_occupation.pdf",
+    yscale=:identity
+)
+    # Get the time
+    time_sim = sol.t
+    # Sort out the time saving
+    if f_units == "SI"
+        time_sim, prefix, _ = best_time_units(time_sim)
+        tlab = latexstring("\\mathrm{Time}, t, [$(prefix)s]")
+    else
+        tlab = latexstring("\\mathrm{Time}, t, [AUT]")
+    end
+
+    # Get the probability flux
+    k_qm = calc_wigner_k_qm(q, p, q0, sol)
+
+    # Plot
+    fig = plot_general(time_sim, k_qm, tlab, ylab)
     fig = plot!(fig, yscale=yscale)
     os_display(fig)
     savefig(fig, joinpath(plot_dump, title))
