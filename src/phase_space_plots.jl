@@ -118,6 +118,7 @@ function plot_wigner_wp(
     plab = latexstring("P \\: \\left[\\alpha_0 \\right]"),
     ylab = latexstring("\\int W \\left( q,p,t \\right) \\, dq"),
     title = "wp_expectation.pdf",
+    yscale = :identity,
     )
 
     _, Wp = calc_wigner_wqp(q, p, W)
