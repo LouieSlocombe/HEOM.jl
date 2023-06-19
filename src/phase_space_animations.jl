@@ -12,12 +12,11 @@ function animate_wigner_heatmap(
     """
     println("Animating wigner heatmap...")
     nt = length(sol.t)
-    z_vals = real.(sol)
+    z_vals = abs.(sol)
 
     # Get the min max range to fix the plot
-    z_max = maximum(z_vals)
-    z_min = minimum(z_vals)
-
+    z_max = maximum([maximum(z_vals[i]) for i = 2:nt])
+    z_min = minimum([minimum(z_vals[i]) for i = 2:nt])
 
     @time begin
         anim = @animate for i = 1:nt
@@ -57,7 +56,7 @@ function animate_wigner_wq(
     # Get the values
     Wq = [abs.(calc_wigner_wqp(q, p, sol[i])[1]) for i = 1:nt]
 
-    # # Get the maximum value for plotting
+    # Get the maximum value for plotting
     y_max = maximum([maximum(Wq[i]) for i = 2:nt])
     y_min = minimum([minimum(Wq[i]) for i = 2:nt])
 

@@ -15,7 +15,7 @@ function plot_wigner_heatmap(
     name="w_heatmap.pdf",
     title="",
     xlab=latexstring("Q \\: \\left[\\alpha_0 \\right]"),
-    ylab=latexstring("P \\: \\left[\\hbar / \\alpha_0 \\right]")
+    ylab=latexstring("P \\: \\left[\\hbar / \\alpha_0 \\right]"),
 )
     # Fix the axes
     w = permutedims(w, (2, 1))
