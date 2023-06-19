@@ -17,7 +17,7 @@ function animate_wigner_heatmap(
     # Get the min max range to fix the plot
     z_max = maximum(z_vals)
     z_min = minimum(z_vals)
-    
+
 
     @time begin
         anim = @animate for i = 1:nt
@@ -47,7 +47,7 @@ function animate_wigner_wq(
     sol;
     name="wq.gif",
     xlab=latexstring("Q \\: \\left[\\alpha_0 \\right]"),
-    ylab=latexstring("\\int W \\, dp"),
+    ylab=latexstring("Wq = \\int W \\, dp"),
     yscale=:identity
 )
     println("Animating Wq probability density...")
@@ -58,7 +58,7 @@ function animate_wigner_wq(
     Wq = [calc_wigner_wqp(q, p, sol[i])[1] for i = 1:nt]
 
     # Get the maximum value for plotting
-    y_max = maximum([maximum(Wq[i, :]) for i = 1:nt])
+    y_max = maximum([maximum(Wq[i]) for i = 1:nt])
     @time begin
         # Loop over time
         anim = @animate for i = 1:nt
@@ -86,7 +86,7 @@ function animate_wigner_wp(
     sol;
     name="wp.gif",
     xlab=latexstring("Q \\: \\left[\\alpha_0 \\right]"),
-    ylab=latexstring("\\int W \\, dq"),
+    ylab=latexstring("Wp = \\int W \\, dq"),
     yscale=:identity
 )
     println("Animating Wp probability density...")
@@ -97,7 +97,7 @@ function animate_wigner_wp(
     Wp = [calc_wigner_wqp(q, p, sol[i])[2] for i = 1:nt]
 
     # Get the maximum value for plotting
-    y_max = maximum([maximum(Wp[i, :]) for i = 1:nt])
+    y_max = maximum([maximum(Wp[i]) for i = 1:nt])
     @time begin
         # Loop over time
         anim = @animate for i = 1:nt
