@@ -84,4 +84,3 @@ function animate_wigner_heatmap(
     os_display(fig)
     return fig
 end
-
