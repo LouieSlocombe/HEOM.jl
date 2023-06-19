@@ -241,6 +241,7 @@ function plot_wigner_energy_expect(
     sol;
     name="energy_expect.pdf",
     f_units="SI",
+    yscale=:identity,
     ylab=latexstring(
         "\\mathrm{Energy \\; expectation}, \\; \\left< E(t)\\right>, \\; [E_\\mathrm{h}]",
     ))
@@ -271,7 +272,8 @@ function plot_wigner_uncertainty_principle(
     sol;
     f_units="SI",
     ylab=latexstring("\\mathrm{Uncertainty}, \\, \\sigma_{Q}\\sigma_{P}"),
-    title="uncertainty_principle.pdf"
+    title="uncertainty_principle.pdf",
+    yscale=:identity,
 )
     # Get the time
     time_sim = sol.t

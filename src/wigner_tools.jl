@@ -98,7 +98,7 @@ function calc_classical_hamiltonian(p, v, mass)
     Calculates the classical Hamiltonian
     H = P^2 / (2m) + V
     """
-    P = repeat(reshape(p, 1, :), n, 1)
+    P = repeat(reshape(p, 1, :), length(p), 1)
     return @. P^2 / (2.0 * mass) + v
 end
 
