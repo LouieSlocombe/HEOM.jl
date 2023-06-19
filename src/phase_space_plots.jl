@@ -46,7 +46,7 @@ function animate_wigner_heatmap(
     name="ani_wigner_heatmap.gif",
     title="",
     xlab=latexstring("Q \\: \\left[\\alpha_0 \\right]"),
-    ylab = latexstring("P \\: \\left[\\hbar / \\alpha_0 \\right]"),
+    ylab=latexstring("P \\: \\left[\\hbar / \\alpha_0 \\right]")
 )
     """
     Animate wigner function heatmap
@@ -85,16 +85,15 @@ function animate_wigner_heatmap(
     return fig
 end
 
-
 function plot_wigner_wq(
-    q, 
-    p, 
-    W,
-    qlab = latexstring("Q \\: \\left[\\alpha_0 \\right]"),
-    ylab = latexstring("\\int W \\left( q,p,t \\right) \\, dp"),
-    title = "wq_expectation.pdf",
-    yscale = :identity,
-    )
+    q,
+    p,
+    W;
+    qlab=latexstring("Q \\: \\left[\\alpha_0 \\right]"),
+    ylab=latexstring("\\int W \\, dp"),
+    title="wq_expectation.pdf",
+    yscale=:identity
+)
 
     Wq, _ = calc_wigner_wqp(q, p, W)
 
@@ -112,14 +111,14 @@ function plot_wigner_wq(
 end
 
 function plot_wigner_wp(
-    q, 
-    p, 
-    W,
-    plab = latexstring("P \\: \\left[\\alpha_0 \\right]"),
-    ylab = latexstring("\\int W \\left( q,p,t \\right) \\, dq"),
-    title = "wp_expectation.pdf",
-    yscale = :identity,
-    )
+    q,
+    p,
+    W;
+    plab=latexstring("P \\: \\left[\\hbar / \\alpha_0 \\right]"),
+    ylab=latexstring("\\int W \\, dq"),
+    title="wp_expectation.pdf",
+    yscale=:identity
+)
 
     _, Wp = calc_wigner_wqp(q, p, W)
 
@@ -133,4 +132,70 @@ function plot_wigner_wp(
     fig = plot!(fig, yscale=yscale)
     os_display(fig)
     savefig(fig, joinpath(plot_dump, title))
+end
+
+function plot_wigner_wq_expectation(
+    q,
+    p,
+    sol;
+    ylab=latexstring("\\int \\int W q \\, dp"),
+    title="wq_expectation_time.pdf",
+    yscale=:identity,
+    f_units="SI"
+)
+    time_sim = sol.t
+    if f_units == "SI"
+        time_sim, prefix, _ = best_time_units(time_sim)
+        tlab = latexstring("\\mathrm{Time}, t, [$(prefix)s]")
+    else
+        tlab = latexstring("\\mathrm{Time}, t, [AUT]")
+    end
+
+    # Calculate the expectation value
+    q_ex, _ = [calc_wigner_wqp_expect(q, p, W) for W in sol]
+
+    # Plot Q
+    fig = plot_general(
+        time_sim,
+        q_ex,
+        tlab,
+        ylab,
+    )
+    fig = plot!(fig, yscale=yscale)
+    os_display(fig)
+    savefig(fig, joinpath(plot_dump, title))
+    return fig
+end
+
+function plot_wigner_wp_expectation(
+    q,
+    p,
+    sol;
+    ylab=latexstring("\\int \\int W p \\, dp"),
+    title="wp_expectation_time.pdf",
+    yscale=:identity,
+    f_units="SI"
+)
+    time_sim = sol.t
+    if f_units == "SI"
+        time_sim, prefix, _ = best_time_units(time_sim)
+        tlab = latexstring("\\mathrm{Time}, t, [$(prefix)s]")
+    else
+        tlab = latexstring("\\mathrm{Time}, t, [AUT]")
+    end
+
+    # Calculate the expectation value
+    _, p_ex = [calc_wigner_wqp_expect(q, p, W) for W in sol]
+
+    # Plot Q
+    fig = plot_general(
+        time_sim,
+        p_ex,
+        tlab,
+        ylab,
+    )
+    fig = plot!(fig, yscale=yscale)
+    os_display(fig)
+    savefig(fig, joinpath(plot_dump, title))
+    return fig
 end

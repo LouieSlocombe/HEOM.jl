@@ -1,4 +1,27 @@
-function calculate_fwhm(x,y)
+function best_time_units(time)
+    prefix_name = ["mili-", "micro-", "nano-", "pico-", "femto-", "atto-"]
+    prefix_unit = ["m", L"\mu", "n", "p", "f", "a"]
+    prefix_amount = [1.0e-3, 1.0e-6, 1.0e-9, 1.0e-12, 1.0e-15, 1.0e-18]
+
+    # Convert to array and convert time from AUT to SI
+    time = Array(time) .* au_time
+
+    # Compare
+    max_time = maximum(time)
+    dif = @. abs(log10(max_time) - log10(prefix_amount))
+
+    # Pick best range
+    min_loc = argmin(dif)
+
+    prefix = prefix_unit[min_loc]
+    name = prefix_name[min_loc]
+    # Convert the new time
+    new_time = time ./ prefix_amount[min_loc]
+
+    return new_time, prefix, name
+end
+
+function calculate_fwhm(x, y)
     """
     Calculate the full width at half maximum of a curve
     """
