@@ -199,3 +199,28 @@ function plot_wigner_wp_expectation(
     savefig(fig, joinpath(plot_dump, title))
     return fig
 end
+
+function plot_wigner_normalisation(    
+    q,
+    p,
+    sol;
+    ylab=latexstring("\\int \\int W p \\, dp"),
+    title="wp_expectation_time.pdf",
+    yscale=:identity,
+    f_units="SI")
+    time_sim = sol.t
+    if f_units == "SI"
+        time_sim, prefix, _ = best_time_units(time_sim)
+        tlab = latexstring("\\mathrm{Time}, t, [$(prefix)s]")
+    else
+        tlab = latexstring("\\mathrm{Time}, t, [AUT]")
+    end
+    norm = [int_2d(q, p, W) for W in sol]
+    y_vals = [abs.(i - 1.0) for i in norm]
+    replace!(y_vals, Inf => NaN)
+    fig = plot_general(time_sim, y_vals, tlab, ylab)
+    fig = plot!(fig, yscale=yscale)
+    os_display(fig)
+    savefig(fig, joinpath(plot_dump, title))
+    return fig
+end
