@@ -55,23 +55,25 @@ function animate_wigner_wq(
     nt = length(time_sim)
 
     # Get the values
-    Wq = abs.([calc_wigner_wqp(q, p, sol[i])[1] for i = 1:nt])
+    Wq = [abs.(calc_wigner_wqp(q, p, sol[i])[1]) for i = 1:nt]
 
-    # Get the maximum value for plotting
-    y_max = maximum([maximum(Wq[i]) for i = 1:nt])
+    # # Get the maximum value for plotting
+    y_max = maximum([maximum(Wq[i]) for i = 2:nt])
+    y_min = minimum([minimum(Wq[i]) for i = 2:nt])
+
     @time begin
         # Loop over time
         anim = @animate for i = 1:nt
             plot(
                 q,
                 Wq[i, :],
-                ylims=(0, y_max),
+                ylims=(y_min, y_max),
                 lw=2,
                 xlabel=xlab,
                 ylabel=ylab,
                 legend=false,
                 linecolor=:black,
-                yscale=yscale
+                yscale=yscale,
             )
         end
         fig = gif(anim, joinpath(plot_dump, name), fps=60)
@@ -94,23 +96,25 @@ function animate_wigner_wp(
     nt = length(time_sim)
 
     # Get the values
-    Wp = abs.([calc_wigner_wqp(q, p, sol[i])[2] for i = 1:nt])
+    Wp = [abs.(calc_wigner_wqp(q, p, sol[i])[2]) for i = 1:nt]
 
     # Get the maximum value for plotting
-    y_max = maximum([maximum(Wp[i]) for i = 1:nt])
+    y_max = maximum([maximum(Wp[i]) for i = 2:nt])
+    y_min = minimum([minimum(Wp[i]) for i = 2:nt])
+
     @time begin
         # Loop over time
         anim = @animate for i = 1:nt
             plot(
                 q,
                 Wp[i, :],
-                ylims=(0, y_max),
+                ylims=(y_min, y_max),
                 lw=2,
                 xlabel=xlab,
                 ylabel=ylab,
                 legend=false,
                 linecolor=:black,
-                yscale=yscale
+                yscale=yscale,
             )
         end
         fig = gif(anim, joinpath(plot_dump, name), fps=60)
