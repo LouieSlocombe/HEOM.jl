@@ -45,8 +45,8 @@ function animate_wigner_heatmap(
     time=nothing,
     name="ani_wigner_heatmap.gif",
     title="",
-    xlab=latexstring("Q \\: \\left[\\alpha_0 \\right]")
-    ylab = latexstring("P \\: \\left[\\hbar / \\alpha_0 \\right]")
+    xlab=latexstring("Q \\: \\left[\\alpha_0 \\right]"),
+    ylab = latexstring("P \\: \\left[\\hbar / \\alpha_0 \\right]"),
 )
     """
     Animate wigner function heatmap
