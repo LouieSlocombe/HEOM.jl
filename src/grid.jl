@@ -18,7 +18,7 @@ function create_basis(n, ql, qh, pl, ph)
     # Make vectors
     q_vec = range(start=ql, stop=qh, length=n) |> Array
     p_vec = range(start=pl, stop=ph, length=n) |> Array
-    
+
     # Calculate the step size
     dq = q_vec[2] - q_vec[1]
     dp = p_vec[2] - p_vec[1]
