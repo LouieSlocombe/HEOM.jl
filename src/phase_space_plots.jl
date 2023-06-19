@@ -157,10 +157,11 @@ function plot_wigner_normalisation(
     q,
     p,
     sol;
-    ylab=latexstring("L_{2} \\; \\mathrm{Norm. \\: error}")
-    title = "wp_expectation_time.pdf",
+    ylab=latexstring("L_{2} \\; \\mathrm{Norm. \\: error}"),
+    title="wp_expectation_time.pdf",
     yscale=:identity,
-    f_units="SI")
+    f_units="SI"
+)
     time_sim = sol.t
     if f_units == "SI"
         time_sim, prefix, _ = best_time_units(time_sim)
@@ -185,7 +186,8 @@ function plot_wigner_purity(
     name="wigner_purity.pdf",
     f_units="SI",
     yscale=:identity,
-    ylab=latexstring("\\mathrm{Purity} \\: \\mathcal{P}")
+    ylab=latexstring("\\mathrm{Purity} \\: \\mathcal{P}",
+    )
 )
     # Get the time
     time_sim = sol.t
