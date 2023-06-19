@@ -26,6 +26,9 @@ include("central_finite_differences.jl")
 # Functions for plotting in phase space
 include("phase_space_plots.jl")
 
+# Functions for animating phase space in time
+include("phase_space_animations.jl")
+
 # Functions for symbolic utilities
 include("symbolic_utils.jl")
 
