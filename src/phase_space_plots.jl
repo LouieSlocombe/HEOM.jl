@@ -158,7 +158,7 @@ function plot_wigner_normalisation(
     p,
     sol;
     ylab=latexstring("L_{2} \\; \\mathrm{Norm. \\: error}"),
-    title="wp_expectation_time.pdf",
+    title="norm_error.pdf",
     yscale=:identity,
     f_units="SI"
 )
