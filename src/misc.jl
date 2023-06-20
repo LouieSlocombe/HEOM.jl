@@ -70,3 +70,11 @@ function logspace(x1, x2, n)
         collect((10^y for y in range(log10(x1), log10(x2), length=Int(n)))),
     )
 end
+
+function printout(x)
+    """
+    Flushes out print statements so that they are seen on clusters
+    """
+    println(x)
+    flush(stdout)
+end

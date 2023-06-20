@@ -332,7 +332,7 @@ function plot_k_qm(
     sol;
     f_units="SI",
     ylab=latexstring("\\int \\int W \\, \\hat{h} \\, dq \\, dp"),
-    title="step_occupation.pdf",
+    title="k_qm.pdf",
     yscale=:identity
 )
     # Get the time
