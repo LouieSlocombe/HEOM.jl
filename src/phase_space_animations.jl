@@ -116,7 +116,7 @@ function animate_wigner_wp(
         # Loop over time
         anim = @animate for i = 1:nt
             plot(
-                q,
+                p,
                 Wp[i, :],
                 ylims=(y_min, y_max),
                 lw=2,
