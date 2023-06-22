@@ -211,9 +211,8 @@ function plot_wigner_purity(
     name="wigner_purity.pdf",
     f_units="SI",
     yscale=:identity,
-    ylab=latexstring("\\mathrm{Purity} \\: \\mathcal{P}",
-        dir=nothing
-    )
+    ylab=latexstring("\\mathrm{Purity} \\: \\mathcal{P}"),
+    dir=nothing
 )
     # Get the time
     time_sim = sol.t
