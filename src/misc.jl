@@ -78,3 +78,16 @@ function printout(x)
     println(x)
     flush(stdout)
 end
+
+function calc_classical_rate(dG, T)
+    """
+    Calculates the classical rate
+    k_cl = k_b T / h_bar * exp(-dG / (k_b T))
+    dG: Barrier height in Hartree
+    temperature: Temperature in Kelvin
+    """
+    # Si k_b used here so that the [s] units is in SI not AUT
+    pre_term = @. (si_k_b * T) / (2.0 * pi * si_h_bar)
+    # Put it all together, Hartree k_b used here to cancel with E (Hartree)
+    return @. pre_term * exp(-dG / (k_b * T))
+end
