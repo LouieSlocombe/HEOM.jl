@@ -16,6 +16,7 @@ function plot_wigner_heatmap(
     title="",
     xlab=latexstring("Q \\: \\left[\\alpha_0 \\right]"),
     ylab=latexstring("P \\: \\left[\\hbar / \\alpha_0 \\right]"),
+    dir=nothing
 )
     # Fix the axes
     w = permutedims(w, (2, 1))
@@ -33,7 +34,11 @@ function plot_wigner_heatmap(
         right_margin=10.0Plots.mm,
     )
     # Save the figure
-    savefig(fig, joinpath(plot_dump, name))
+    if dir === nothing
+        savefig(fig, joinpath(plot_dump, name))
+    else
+        savefig(fig, joinpath(dir, name))
+    end
     os_display(fig)
     return fig
 end
@@ -44,8 +49,9 @@ function plot_wigner_wq(
     W;
     qlab=latexstring("Q \\: \\left[\\alpha_0 \\right]"),
     ylab=latexstring("\\int W \\, dp"),
-    title="wq_expectation.pdf",
-    yscale=:identity
+    name="wq_expectation.pdf",
+    yscale=:identity,
+    dir=nothing
 )
 
     Wq, _ = calc_wigner_wqp(q, p, W)
@@ -58,8 +64,12 @@ function plot_wigner_wq(
         ylab,
     )
     fig = plot!(fig, yscale=yscale)
+    if dir === nothing
+        savefig(fig, joinpath(plot_dump, name))
+    else
+        savefig(fig, joinpath(dir, name))
+    end
     os_display(fig)
-    savefig(fig, joinpath(plot_dump, title))
     return fig
 end
 
@@ -69,8 +79,9 @@ function plot_wigner_wp(
     W;
     plab=latexstring("P \\: \\left[\\hbar / \\alpha_0 \\right]"),
     ylab=latexstring("\\int W \\, dq"),
-    title="wp_expectation.pdf",
-    yscale=:identity
+    name="wp_expectation.pdf",
+    yscale=:identity,
+    dir=nothing
 )
 
     _, Wp = calc_wigner_wqp(q, p, W)
@@ -83,8 +94,12 @@ function plot_wigner_wp(
         ylab,
     )
     fig = plot!(fig, yscale=yscale)
+    if dir === nothing
+        savefig(fig, joinpath(plot_dump, name))
+    else
+        savefig(fig, joinpath(dir, name))
+    end
     os_display(fig)
-    savefig(fig, joinpath(plot_dump, title))
 end
 
 function plot_wigner_wq_expectation(
@@ -125,9 +140,10 @@ function plot_wigner_wp_expectation(
     p,
     sol;
     ylab=latexstring("\\int \\int W p \\, dq dp"),
-    title="wp_expectation_time.pdf",
+    name="wp_expectation_time.pdf",
     yscale=:identity,
-    f_units="SI"
+    f_units="SI",
+    dir=nothing
 )
     time_sim = sol.t
     if f_units == "SI"
@@ -148,8 +164,12 @@ function plot_wigner_wp_expectation(
         ylab,
     )
     fig = plot!(fig, yscale=yscale)
+    if dir === nothing
+        savefig(fig, joinpath(plot_dump, name))
+    else
+        savefig(fig, joinpath(dir, name))
+    end
     os_display(fig)
-    savefig(fig, joinpath(plot_dump, title))
     return fig
 end
 
@@ -158,9 +178,10 @@ function plot_wigner_normalisation(
     p,
     sol;
     ylab=latexstring("L_{2} \\; \\mathrm{Norm. \\: error}"),
-    title="norm_error.pdf",
+    name="norm_error.pdf",
     yscale=:identity,
-    f_units="SI"
+    f_units="SI",
+    dir=nothing
 )
     time_sim = sol.t
     if f_units == "SI"
@@ -174,8 +195,12 @@ function plot_wigner_normalisation(
     replace!(y_vals, Inf => NaN)
     fig = plot_general(time_sim, y_vals, tlab, ylab)
     fig = plot!(fig, yscale=yscale)
+    if dir === nothing
+        savefig(fig, joinpath(plot_dump, name))
+    else
+        savefig(fig, joinpath(dir, name))
+    end
     os_display(fig)
-    savefig(fig, joinpath(plot_dump, title))
     return fig
 end
 
@@ -187,6 +212,7 @@ function plot_wigner_purity(
     f_units="SI",
     yscale=:identity,
     ylab=latexstring("\\mathrm{Purity} \\: \\mathcal{P}",
+        dir=nothing
     )
 )
     # Get the time
@@ -202,7 +228,11 @@ function plot_wigner_purity(
 
     fig = plot_general(time_sim, purity, tlab, ylab)
     fig = plot!(fig, yscale=yscale)
-    savefig(fig, joinpath(plot_dump, name))
+    if dir === nothing
+        savefig(fig, joinpath(plot_dump, name))
+    else
+        savefig(fig, joinpath(dir, name))
+    end
     os_display(fig)
     return fig
 end
@@ -214,7 +244,8 @@ function plot_wigner_s2_entropy(
     name="s2_entropy.pdf",
     f_units="SI",
     ylab=latexstring("\\mathrm{Entropy} \\, S_{2}"),
-    yscale=:identity
+    yscale=:identity,
+    dir=nothing
 )
     # Get the time
     time_sim = sol.t
@@ -228,7 +259,11 @@ function plot_wigner_s2_entropy(
 
     fig = plot_general(time_sim, s2_entropy, tlab, ylab)
     fig = plot!(fig, yscale=yscale)
-    savefig(fig, joinpath(plot_dump, name))
+    if dir === nothing
+        savefig(fig, joinpath(plot_dump, name))
+    else
+        savefig(fig, joinpath(dir, name))
+    end
     os_display(fig)
     return fig
 end
@@ -244,7 +279,9 @@ function plot_wigner_energy_expect(
     yscale=:identity,
     ylab=latexstring(
         "\\mathrm{Energy \\; expectation}, \\; \\left< E(t)\\right>, \\; [E_\\mathrm{h}]",
-    ))
+    ),
+    dir=nothing
+)
 
     # Get the time
     time_sim = sol.t
@@ -261,7 +298,11 @@ function plot_wigner_energy_expect(
     # Plot them
     fig = plot_general(time_sim, e_expect, tlab, ylab)
     fig = plot!(fig, yscale=yscale)
-    savefig(fig, joinpath(plot_dump, name))
+    if dir === nothing
+        savefig(fig, joinpath(plot_dump, name))
+    else
+        savefig(fig, joinpath(dir, name))
+    end
     os_display(fig)
     return fig
 end
@@ -273,7 +314,8 @@ function plot_wigner_uncertainty_principle(
     f_units="SI",
     ylab=latexstring("\\mathrm{Uncertainty}, \\, \\sigma_{Q}\\sigma_{P}"),
     title="uncertainty_principle.pdf",
-    yscale=:identity
+    yscale=:identity,
+    dir=nothing
 )
     # Get the time
     time_sim = sol.t
@@ -290,8 +332,12 @@ function plot_wigner_uncertainty_principle(
 
     fig = plot_general(time_sim, uncert, tlab, ylab)
     fig = plot!(fig, yscale=yscale)
+    if dir === nothing
+        savefig(fig, joinpath(plot_dump, title))
+    else
+        savefig(fig, joinpath(dir, title))
+    end
     os_display(fig)
-    savefig(fig, joinpath(plot_dump, title))
     return fig
 end
 
@@ -302,8 +348,9 @@ function plot_wigner_step_occupation(
     sol;
     f_units="SI",
     ylab=latexstring("\\int \\int W \\hat{h} \\, dq dp"),
-    title="step_occupation.pdf",
-    yscale=:identity
+    name="step_occupation.pdf",
+    yscale=:identity,
+    dir=nothing
 )
     # Get the time
     time_sim = sol.t
@@ -320,8 +367,12 @@ function plot_wigner_step_occupation(
 
     fig = plot_general(time_sim, prob, tlab, ylab)
     fig = plot!(fig, yscale=yscale)
+    if dir === nothing
+        savefig(fig, joinpath(plot_dump, name))
+    else
+        savefig(fig, joinpath(dir, name))
+    end
     os_display(fig)
-    savefig(fig, joinpath(plot_dump, title))
     return fig
 end
 
@@ -332,8 +383,9 @@ function plot_k_qm(
     sol;
     f_units="SI",
     ylab=latexstring("\\int \\int W \\, \\hat{h} \\, dq \\, dp"),
-    title="k_qm.pdf",
-    yscale=:identity
+    name="k_qm.pdf",
+    yscale=:identity,
+    dir=nothing
 )
     # Get the time
     time_sim = sol.t
@@ -351,7 +403,11 @@ function plot_k_qm(
     # Plot
     fig = plot_general(time_sim, k_qm, tlab, ylab)
     fig = plot!(fig, yscale=yscale)
+    if dir === nothing
+        savefig(fig, joinpath(plot_dump, name))
+    else
+        savefig(fig, joinpath(dir, name))
+    end
     os_display(fig)
-    savefig(fig, joinpath(plot_dump, title))
     return fig
 end

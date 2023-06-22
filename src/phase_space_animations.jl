@@ -5,7 +5,8 @@ function animate_wigner_heatmap(
     name="ani_wigner_heatmap.gif",
     title="",
     xlab=latexstring("Q \\: \\left[\\alpha_0 \\right]"),
-    ylab=latexstring("P \\: \\left[\\hbar / \\alpha_0 \\right]")
+    ylab=latexstring("P \\: \\left[\\hbar / \\alpha_0 \\right]"),
+    dir=nothing
 )
     """
     Animate wigner function heatmap
@@ -34,7 +35,11 @@ function animate_wigner_heatmap(
                 right_margin=10.0Plots.mm,
             )
         end
-        fig = gif(anim, joinpath(plot_dump, name), fps=60)
+        if dir === nothing
+            fig = gif(anim, joinpath(plot_dump, name), fps=60)
+        else
+            fig = gif(anim, joinpath(dir, name), fps=60)
+        end
     end
     os_display(fig)
     return fig
@@ -47,7 +52,8 @@ function animate_wigner_wq(
     name="wq.gif",
     xlab=latexstring("Q \\: \\left[\\alpha_0 \\right]"),
     ylab=latexstring("Wq = \\int W \\, dp"),
-    yscale=:identity
+    yscale=:identity,
+    dir=nothing
 )
     println("Animating Wq probability density...")
     time_sim = sol.t
@@ -75,7 +81,11 @@ function animate_wigner_wq(
                 yscale=yscale,
             )
         end
-        fig = gif(anim, joinpath(plot_dump, name), fps=60)
+        if dir === nothing
+            fig = gif(anim, joinpath(plot_dump, name), fps=60)
+        else
+            fig = gif(anim, joinpath(dir, name), fps=60)
+        end
     end
     os_display(fig)
     return fig
@@ -88,7 +98,8 @@ function animate_wigner_wp(
     name="wp.gif",
     xlab=latexstring("Q \\: \\left[\\alpha_0 \\right]"),
     ylab=latexstring("Wp = \\int W \\, dq"),
-    yscale=:identity
+    yscale=:identity,
+    dir=nothing
 )
     println("Animating Wp probability density...")
     time_sim = sol.t
@@ -116,7 +127,11 @@ function animate_wigner_wp(
                 yscale=yscale,
             )
         end
-        fig = gif(anim, joinpath(plot_dump, name), fps=60)
+        if dir === nothing
+            fig = gif(anim, joinpath(plot_dump, name), fps=60)
+        else
+            fig = gif(anim, joinpath(dir, name), fps=60)
+        end
     end
     os_display(fig)
     return fig
