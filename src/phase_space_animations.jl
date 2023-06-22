@@ -96,7 +96,7 @@ function animate_wigner_wp(
     p,
     sol;
     name="wp.gif",
-    xlab=latexstring("Q \\: \\left[\\alpha_0 \\right]"),
+    xlab=latexstring("P \\: \\left[\\hbar / \\alpha_0 \\right]"),
     ylab=latexstring("Wp = \\int W \\, dq"),
     yscale=:identity,
     dir=nothing
