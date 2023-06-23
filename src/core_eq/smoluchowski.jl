@@ -756,20 +756,8 @@ function calc_QSE_reactive_correlation(q_vec, sol, v; f_renorm=false, k=5)
         k=k
     )
 
-    if dN_t[end] < eps(eltype(dN_t[end])) * 10.0
-        printout("WARNING: probability lower than eps")
-        T = DF.Double64
-        convert.(T, time)
-        convert.(T, dN_t)
-        # Take the first derivative
-        der = derivative_1d_interp(time, dN_t, 1)
-        der[1] = der[2]
-        der[end] = der[end-1]
-    else
-        # Take the first derivative
-        der = derivative_1d_interp(time, dN_t, 1; k=k)
-    end
-    return der
+    # Take the first derivative
+    return derivative_1d_interp(time, dN_t, 1; k=k)
 end
 
 function calc_QSE_reactive_correlation_eq(
