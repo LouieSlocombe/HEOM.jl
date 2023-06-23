@@ -62,6 +62,12 @@ include("initial_conditions.jl")
 # Misc functions
 include("misc.jl")
 
+# Smoluchowski equation
+include("core_eq/smoluchowski.jl")
+
+# QSE limit plotting
+include("smoluchowski_plot.jl")
+
 export HEOM
 
 end
