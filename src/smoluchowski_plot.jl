@@ -20,14 +20,14 @@ function plot_QSE_normalisation(
     # Loop over the time series
     y_vals = [abs.(i - 1.0) for i in norm]
     replace!(y_vals, Inf => NaN)
-    p = plot_general(time, y_vals, tlab, ylab)
-    os_display(p)
+    fig = plot_general(time, y_vals, tlab, ylab)
     if dir === nothing
         savefig(fig, joinpath(plot_dump, name))
     else
         savefig(fig, joinpath(dir, name))
     end
-    return p
+    os_display(fig)
+    return fig
 end
 
 function plot_QSE_normalisation_log(
@@ -52,30 +52,30 @@ function plot_QSE_normalisation_log(
     # Loop over the time series
     y_vals = log10.([abs.(i - 1.0) for i in norm])
     replace!(y_vals, Inf => NaN)
-    p = plot_general(time, y_vals, tlab, ylab)
-    os_display(p)
+    fig = plot_general(time, y_vals, tlab, ylab)
     if dir === nothing
         savefig(fig, joinpath(plot_dump, name))
     else
         savefig(fig, joinpath(dir, name))
     end
-    return p
+    os_display(fig)
+    return fig
 end
 
 function plot_QSE_P(q_vec, P; name="Pq.pdf", dir=nothing)
-    p = plot_general(
+    fig = plot_general(
         q_vec,
         P,
         latexstring("Q \\: \\left[\\alpha_0 \\right]"),
         "P(q)",
     )
-    os_display(p)
     if dir === nothing
         savefig(fig, joinpath(plot_dump, name))
     else
         savefig(fig, joinpath(dir, name))
     end
-    return
+    os_display(fig)
+    return fig
 end
 
 function plot_QSE_P_log(q_vec, P; name="Pq.pdf", max_y_min=-20, dir=nothing)
@@ -89,7 +89,7 @@ function plot_QSE_P_log(q_vec, P; name="Pq.pdf", max_y_min=-20, dir=nothing)
         y_min = max_y_min
     end
 
-    p = plot(
+    fig = plot(
         q_vec,
         y_vals,
         ylims=(y_min, y_max),
@@ -99,13 +99,14 @@ function plot_QSE_P_log(q_vec, P; name="Pq.pdf", max_y_min=-20, dir=nothing)
         legend=false,
         linecolor=:black,
     )
-    os_display(p)
+
     if dir === nothing
         savefig(fig, joinpath(plot_dump, name))
     else
         savefig(fig, joinpath(dir, name))
     end
-    return
+    os_display(fig)
+    return fig
 end
 
 function plot_QSE_k_qm(time, k_qm; f_name="k_qm.pdf", dir=nothing)
@@ -113,13 +114,14 @@ function plot_QSE_k_qm(time, k_qm; f_name="k_qm.pdf", dir=nothing)
     time, prefix, name = best_time_units(time)
     t_lab = latexstring("\\mathrm{Time}, t, [$(prefix)s]")
     y_lab = latexstring("k_{\\mathrm{qm}}")
-    p = plot_general(time, k_qm, t_lab, y_lab)
+    fig = plot_general(time, k_qm, t_lab, y_lab)
     if dir === nothing
         savefig(fig, joinpath(plot_dump, name))
     else
         savefig(fig, joinpath(dir, name))
     end
-    os_display(p)
+    os_display(fig)
+    return fig
 end
 
 function plot_QSE_error_compare(
@@ -153,7 +155,7 @@ function plot_QSE_error_compare(
     replace!(prob, Inf => NaN)
 
     # Plot
-    p = plot(
+    fig = plot(
         time,
         error,
         xlabel=tlab,
@@ -162,15 +164,15 @@ function plot_QSE_error_compare(
         linecolor=:red,
         lw=3,
     )
-    p = plot!(time, prob, linecolor=:black, label="prob", lw=3)
-    p = plot!(legend=:bottomright)
-    os_display(p)
+    fig = plot!(time, prob, linecolor=:black, label="prob", lw=3)
+    fig = plot!(legend=:bottomright)
     if dir === nothing
         savefig(fig, joinpath(plot_dump, name))
     else
         savefig(fig, joinpath(dir, name))
     end
-    return p
+    os_display(fig)
+    return fig
 end
 
 function plot_QSE_error_ratio(
@@ -204,14 +206,15 @@ function plot_QSE_error_ratio(
     replace!(ratio, Inf => NaN)
 
     # Plot
-    p = plot_general(time, ratio, tlab, ylab)
-    os_display(p)
+    fig = plot_general(time, ratio, tlab, ylab)
+
     if dir === nothing
         savefig(fig, joinpath(plot_dump, name))
     else
         savefig(fig, joinpath(dir, name))
     end
-    return p
+    os_display(fig)
+    return fig
 end
 
 function plot_QSE_low_temp_terms(
@@ -303,7 +306,7 @@ function plot_QSE_low_temp_terms(
 
 
     # Small d terms
-    p = plot(
+    fig = plot(
         q_vec,
         d_0_val,
         xlabel=x_lab,
@@ -311,12 +314,12 @@ function plot_QSE_low_temp_terms(
         label="d_0",
         lw=3,
     )
-    p = plot!(p, q_vec, d_1_val, label="d_1", lw=3)
-    p = plot!(p, q_vec, d_2_val, label="d_2", lw=3, ylims=d_lim)
-    os_display(p)
+    fig = plot!(fig, q_vec, d_1_val, label="d_1", lw=3)
+    fig = plot!(fig, q_vec, d_2_val, label="d_2", lw=3, ylims=d_lim)
+    os_display(fig)
 
     # Big D1 terms
-    p = plot(
+    fig = plot(
         q_vec,
         D1_0_val,
         xlabel=x_lab,
@@ -324,12 +327,12 @@ function plot_QSE_low_temp_terms(
         label="D1_0",
         lw=3,
     )
-    p = plot!(p, q_vec, D1_1_val, label="D1_1", lw=3)
-    p = plot!(p, q_vec, D1_2_val, label="D1_2", lw=3, ylims=D1_lim)
-    os_display(p)
+    fig = plot!(fig, q_vec, D1_1_val, label="D1_1", lw=3)
+    fig = plot!(fig, q_vec, D1_2_val, label="D1_2", lw=3, ylims=D1_lim)
+    os_display(fig)
 
     # Big D2 terms
-    p = plot(
+    fig = plot(
         q_vec,
         D2_0_val,
         xlabel=x_lab,
@@ -337,9 +340,9 @@ function plot_QSE_low_temp_terms(
         label="D2_0",
         lw=3,
     )
-    p = plot!(p, q_vec, D2_1_val, label="D2_1", lw=3)
-    p = plot!(p, q_vec, D2_2_val, label="D2_2", lw=3, ylims=D2_lim)
+    fig = plot!(fig, q_vec, D2_1_val, label="D2_1", lw=3)
+    fig = plot!(fig, q_vec, D2_2_val, label="D2_2", lw=3, ylims=D2_lim)
     D2_00 = QSE_d2_00(q_vec, v_vec, temperature, gamma, mass)
-    p = plot!(p, q_vec, D2_00, label="D2_00", lw=3, ylims=D2_lim)
-    os_display(p)
+    fig = plot!(fig, q_vec, D2_00, label="D2_00", lw=3, ylims=D2_lim)
+    os_display(fig)
 end

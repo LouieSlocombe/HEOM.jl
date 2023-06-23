@@ -25,8 +25,8 @@ function animate_QSE_P(q_vec, solu, time; name="Pq.gif", dir=nothing)
             fig = gif(anim, joinpath(dir, name), fps=60)
         end
     end
-    os_display(p)
-    return p
+    os_display(fig)
+    return fig
 end
 
 function animate_QSE_P_log(
@@ -68,6 +68,6 @@ function animate_QSE_P_log(
             fig = gif(anim, joinpath(dir, name), fps=60)
         end
     end
-    os_display(p)
-    return p
+    os_display(fig)
+    return fig
 end
