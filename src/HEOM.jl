@@ -68,6 +68,9 @@ include("core_eq/smoluchowski.jl")
 # QSE limit plotting
 include("smoluchowski_plot.jl")
 
+# QSE limit animation
+include("smoluchowski_animation.jl")
+
 export HEOM
 
 end
