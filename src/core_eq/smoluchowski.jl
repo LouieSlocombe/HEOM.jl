@@ -6,7 +6,6 @@ function QSE_lambda(temperature, gamma, mass)
     lambda_apr = pre * log(x)
     # This is the exact value, this seems to be much larger than approx
     # lambda_apr = @. pre * (digamma(1 + x) + C_e)
-
     return lambda_apr
 end
 
@@ -133,15 +132,8 @@ function QSE_d1_2(q_vec, v, temperature, gamma, mass; k=5, f_approx=true)
     return @. dv1 * (1.0 + beta^2 / 4.0 * t1 * lambda^2)
 end
 
-function QSE_d2_00(q_vec, v, temperature, gamma, mass; f_low_t=false)
-    if f_low_t
-        # Find beta
-        omega_apr = determine_best_local_spring(mass, v, q_vec)
-        beta = 1.0 / low_temperature_correction(omega_apr, temperature)
-    else
-        beta = 1.0 / (k_b * temperature)
-    end
-
+function QSE_d2_00(q_vec, v, temperature, gamma, mass)
+    beta = 1.0 / (k_b * temperature)
     I = ones(length(v))
     return @. I / beta
 end
@@ -169,6 +161,7 @@ function QSE_d2_0(
     # Get second derivative
     dv2 = derivative_1d_interp(q_vec, v, 2; k=k)
 
+    # Approximate form
     if f_dutty
         rtn = @. 1.0 / beta * (1.0 + beta * dv2 * lambda)
     else
@@ -236,7 +229,6 @@ function QSE_low_temp_terms(
     mass;
     k=5,
     f_approx=true,
-    f_low_t=false,
     f_dutty=true
 )
     if order == 0
@@ -311,7 +303,7 @@ function QSE_low_temp_terms(
     else
         d = QSE_d_0(q_vec, v, temperature, gamma, mass)
         D1 = QSE_d1_0(q_vec, v, temperature, gamma, mass; k=k)
-        D2 = QSE_d2_00(q_vec, v, temperature, gamma, mass; f_low_t=f_low_t)
+        D2 = QSE_d2_00(q_vec, v, temperature, gamma, mass)
     end
     return d, D1, D2
 end
@@ -320,18 +312,11 @@ function convert_W_to_W_q(q_vec, p_vec, W)
     """
     Converts wigner distro to W_q by integrating over momentum
     """
-    W = real.(W)
-
     # Get matrix size
     N = length(q_vec)
 
     # Find W_q
-    W_q = zeros(eltype(W), N)
-    for i = 1:N
-        W_q[i] = int_1d(p_vec, W[:, i])
-    end
-
-    return W_q
+    return [int_1d(p_vec, W[:, i]) for i = 1:N]
 end
 
 function QSE_normalise(q_vec, P; k=5)
@@ -343,22 +328,15 @@ end
 function QSE_thermal_distribution_wigner(
     q_vec,
     v,
-    temperature,
-    mass;
-    k=5,
-    f_low_t=false
+    temperature;
+    k=5
 )
     """
     2010[Maier] Quantum QSE equation a systematic study
     """
-    if f_low_t
-        # Find beta
-        omega_apr = determine_best_local_spring(mass, v, q_vec)
-        beta = @. 1.0 / low_temperature_correction(omega_apr, temperature)
-    else
-        beta = @. 1.0 / (k_b * temperature)
-    end
-
+    # Get the thermal energy
+    beta = @. 1.0 / (k_b * temperature)
+    # Get the thermal distribution
     P_ic = @. exp(-beta * v)
 
     # Normalise
@@ -831,9 +809,7 @@ function calc_QSE_reactive_correlation_eq(
     P_eq = QSE_thermal_distribution_wigner(
         q_vec,
         v,
-        temperature,
-        mass;
-        f_low_t=f_low_t
+        temperature
     )
 
     # Reactant and product partition functions
@@ -879,20 +855,14 @@ function calc_QSE_reactive_correlation_eq(
 
 end
 
-function prep_QSE(apx, q, v, mass, temperature, gamma; f_low_t=false)
+function prep_QSE(apx, q, v, mass, temperature, gamma)
     """
     Simple QSE
     """
     T = eltype(q)
 
     # Obtain the thermal energy
-    if f_low_t
-        # Find beta
-        omega_apr = determine_best_local_spring(mass, v, q)
-        beta = @. 1.0 / low_temperature_correction(omega_apr, temperature)
-    else
-        beta = @. 1.0 / (k_b * temperature)
-    end
+    beta = @. 1.0 / (k_b * temperature)
 
     # Calculate missing values
     dq = q[2] - q[1]
@@ -902,11 +872,8 @@ function prep_QSE(apx, q, v, mass, temperature, gamma; f_low_t=false)
     t1 = 1.0 / (mass * gamma)
     t2 = 1.0 / (mass * gamma * beta)
     # Make derivatives
-    d_dq = Array{T}(pde_fd(dq, N, 1, 2))
-    d_dq2 = Array{T}(pde_fd(dq, N, 2, 2))
-
-    # dq = derivative_fd_core(T, 1, apx, dq, N)
-    # dq2 = derivative_fd_core(T, 2, apx, dq, N)
+    d_dq = prepare_fd_dq(1, apx, dq, N)
+    d_dq2 = prepare_fd_dq(2, apx, dq, N)
 
     dP_dq = zeros(N)
     d2P_dq2 = zeros(N)
@@ -938,145 +905,6 @@ function QSE_eq!(du, u, p, t)
     mul!(p.d2P_dq2, p.d_dq2, u)
     # Put the equation together
     @. du = p.t1 * (p.dv2 * u + p.dv1 * p.dP_dq) + p.t2 * p.d2P_dq2
-end
-
-function prep_QSE_opp(apx, q, v, mass, temperature, gamma; f_low_t=false)
-    """
-    Uses DiffEqOperators
-    """
-    T = eltype(q)
-
-    # Obtain the thermal energy
-    if f_low_t
-        # Find beta
-        omega_apr = determine_best_local_spring(mass, v, q)
-        beta = @. 1.0 / low_temperature_correction(omega_apr, temperature)
-    else
-        beta = @. 1.0 / (k_b * temperature)
-    end
-
-    # Calculate missing values
-    dq = q[2] - q[1]
-    N = length(q)
-
-    # Calculate the terms
-    t1 = 1.0 / (mass * gamma)
-    t2 = 1.0 / (mass * gamma * beta)
-    # Make derivatives
-    d_dq = Array{T}(pde_fd(dq, N, 1, apx))
-    d_dq2 = Array{T}(pde_fd(dq, N, 2, apx))
-
-    dP_dq = zeros(N)
-    d2P_dq2 = zeros(N)
-
-    # Get the derivative of the potential
-    dv1 = derivative_1d_interp(q, v, 1)
-    dv2 = derivative_1d_interp(q, v, 2)
-
-    p = (
-        t1=t1,
-        t2=t2,
-        d_dq=d_dq,
-        dP_dq=dP_dq,
-        d_dq2=d_dq2,
-        d2P_dq2=d2P_dq2,
-        dv1=dv1,
-        dv2=dv2,
-    )
-    return p
-end
-
-function QSE_eq_opp(du, u, p, t)
-    """
-    Uses DiffEqOperators
-    """
-    # Calculate dP_dq
-    mul!(p.dP_dq, p.d_dq, u)
-    # Calculate d2P_dq2
-    mul!(p.d2P_dq2, p.d_dq2, u)
-    # Put the equation together
-    @. du = p.t1 * (p.dv2 * u + p.dv1 * p.dP_dq) + p.t2 * p.d2P_dq2
-end
-
-function prep_QSE_LT_opp(
-    apx,
-    q,
-    v,
-    mass,
-    temperature,
-    gamma,
-    order;
-    k=5,
-    f_approx=true,
-    f_low_t=false,
-    f_dutty=true
-)
-    """
-    Uses DiffEqOperators
-    """
-    T = eltype(q)
-
-    # Calculate missing values
-    dq = q[2] - q[1]
-    N = length(q)
-
-    # Calculate the terms
-    d, D1, D2 = QSE_low_temp_terms(
-        order,
-        q,
-        v,
-        temperature,
-        gamma,
-        mass;
-        k=k,
-        f_approx=f_approx,
-        f_low_t=f_low_t
-    )
-
-
-    # Make derivatives
-    d_dq = Array{T}(pde_fd(dq, N, 1, apx))
-    D1_P = zeros(T, N)
-    D2_P = zeros(T, N)
-    dD2P_dq = zeros(T, N)
-    inner = zeros(T, N)
-    dPinner_dq = zeros(T, N)
-
-    p = (
-        d=d,
-        D1=D1,
-        D2=D2,
-        d_dq=d_dq,
-        D1_P=D1_P,
-        D2_P=D2_P,
-        dD2P_dq=dD2P_dq,
-        inner=inner,
-        dPinner_dq=dPinner_dq,
-    )
-    return p
-end
-
-function QSE_LT_eq_opp(du, u, p, t)
-    """
-    Uses DiffEqOperators
-    """
-    # Calculate D2 P
-    @. p.D2_P = p.D2 * u
-
-    # Calculate derivative of (D2 P)
-    mul!(p.dD2P_dq, p.d_dq, p.D2_P)
-
-    # Calculate D1 P
-    @. p.D1_P = p.D1 * u
-
-    # Calculate inner
-    @. p.inner = p.d * (p.D1_P + p.dD2P_dq)
-
-    # Calculate derivative of inner
-    mul!(p.dPinner_dq, p.d_dq, p.inner)
-
-    # Put the equation together
-    @. du = p.dPinner_dq
 end
 
 function prep_QSE_LT_leading_o(
@@ -1115,7 +943,7 @@ function prep_QSE_LT_leading_o(
     outer = @. 1.0 / (mass * gamma)
 
     # Make derivatives
-    d_dq = Array{T}(pde_fd(dq, N, 1, apx))
+    d_dq = prepare_fd_dq(1, apx, dq, N)
     dP_dq = zeros(N)
     dv1_P = zeros(N)
     dPinner_dq = zeros(N)
@@ -1163,7 +991,7 @@ function QSE_check_limits(temperature, gamma, q, v, mass)
     printout("QSE low T limit: ħβω_0 ($(rnd(h_bar * beta *omega_0))) >> 1")
 end
 
-function q_correlation(q, v, temperature, mass, omega, gamma; f_low_t=true)
+function q_correlation(q, v, temperature, mass, omega, gamma)
     """
     <q^2> q - correlation function
 
@@ -1172,14 +1000,9 @@ function q_correlation(q, v, temperature, mass, omega, gamma; f_low_t=true)
     """
     beta = 1.0 / (k_b * temperature)
     omega_0 = determine_best_local_spring(mass, v, q)
-    if f_low_t
-        therm = @. coth(0.5 * beta * h_bar * omega)
-    else
-        therm = @. 2.0 / (beta * h_bar * omega)
-    end
+    therm = @. 2.0 / (beta * h_bar * omega)
     nom = @. gamma * omega_0^2 * omega
     denom = @. (omega_0^2 - omega^2)^2 + gamma^2 * omega^2
-
     return @. 0.5 * therm / omega_0 * nom / denom
 end
 
@@ -1189,7 +1012,6 @@ function harmonic_q2_anal(
     temperature,
     mass,
     gamma;
-    f_low_t=true,
     k=5,
     n=Int(1e5),
     omega_min=0.001,
@@ -1203,8 +1025,7 @@ function harmonic_q2_anal(
     """
     omega_0 = determine_best_local_spring(mass, v, q)
     omega = linspace(omega_0 * omega_min, omega_0 * omega_max, n)
-    q_corr =
-        q_correlation(q, v, temperature, mass, omega, gamma; f_low_t=f_low_t)
+    q_corr = q_correlation(q, v, temperature, mass, omega, gamma)
     return 2.0 / pi * int_1d(omega, q_corr; k=k)
 end
 
@@ -1214,7 +1035,6 @@ function QSE_thermal_distribution_harmonic(
     temperature,
     mass,
     gamma;
-    f_low_t=true,
     k=5,
     n=Int(1e5),
     omega_min=0.001,
@@ -1232,7 +1052,6 @@ function QSE_thermal_distribution_harmonic(
         temperature,
         mass,
         gamma;
-        f_low_t=f_low_t,
         k=k,
         n=n,
         omega_min=omega_min,
