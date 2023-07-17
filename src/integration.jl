@@ -25,8 +25,7 @@ function int_2d(
     x1=nothing,
     y0=nothing,
     y1=nothing,
-    kx=3,
-    ky=3
+    k=3,
 )
     """
     Perform numerical integration by doing a 2D spline then integrate
@@ -47,7 +46,7 @@ function int_2d(
     end
 
     # Interpolate
-    spl = Spline2D(x, y, z; kx=kx, ky=ky)
+    spl = Spline2D(x, y, z; kx=k, ky=k)
     # Intergrate
     return integrate(spl, x0, x1, y0, y1)
 end
