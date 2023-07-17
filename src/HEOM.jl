@@ -62,13 +62,16 @@ include("initial_conditions.jl")
 # Misc functions
 include("misc.jl")
 
-# Smoluchowski equation
+# Quantum Smoluchowski equation
 include("core_eq/smoluchowski.jl")
 
-# QSE limit plotting
+# Quantum Smoluchowski equation tools
+include("smoluchowski_tools.jl")
+
+# Quantum Smoluchowski equation plotting
 include("smoluchowski_plot.jl")
 
-# QSE limit animation
+# Quantum Smoluchowski equation animation
 include("smoluchowski_animation.jl")
 
 export HEOM
