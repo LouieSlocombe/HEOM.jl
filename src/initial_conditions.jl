@@ -22,7 +22,7 @@ function w0_thermal_step(q, p, v, mass, beta, q0)
     return wigner_normalise(q, p, W0)
 end
 
-function w0_gaussian(q, p, q0, p0, σ, ħ)
+function w0_gaussian(q, p, q0, p0, σ; ħ=h_bar)
     """
     Calculates the Wigner function for a Gaussian state
     """
