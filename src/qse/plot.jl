@@ -141,7 +141,7 @@ function plot_QSE_error_compare(
     if q0 == nothing
         p_p = calc_QSE_product_prob_loop(q_vec, solu, v, time)
     else
-        p_p = calc_qse_k_qm(q_vec, h_step, solu)
+        p_p = calc_qse_k_qm(q_vec, q0, solu)
     end
 
     if f_units == "SI"
