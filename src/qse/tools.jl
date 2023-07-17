@@ -264,3 +264,33 @@ function QSE_thermal_distribution_harmonic(
     # Normalise
     return QSE_normalise(q, P_ic; k=k)
 end
+
+function calc_qse_probability(q, q0, W; k=5)
+    """
+    Calculates the probability of finding the particle in a region
+    P = ∫∫ P(q) h_q0(q) dq
+    """
+    # Calculate the step function
+    h_q0 = step_function(q, W, q0)
+    # Calculate the probability
+    return int_1d(q, h_q0; k=k)
+end
+
+function calc_qse_k_qm(q, q0, sol; k=5)
+    """
+    Calculates the rate of change of the probability 
+    of finding the particle in a region of phase space
+    dP/dt = ∫∫ ∂W/∂t h_q0(q, p) dq dp
+    """
+    time = sol.t
+    # Get P(t)
+    solu = sol.u
+    # Calculate the occupation probability
+    dP_p = [calc_qse_probability(q, q0, solu[i]; k=k) for i = 1:length(time)]
+    # Calculate the rate of change
+    dP_p_dt = derivative_1d_interp(time, dP_p, 1; k=k)
+    #dP_p_dt = @. -dP_p_dt
+    # Prevent inf at zero
+    #dP_p_dt[1] = dP_p_dt[2]
+    return dP_p_dt
+end

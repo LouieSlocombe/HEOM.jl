@@ -148,7 +148,7 @@ function calc_wigner_autocorrelation(q, p, sol)
     return C ./ C[1]
 end
 
-function calc_wigner_probability(q, p, q0, W)
+function calc_wigner_probability(q, p, q0, W; k=5)
     """
     Calculates the probability of finding the particle in a region of phase space
     P = ∫∫ W(q, p) h_q0(q, p) dq dp
@@ -156,7 +156,7 @@ function calc_wigner_probability(q, p, q0, W)
     # Calculate the step function
     h_q0 = step_function(q, W, q0)
     # Calculate the probability
-    return int_2d(q, p, h_q0)
+    return int_2d(q, p, h_q0; k=k)
 end
 
 function calc_wigner_k_qm(q, p, q0, sol; k=5)
@@ -167,7 +167,7 @@ function calc_wigner_k_qm(q, p, q0, sol; k=5)
     """
     time = sol.t
     # Calculate the occupation probability
-    dP_p = [calc_wigner_probability(q, p, q0, sol[i]) for i = 1:length(time)]
+    dP_p = [calc_wigner_probability(q, p, q0, sol[i]; k=k) for i = 1:length(time)]
     # Calculate the rate of change
     dP_p_dt = derivative_1d_interp(time, dP_p, 1; k=k)
     #dP_p_dt = @. -dP_p_dt
