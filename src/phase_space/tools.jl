@@ -1,14 +1,14 @@
-function wigner_normalise(q, p, W)
+function wigner_normalise(q, p, W; k=5)
     """
     Normalise the Wigner function using the 2D integral
     """
     # Determine the norm
-    norm = int_2d(q, p, W)
+    norm = int_2d(q, p, W; k=k)
     # Divide by norm
     return W ./ norm
 end
 
-function calc_wigner_wqp(q, p, W)
+function calc_wigner_wqp(q, p, W; k=5)
     """
     Calculates the Wigner function in the q and p plane
     Wq(p) = ∫ W(q, p) dq
@@ -18,70 +18,70 @@ function calc_wigner_wqp(q, p, W)
     Nq = length(q)
     Np = length(p)
     # Find Wq
-    Wq = [int_1d(p, W[i, :]) for i = 1:Nq]
+    Wq = [int_1d(p, W[i, :]; k=k) for i = 1:Nq]
     # Find Wp
-    Wp = [int_1d(q, W[:, i]) for i = 1:Np]
+    Wp = [int_1d(q, W[:, i]; k=k) for i = 1:Np]
     return Wq, Wp
 end
 
-function calc_wigner_wqp_norm(q, p, W)
+function calc_wigner_wqp_norm(q, p, W; k=5)
     """
     Calculates the norm of the Wigner function in the q and p plane
     """
     # Find Wq and Wp
-    Wq, Wp = calc_wigner_wqp(q, p, W)
+    Wq, Wp = calc_wigner_wqp(q, p, W; k=k)
     # Calculate the norms
-    q_norm = int_1d(q, Wq)
-    p_norm = int_1d(p, Wp)
+    q_norm = int_1d(q, Wq; k=k)
+    p_norm = int_1d(p, Wp; k=k)
     return q_norm, p_norm
 end
 
-function calc_wigner_o_expect(q, p, W, O)
+function calc_wigner_o_expect(q, p, W, O; k=5)
     """
     Calculates the expecation value of an operator O
     <O> = ∫∫ W(q, p) O(q, p) dq dp
     """
     # Integrate over q and p
-    return int_2d(q, p, W .* O)
+    return int_2d(q, p, W .* O; k=k)
 end
 
-function calc_wigner_wqp_expect(q, p, W)
+function calc_wigner_wqp_expect(q, p, W; k=5)
     """
     Calculates the expectation value of q and p
     <q> = ∫∫ W(q, p) q dq dp
     <p> = ∫∫ W(q, p) p dq dp
     """
     # Calculate the expectation value
-    q_ex = calc_wigner_o_expect(q, p, W, q)
-    p_ex = calc_wigner_o_expect(q, p, W, p)
+    q_ex = calc_wigner_o_expect(q, p, W, q; k=k)
+    p_ex = calc_wigner_o_expect(q, p, W, p; k=k)
     return q_ex, p_ex
 end
 
-function calc_wigner_wqp2_expect(q, p, W)
+function calc_wigner_wqp2_expect(q, p, W; k=5)
     """
     Calculates the second moment of q and p
     <q^2> = ∫∫ W(q, p) q^2 dq dp
     <p^2> = ∫∫ W(q, p) p^2 dq dp
     """
     # Calculate the second moment
-    q2_ex = calc_wigner_o_expect(q, p, W, q .^ 2)
-    p2_ex = calc_wigner_o_expect(q, p, W, p .^ 2)
+    q2_ex = calc_wigner_o_expect(q, p, W, q .^ 2; k=k)
+    p2_ex = calc_wigner_o_expect(q, p, W, p .^ 2; k=k)
     return q2_ex, p2_ex
 end
 
-function calc_wigner_uncertainty_principle(q, p, W)
+function calc_wigner_uncertainty_principle(q, p, W; k=5)
     """
     Calculates the uncertainty principle
     sqrt(<q^2> - <q>^2) * sqrt(<p^2> - <p>^2) >= ħ/2
     """
     # Find the q and p expectation values
-    q_ex, p_ex = calc_wigner_wqp_expect(q, p, W)
+    q_ex, p_ex = calc_wigner_wqp_expect(q, p, W; k=k)
     # Find the q and p second moments
-    q2_ex, p2_ex = calc_wigner_wqp2_expect(q, p, W)
+    q2_ex, p2_ex = calc_wigner_wqp2_expect(q, p, W; k=k)
     return sqrt(q2_ex - q_ex^2) * sqrt(p2_ex - p_ex^2)
 end
 
-function calc_wigner_entropy(q, p, W)
+function calc_wigner_entropy(q, p, W; k=5)
     """
     !!!DOUBLE CHECK THIS!!!
     Calculates the entropy of the Wigner function
@@ -90,7 +90,7 @@ function calc_wigner_entropy(q, p, W)
     # Calculate the log of the Wigner function
     W_log = @. W * log(abs(W))
     # Find the entropy
-    return -int_2d(q, p, W_log)
+    return -int_2d(q, p, W_log; k=k)
 end
 
 function calc_classical_hamiltonian(p, v, mass)
@@ -102,7 +102,7 @@ function calc_classical_hamiltonian(p, v, mass)
     return @. P^2 / (2.0 * mass) + v
 end
 
-function calc_wigner_energy_expect(q, p, v, mass, W)
+function calc_wigner_energy_expect(q, p, v, mass, W; k=5)
     """
     Calculates the energy expectation value
     <H> = ∫∫ W(q, p) H(q, p) dq dp
@@ -110,26 +110,26 @@ function calc_wigner_energy_expect(q, p, v, mass, W)
     # Calculate the classical Hamiltonian
     H = calc_classical_hamiltonian(p, v, mass)
     # Calculate the expectation value
-    return calc_wigner_o_expect(q, p, W, H)
+    return calc_wigner_o_expect(q, p, W, H; k=k)
 end
 
-function calc_wigner_purity(q, p, W)
+function calc_wigner_purity(q, p, W; k=5)
     """
     Calculates the purity of the Wigner function
     P = 2πħ ∫∫ W(q, p)^2 dq dp
     """
-    return 2.0 * pi * h_bar * calc_wigner_o_expect(q, p, W, W)
+    return 2.0 * pi * h_bar * calc_wigner_o_expect(q, p, W, W; k=k)
 end
 
-function calc_wigner_s2_entropy(q, p, W)
+function calc_wigner_s2_entropy(q, p, W; k=5)
     """
     Calculates the entropy of the Wigner function
     S = 1 - 2πħ ∫∫ W(q, p)^2 dq dp
     """
-    return 1.0 - calc_wigner_purity(q, p, W)
+    return 1.0 - calc_wigner_purity(q, p, W; k=k)
 end
 
-function calc_wigner_autocorrelation(q, p, sol)
+function calc_wigner_autocorrelation(q, p, sol; k=5)
     """
     Calculates the autocorrelation function
     C(t) = ∫∫ W(q, p, t) W(q, p, 0) dq dp
@@ -139,11 +139,7 @@ function calc_wigner_autocorrelation(q, p, sol)
     # Get the Wigner function
     W = sol.u
     # Calculate the autocorrelation
-    C = [int_2d(q, p, W[:, :, i] .* W[:, :, 1]) for i = 1:nt]
-    C = zeros(nt)
-    for i = 1:nt
-        C[i] = int_2d(q, p, W[:, :, i] .* W[:, :, 1])
-    end
+    C = [int_2d(q, p, W[:, :, i] .* W[:, :, 1]; k=k) for i = 1:nt]
     # Normalise
     return C ./ C[1]
 end

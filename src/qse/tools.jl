@@ -1,4 +1,4 @@
-function convert_W_to_W_q(q_vec, p_vec, W)
+function convert_W_to_W_q(q_vec, p_vec, W; k=5)
     """
     Converts wigner distro to W_q by integrating over momentum
     """
@@ -6,7 +6,7 @@ function convert_W_to_W_q(q_vec, p_vec, W)
     N = length(q_vec)
 
     # Find W_q
-    return [int_1d(p_vec, W[:, i]) for i = 1:N]
+    return [int_1d(p_vec, W[:, i]; k=k) for i = 1:N]
 end
 
 function QSE_norm(q_vec, P; k=5)
@@ -283,14 +283,9 @@ function calc_qse_k_qm(q, q0, sol; k=5)
     dP/dt = ∫∫ ∂W/∂t h_q0(q, p) dq dp
     """
     time = sol.t
-    # Get P(t)
-    solu = sol.u
     # Calculate the occupation probability
-    dP_p = [calc_qse_probability(q, q0, solu[i]; k=k) for i = 1:length(time)]
+    dP_p = [calc_qse_probability(q, q0, sol[i]; k=k) for i = 1:length(time)]
     # Calculate the rate of change
     dP_p_dt = derivative_1d_interp(time, dP_p, 1; k=k)
-    #dP_p_dt = @. -dP_p_dt
-    # Prevent inf at zero
-    #dP_p_dt[1] = dP_p_dt[2]
     return dP_p_dt
 end
