@@ -131,13 +131,18 @@ function plot_QSE_error_compare(
     time;
     name="QSE_error_compare.pdf",
     f_units="SI",
-    dir=nothing
+    dir=nothing,
+    q0=nothing,
 )
     # Track the deviation from normalisation conditon over time
     norm = QSE_norm_loop(q_vec, solu, time)
 
     # get the tunnelling probability
-    p_p = calc_QSE_product_prob_loop(q_vec, solu, v, time)
+    if q0 == nothing
+        p_p = calc_QSE_product_prob_loop(q_vec, solu, v, time)
+    else
+        p_p = calc_qse_k_qm(q_vec, h_step, solu)
+    end
 
     if f_units == "SI"
         time, prefix, _ = best_time_units(time)
