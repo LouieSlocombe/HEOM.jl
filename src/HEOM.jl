@@ -17,17 +17,11 @@ end
 # Include unit system
 include("unit_system.jl")
 
-# Functions for phase space grid generation
-include("grid.jl")
-
 # Replacement for diff eq operators to calculate the derivative of a vector/matrix
 include("central_finite_differences.jl")
 
-# Functions for plotting in phase space
-include("phase_space_plots.jl")
-
-# Functions for animating phase space in time
-include("phase_space_animations.jl")
+# Misc functions
+include("misc.jl")
 
 # Functions for symbolic utilities
 include("symbolic_utils.jl")
@@ -38,14 +32,16 @@ include("derivatives.jl")
 # Functions for integration
 include("integration.jl")
 
-# Functions for the wigner tools
-include("wigner_tools.jl")
-
+# Core equations
+##################################################################################
 # Functions for symbolic forms of the equations
 include("core_eq/symbolic_eq.jl")
 
 # Wigner Moyal equation
 include("core_eq/wigner_moyal.jl")
+
+# Quantum Smoluchowski equation
+include("core_eq/smoluchowski.jl")
 
 # Linear-linear Coupling in the High-Temperature Markovian Limit
 include("core_eq/LL_HT_M.jl")
@@ -56,23 +52,37 @@ include("core_eq/LL_HT_M.jl")
 # Linear-linear Coupling in the Low-Temperature non-Markovian Limit
 # include("core_eq/LL_LT_NM.jl")
 
-# Initial conditions
-include("initial_conditions.jl")
+# Wigner phase space
+##################################################################################
+# Initial conditions Wigner phase space
+include("phase_space/initial_conditions.jl")
 
-# Misc functions
-include("misc.jl")
+# Functions for phase space grid generation
+include("phase_space/grid.jl")
 
-# Quantum Smoluchowski equation
-include("core_eq/smoluchowski.jl")
+# Functions for plotting in phase space
+include("phase_space/plots.jl")
+
+# Functions for animating phase space in time
+include("phase_space/animations.jl")
+
+# Functions for the wigner tools
+include("phase_space/tools.jl")
+
+
+# QSE
+##################################################################################
+# Initial conditions Quantum Smoluchowski equation
+include("qse/initial_conditions.jl")
 
 # Quantum Smoluchowski equation tools
-include("smoluchowski_tools.jl")
+include("qse/tools.jl")
 
 # Quantum Smoluchowski equation plotting
-include("smoluchowski_plot.jl")
+include("qse/plot.jl")
 
 # Quantum Smoluchowski equation animation
-include("smoluchowski_animation.jl")
+include("qse/animation.jl")
 
 export HEOM
 

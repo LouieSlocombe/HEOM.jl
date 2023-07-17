@@ -1,3 +1,27 @@
+function convert_W_to_W_q(q_vec, p_vec, W)
+    """
+    Converts wigner distro to W_q by integrating over momentum
+    """
+    # Get matrix size
+    N = length(q_vec)
+
+    # Find W_q
+    return [int_1d(p_vec, W[:, i]) for i = 1:N]
+end
+
+function QSE_norm(q_vec, P; k=5)
+    return int_1d(q_vec, P; k=k)
+end
+
+function QSE_norm_loop(q_vec, solu, time; k=5)
+    nt = length(time)
+    norm = zeros(nt)
+    for i = 1:nt
+        norm[i] = QSE_norm(q_vec, solu[i][:]; k=k)
+    end
+    return norm
+end
+
 function calc_QSE_product_prob(q_vec, P, v; f_renorm=false, k=5)
     max_loc = find_double_well_barrier_loc(v)
 
@@ -155,23 +179,6 @@ function calc_QSE_reactive_correlation_eq(
     p_rate = (time, p_r, log.(abs.(p_r)), dp_r_dt)
     return p_rate, abs.(rate)
 
-end
-
-function QSE_LT_eq_leading_o(du, u, p, t)
-    # Calculate derivative of P
-    mul!(p.dP_dq, p.d_dq, u)
-
-    # Calculate dV2 P
-    @. p.dv1_P = p.dv1 * u
-
-    # Calculate inner
-    @. p.inner = p.dv1_P + p.dv2_term * p.dP_dq
-
-    # Calculate derivative of inner
-    mul!(p.dPinner_dq, p.d_dq, p.inner)
-
-    # Put the equation together
-    @. du = p.outer * p.dPinner_dq
 end
 
 function QSE_check_limits(temperature, gamma, q, v, mass)
