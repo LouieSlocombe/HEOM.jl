@@ -17,7 +17,7 @@ function w0_thermal_step(q, p, v, mass, beta, q0)
     # Calculate the Wigner function
     W0 = w0_thermal(q, p, v, mass, beta)
     # Calculate the step function
-    step_func = step_function(q, W0, q0)
+    step_func = step_function(q, ones(length(q)), q0)
     # Apply the step function
     W0 = @. W0 * (1.0 - step_func)
     # Normalise
