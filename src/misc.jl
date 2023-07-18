@@ -170,3 +170,7 @@ function rnd(x; n=3)
     """
     return round(x; sigdigits=n)
 end
+
+function trunc_pot(x; a=0.1)
+    return @. a * atan(x / a)
+end
