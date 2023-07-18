@@ -6,7 +6,7 @@ function convert_W_to_W_q(q_vec, p_vec, W; k=5)
     N = length(q_vec)
 
     # Find W_q
-    return [int_1d(p_vec, W[:, i]; k=k) for i = 1:N]
+    return [int_1d(p_vec, W[i, :]; k=k) for i = 1:N]
 end
 
 function QSE_norm(q_vec, P; k=5)
