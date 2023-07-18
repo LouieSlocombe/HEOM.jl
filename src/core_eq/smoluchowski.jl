@@ -360,6 +360,57 @@ function QSE_eq!(du, u, p, t)
     @. du = p.t1 * (p.dv2 * u + p.dv1 * p.dP_dq) + p.t2 * p.d2P_dq2
 end
 
+function prep_QSE_full(apx, q, v, mass, temperature, gamma)
+    """
+    Simple QSE
+    """
+    # Calculate missing values
+    dq = q[2] - q[1]
+    N = length(q)
+
+    # Calculate the terms
+    t1 = 1.0 / (mass * gamma)
+    t2 = 1.0 / (k_b * temperature)
+
+    # Make derivatives
+    d_dq = prepare_fd_dq(1, apx, dq, N)
+
+    dP_dq = zeros(N)
+    inner = zeros(N)
+    dPinner_dq = zeros(N)
+
+    # Get the derivative of the potential
+    dv1 = derivative_1d_interp(q, v, 1)
+
+    p = (
+        t1=t1,
+        t2=t2,
+        d_dq=d_dq,
+        dP_dq=dP_dq,
+        dv1=dv1,
+        inner=inner,
+        dPinner_dq=dPinner_dq,
+    )
+    return p
+end
+
+function QSE_eq_full!(du, u, p, t)
+    """
+    Simple QSE
+    """
+    # Calculate derivative of P
+    mul!(p.dP_dq, p.d_dq, u)
+
+    # Calculate inner
+    @. p.inner = p.dv1 * u + p.t2 * p.dP_dq
+
+    # Calculate derivative of inner
+    mul!(p.dPinner_dq, p.d_dq, p.inner)
+
+    # Put the equation together
+    @. du = p.t1 * p.dPinner_dq
+end
+
 function prep_QSE_LT_leading_o(
     apx,
     q,
