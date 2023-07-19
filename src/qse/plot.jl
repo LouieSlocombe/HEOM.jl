@@ -111,14 +111,14 @@ end
 
 function plot_QSE_k_qm(time, k_qm; f_name="k_qm.pdf", dir=nothing)
     # Convert to better time array
-    time, prefix, name = best_time_units(time)
+    time, prefix, _ = best_time_units(time)
     t_lab = latexstring("\\mathrm{Time}, t, [$(prefix)s]")
     y_lab = latexstring("k_{\\mathrm{qm}}")
     fig = plot_general(time, k_qm, t_lab, y_lab)
     if dir === nothing
-        savefig(fig, joinpath(plot_dump, name))
+        savefig(fig, joinpath(plot_dump, f_name))
     else
-        savefig(fig, joinpath(dir, name))
+        savefig(fig, joinpath(dir, f_name))
     end
     os_display(fig)
     return fig
