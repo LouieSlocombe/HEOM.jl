@@ -4,6 +4,7 @@ using SciMLOperators, FFTW, Plots, Symbolics, ModelingToolkit, Dierckx, Interpol
 using BenchmarkTools, LaTeXStrings, Latexify
 using MethodOfLines, OrdinaryDiffEq, DomainSets
 using SciMLBase: AbstractDiffEqLinearOperator
+using Unitful, UnitfulEquivalences, UnitfulAtomic
 
 if Sys.iswindows()
     const plot_dump =
