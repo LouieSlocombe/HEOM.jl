@@ -52,16 +52,3 @@ k_b = si_k_b / au_energy # In hartrees
 # Other constants
 # https://en.wikipedia.org/wiki/Euler%27s_constant
 C_e = 0.57721566490153286060651209008240243104215933593992
-
-# Variables
-mass = au_me_mp
-temperature = 298.15
-beta = 1.0 / (temperature * k_b)
-t_relax = 0.1 * 1.0e-12 / au_time
-gamma = 1.0 / t_relax
-
-# Precalculate terms
-term_kin = (1.0im * h_bar) / (2.0 * mass)
-term_pot = -1.0im / h_bar
-term_dissi = -gamma
-term_deco = (-2.0 * gamma * mass) / (beta * h_bar^2)
