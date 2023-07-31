@@ -192,6 +192,8 @@ function plot_wigner_normalisation(
     end
     norm = [int_2d(q, p, sol[i]) for i = 1:length(time_sim)]
     y_vals = [abs.(i - 1.0) for i in norm]
+    # Prevent log(0) errors
+    replace!(y_vals, 0.0 => 1e-16)
     replace!(y_vals, Inf => NaN)
     fig = plot_general(time_sim, y_vals, tlab, ylab)
     fig = plot!(fig, yscale=yscale)
