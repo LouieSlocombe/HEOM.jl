@@ -60,7 +60,7 @@ function animate_wigner_wq(
     nt = length(time_sim)
 
     # Get the values
-    Wq = [abs.(calc_wigner_wqp(q, p, sol[i])[1]) for i = 1:nt]
+    Wq = abs.([abs.(calc_wigner_wqp(q, p, sol[i])[1]) for i = 1:nt])
 
     # Get the maximum value for plotting
     y_max = maximum([maximum(Wq[i]) for i = 2:nt])
