@@ -53,26 +53,26 @@ function probability_current(W::AbstractMatrix, grid::PhaseSpaceGrid; mass::Real
 end
 
 # Use the same right-hand side as the integrator, including the selected discretisation.
-function time_derivative(W::AbstractMatrix, op::AbstractWignerMoyal)
+function time_derivative(W::AbstractMatrix, op::AbstractPhaseSpaceOperator)
     check_size(W, op.grid)
     dW = similar(W, Float64)
-    wigner_moyal!(dW, W, op, 0.0)
+    phase_space_rhs!(dW, W, op, 0.0)
     return dW
 end
 
 """
-    expectation_rate(f, W, op::AbstractWignerMoyal)
+    expectation_rate(f, W, op)
 
 Instantaneous rate `d⟨f⟩/dt = ∫∫ f(q, p) ∂W/∂t dq dp` for a time-independent Weyl symbol
 `f`, using the grid and right-hand side of `op`. This is exact for the semi-discrete
 equations, since [`expectation`](@ref) is linear in `W`.
 """
-function expectation_rate(f, W::AbstractMatrix, op::AbstractWignerMoyal)
+function expectation_rate(f, W::AbstractMatrix, op::AbstractPhaseSpaceOperator)
     return expectation(f, time_derivative(W, op), op.grid)
 end
 
 """
-    probability_rate(W, op::AbstractWignerMoyal; q = (-Inf, Inf), p = (-Inf, Inf))
+    probability_rate(W, op; q = (-Inf, Inf), p = (-Inf, Inf))
 
 Instantaneous window population rate `dP/dt`, found by applying [`probability`](@ref) to
 the right-hand side of `op`. This is exact for the semi-discrete equations because the
@@ -85,7 +85,7 @@ give the flux of their own semi-discrete evolution.
 """
 function probability_rate(
     W::AbstractMatrix,
-    op::AbstractWignerMoyal;
+    op::AbstractPhaseSpaceOperator;
     q = (-Inf, Inf),
     p = (-Inf, Inf),
 )

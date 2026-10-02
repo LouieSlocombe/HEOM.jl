@@ -3,13 +3,16 @@
 # potentials up to degree eight.
 const MAX_MOYAL_TERMS = 4
 
+# Common interface for Hamiltonian and dissipative phase-space evolution.
+abstract type AbstractPhaseSpaceOperator end
+
 """
     AbstractWignerMoyal
 
 Supertype of the semi-discrete Wigner–Moyal operators returned by
 [`wigner_moyal_operator`](@ref).
 """
-abstract type AbstractWignerMoyal end
+abstract type AbstractWignerMoyal <: AbstractPhaseSpaceOperator end
 
 # Pseudo-spectral operator. The FFTs are planned on the stored buffers, and only those
 # buffers are ever passed to them. The backward transforms are unnormalised, so the symbols
@@ -208,6 +211,8 @@ function wigner_moyal!(dW, W, op::FiniteDifferenceWignerMoyal, t)
     mul!(vec(dW), op.matrix, vec(W))
     return nothing
 end
+
+phase_space_rhs!(dW, W, op::AbstractWignerMoyal, t) = wigner_moyal!(dW, W, op, t)
 
 """
     wigner_moyal_problem(W0, tspan, grid::PhaseSpaceGrid; mass, potential, kwargs...)

@@ -101,8 +101,8 @@ end
 
 function animation_operator(sol)
     op = sol.prob.p
-    op isa HEOM.AbstractWignerMoyal ||
-        throw(ArgumentError("solution parameters must be a Wigner–Moyal operator"))
+    op isa HEOM.AbstractPhaseSpaceOperator ||
+        throw(ArgumentError("solution parameters must be a phase-space operator"))
     return op
 end
 

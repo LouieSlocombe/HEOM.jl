@@ -11,7 +11,7 @@ selected states are validated and used to determine the symmetric colour limits,
 which stay fixed throughout the animation (zero data uses `(-1, 1)`). Position and
 momentum axes also stay fixed. Samples are neither clipped nor renormalised.
 
-The solution form reads the grid and saved times from a Wigner–Moyal solution.
+The solution form reads the grid and saved times from a phase-space solution.
 For explicit states, optional `times` must be a finite real vector with one entry
 per state. Titles show `t = ...` when times are available, otherwise `Frame ...`.
 Standard Plots attributes, including `clims`, `title` and `size`, override defaults.

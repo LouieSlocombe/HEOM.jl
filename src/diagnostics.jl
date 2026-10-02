@@ -131,16 +131,16 @@ end
 """
     diagnostics(sol::AbstractODESolution; potential)
 
-Evaluate [`diagnostics`](@ref) on the saved states of a Wigner–Moyal solution. The
+Evaluate [`diagnostics`](@ref) on the saved states of a phase-space solution. The
 result puts the saved times `t = sol.t` first, followed by the observable vectors and
 `autocorrelation`. Grid, mass and ħ are read from the operator in `sol.prob.p`; the
 potential must be supplied explicitly.
 """
 function diagnostics(sol::AbstractODESolution; potential)
     op = sol.prob.p
-    op isa AbstractWignerMoyal || throw(
+    op isa AbstractPhaseSpaceOperator || throw(
         ArgumentError(
-            "solution parameters must be a Wigner–Moyal operator; use " *
+            "solution parameters must be a phase-space operator; use " *
             "diagnostics(sol.u, grid; mass, potential, hbar) for other solutions",
         ),
     )

@@ -107,6 +107,34 @@ end
         )
     end
 
+    @testset "Caldeira–Leggett solution integration" begin
+        V = harmonic_potential(; mass = 1, omega = 1)
+        damped_grid = PhaseSpaceGrid((-6, 6), 24, (-7, 7), 28)
+        W0 = on_grid(
+            (q, p) -> coherent_wigner(q, p; q0 = 0.6, mass = 1, omega = 1),
+            damped_grid,
+        )
+        prob = caldeira_leggett_problem(
+            W0,
+            (0.0, 0.01),
+            damped_grid;
+            mass = 1,
+            potential = V,
+            friction = 0.5,
+            kT = 2,
+        )
+        sol = solve(prob, Vern9(); save_everystep = false)
+        for kind in (HEOM.WignerPlot, HEOM.MarginalPlot)
+            actual = plotting_recipe(kind, sol)
+            expected = plotting_recipe(kind, sol.u[end], damped_grid)
+            @test map(s -> s.args, actual) == map(s -> s.args, expected)
+        end
+        actual = plotting_recipe(HEOM.DiagnosticsPlot, sol; potential = V)
+        expected = plotting_recipe(HEOM.DiagnosticsPlot, diagnostics(sol; potential = V))
+        @test map(s -> s.args, actual) == map(s -> s.args, expected)
+        @test Base.get_extension(HEOM, :HEOMPlotsExt).animation_operator(sol) === prob.p
+    end
+
     @testset "Diagnostic trajectories" begin
         times = [0.0, 0.2, 0.7]
         values = (

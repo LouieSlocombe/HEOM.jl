@@ -1,7 +1,8 @@
 # HEOM.jl
 
 Phase-space quantum dynamics in Julia, developed towards hierarchical equations of
-motion (HEOM). The package currently solves the Wigner–Moyal equation. This is the
+motion (HEOM). The package solves the Wigner–Moyal equation, with optional
+Caldeira–Leggett friction and thermal diffusion. The Wigner–Moyal equation is the
 exact quantum evolution of the Wigner function $W(q, p, t)$ of a particle of mass
 $m$ in a potential $V(q)$:
 
@@ -63,6 +64,54 @@ To work on this package from another Julia project, use
 function has a docstring available through Julia's help mode, for example
 `?wigner_moyal_operator`.
 
+## Caldeira–Leggett damping
+
+The high-temperature, Markovian Caldeira–Leggett model couples the particle to a
+thermal bath:
+
+```math
+\frac{\partial W}{\partial t} = \mathcal{L}_{\mathrm{WM}} W
++ \gamma\frac{\partial(pW)}{\partial p}
++ m\gamma k_B T\frac{\partial^2 W}{\partial p^2}.
+```
+
+Here `friction = γ` is the full momentum damping rate, so the mean momentum obeys
+`d⟨p⟩/dt = −⟨V′(q)⟩ − γ⟨p⟩`. `kT` is the thermal energy `k_B T`, in the same units
+as the potential. Both must be finite and nonnegative. The quantum Hamiltonian
+term uses the same `hbar`, `discretization` and `moyal_terms` options as
+`wigner_moyal_problem`. This convention matches the thermal diffusion coefficient
+`Dpp = mass * friction * kT` in
+[García-Palacios and Zueco, Eq. (4)](https://arxiv.org/pdf/cond-mat/0407454), with
+the mixed diffusion coefficient set to zero.
+
+```julia
+prob = caldeira_leggett_problem(W0, (0.0, 25.0), grid;
+    mass, potential = V, friction = 0.8, kT = 2.0)
+sol = solve(prob, Vern9(); abstol = 1e-10, reltol = 1e-10, saveat = 0.25)
+d = diagnostics(sol; potential = V)
+```
+
+For a harmonic well, the centroid decays to its minimum. At finite temperature,
+the state retains a thermal width: its equilibrium variances are
+`⟨q²⟩ = kT / (mass * omega²)` and `⟨p²⟩ = mass * kT`, with mean energy `kT`.
+This model is a high-temperature approximation (`kT ≫ hbar * omega` for the
+oscillator); it does not describe cooling into the quantum ground state.
+
+A Gaussian initial state remains Gaussian. Its exact mean and covariance are
+
+```math
+\mu(t)=e^{At}\mu_0,\qquad
+\Sigma(t)=\Sigma_\infty+e^{At}(\Sigma_0-\Sigma_\infty)e^{A^\mathsf{T}t},
+\quad
+A=\begin{pmatrix}0&1/m\\-m\omega^2&-\gamma\end{pmatrix},\quad
+\Sigma_\infty=\begin{pmatrix}k_BT/(m\omega^2)&0\\0&mk_BT\end{pmatrix}.
+```
+
+See [the damped harmonic oscillator example](examples/damped_sho.jl) for a
+comparison of the full Wigner function and its moments against this solution.
+The existing observables, diagnostics, plots and rate functions also accept
+Caldeira–Leggett operators and solutions.
+
 ## API
 
 | Function | Purpose |
@@ -72,6 +121,9 @@ function has a docstring available through Julia's help mode, for example
 | `wigner_moyal_problem(W0, tspan, grid; mass, potential, ...)` | `ODEProblem` for the Wigner–Moyal equation |
 | `wigner_moyal_operator(grid; mass, potential, hbar, discretization, moyal_terms)` | Reusable semi-discrete operator; `wigner_moyal_problem(W0, tspan, op)` takes it |
 | `wigner_moyal!(dW, W, op, t)` | In-place right-hand side |
+| `caldeira_leggett_problem(W0, tspan, grid; mass, potential, friction, kT, ...)` | `ODEProblem` with Caldeira–Leggett friction and thermal diffusion |
+| `caldeira_leggett_operator(grid; mass, potential, friction, kT, ...)` | Reusable operator; `caldeira_leggett_problem(W0, tspan, op)` takes it |
+| `caldeira_leggett!(dW, W, op, t)` | In-place dissipative right-hand side |
 | `phase_space_integral`, `expectation`, `energy` | Norm, Weyl-symbol averages and mean energy |
 | `position_density`, `momentum_density` | Marginal densities, integrating over the other axis |
 | `phase_space_mean`, `phase_space_covariance` | Mean position and momentum, and symmetrised covariance |
@@ -237,9 +289,10 @@ an optional command-line argument selects the output directory.
 **Discretisation.** `discretization = Spectral()`, the default, uses Fourier
 pseudo-spectral derivatives. It converges spectrally for smooth Wigner functions,
 and its right-hand side allocates nothing. `discretization = FiniteDifference(order)`
-uses central differences of even accuracy `order` (default 4). The whole operator is
-a sparse, exactly skew-symmetric matrix, available as `sparse(op)`. Both treat the
-box as periodic, so make the grid large enough that `W` decays to zero at its edges.
+uses central differences of even accuracy `order` (default 4). Its operator is
+available as `sparse(op)`; the Wigner–Moyal part is exactly skew-symmetric, while
+Caldeira–Leggett damping adds dissipative terms. Both discretisations treat the box
+as periodic, so make the grid large enough that `W` decays to zero at its edges.
 
 **Moyal series.** `moyal_terms = nothing`, the default, keeps every order. In
 momentum Fourier space, where `∂/∂p → iκ`, the potential term is applied exactly as
@@ -257,6 +310,8 @@ spectral right-hand side runs on FFTW and does not accept dual numbers, and no
 sparse Jacobian is wired up yet. Strongly anharmonic potentials make the problem
 stiff, because the potential symbol grows like `ħ² V‴ κ³`. An operator holds work
 buffers, so give each parallel task (for example in an `EnsembleProblem`) its own.
+Thermal diffusion also restricts explicit time steps as momentum resolution or
+`mass * friction * kT` increases.
 
 **Validation.** For the harmonic oscillator, $V''' = 0$, the Moyal series stops at
 the classical term, and every Wigner function rotates rigidly in phase space. The
@@ -278,6 +333,9 @@ checked against closed forms instead:
 - Fourier modes test boundary and spectral diagnostics, and exact window integrals.
 - Harmonic trajectories test the summary fields and survival probability; population
   fluxes, Ehrenfest relations and energy rates test both discretisations.
+- Damped harmonic Gaussians test Caldeira–Leggett evolution against the exact
+  time-dependent mean, covariance and full state, including relaxation to thermal
+  equilibrium at the bottom of the well.
 
 ## Development
 
@@ -346,6 +404,7 @@ packages are distributed as source; there is no wheel-building step.
 │   ├── grid.jl                    # periodic phase-space grid
 │   ├── derivatives.jl             # spectral and finite-difference discretisations
 │   ├── wigner_moyal.jl            # Wigner–Moyal operators and ODEProblem
+│   ├── caldeira_leggett.jl        # thermal friction and diffusion operators
 │   ├── observables.jl             # marginals, moments, energy, overlaps, negativity
 │   ├── diagnostics.jl             # grid health and state/trajectory summaries
 │   ├── populations.jl             # window populations, currents and rates

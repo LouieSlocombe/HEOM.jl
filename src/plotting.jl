@@ -10,8 +10,8 @@ end
 
 function plotting_state(sol::AbstractODESolution, index::Integer = lastindex(sol.u))
     op = sol.prob.p
-    op isa AbstractWignerMoyal ||
-        throw(ArgumentError("solution parameters must be a Wigner–Moyal operator"))
+    op isa AbstractPhaseSpaceOperator ||
+        throw(ArgumentError("solution parameters must be a phase-space operator"))
     return plotting_state(sol.u[index], op.grid)
 end
 
@@ -22,7 +22,7 @@ end
 
 Plot a signed Wigner heatmap with position `q` horizontal and momentum `p` vertical.
 Load `Plots` before calling this function. `W[i, j]` is plotted at `(grid.q[i], grid.p[j])`.
-For a Wigner–Moyal ODE solution, `index` selects a saved state and defaults to the last.
+For a phase-space ODE solution, `index` selects a saved state and defaults to the last.
 
 The default diverging colour scale is centred at zero, with limits `±maximum(abs, W)`
 (or `(-1, 1)` for a zero matrix). Samples must be real and finite. Values are neither
@@ -127,7 +127,7 @@ end
 
 Plot selected [`diagnostics`](@ref) columns against saved times, one panel per field.
 Load `Plots` first. Pass the result of `diagnostics(sol; potential)`, explicit times and
-`diagnostics(states, grid; ...)`, or a Wigner–Moyal solution with its potential.
+`diagnostics(states, grid; ...)`, or a phase-space solution with its potential.
 
 `fields` may be a symbol or a tuple/vector of distinct column names, such as
 `(:mean_q, :mean_p)` or `(:boundary_q, :boundary_p, :tail_q, :tail_p)`. Fields are shown
