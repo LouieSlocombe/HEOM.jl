@@ -1,194 +1,73 @@
-function prepare_fft_der(x, L; order=1)
-    # https://docs.sciml.ai/SciMLOperators/stable/tutorials/fftw/
-    n = length(x)
+"""
+    Spectral()
 
-    # The frequency modes sampled by our finite grid
-    k = rfftfreq(n, 2 * pi * n / L) |> Array
+Fourier pseudo-spectral discretisation of the phase-space derivatives on a periodic
+[`PhaseSpaceGrid`](@ref). This is the default. It converges spectrally for smooth Wigner
+functions and is the only discretisation that supports the exact Moyal operator.
+"""
+struct Spectral end
 
-    # Plan the fft
-    transform = plan_rfft(x)
-    # Define our wrapper for the FFT object
-    T = FunctionOperator((du, u, p, t) -> mul!(du, transform, u), x, im * k;
-        isinplace=true,
-        T=ComplexF64,
-        op_adjoint=(du, u, p, t) -> ldiv!(du, transform, u),
-        op_inverse=(du, u, p, t) -> ldiv!(du, transform, u),
-        op_adjoint_inverse=(du, u, p, t) -> ldiv!(du, transform, u)
-    )
+"""
+    FiniteDifference(order::Integer = 4)
 
-    # Make the operator
-    ik = @. (im * k)^order
-    # Diagonalise the operator
-    ik_diag = DiagonalOperator(ik)
-    # Make the derivative operator
-    Dx = T \ ik_diag * T
-    # Cache the operator
-    Dx = cache_operator(Dx, x)
-    return Dx
-end
-
-function prepare_fft_der_2d(x, y, Lx, Ly; order=1, axis=1)
-    # https://docs.sciml.ai/SciMLOperators/stable/tutorials/fftw/
-    nx = size(x, 1)
-    ny = size(y, 1)
-    # Assert that the grid is square
-    @assert nx == ny
-
-    # The frequency modes sampled by our finite grid
-    kx = rfftfreq(nx, 2 * pi * nx / Lx) |> Array
-    ky = rfftfreq(ny, 2 * pi * ny / Ly) |> Array
-
-    m = length(kx)
-
-    # reshape the grid
-    kx = repeat(kx, 1, nx)
-    #kx = repeat(reshape(kx, 1, :), m, 1)
-
-    # Plan the fft
-    transform = plan_rfft(x, axis)
-    # Define our wrapper for the FFT object
-    T = FunctionOperator((du, u, p, t) -> mul!(du, transform, u), x, im * kx;
-        isinplace=true,
-        T=ComplexF64, # ComplexF64
-        op_adjoint=(du, u, p, t) -> ldiv!(du, transform, u),
-        op_inverse=(du, u, p, t) -> ldiv!(du, transform, u),
-        op_adjoint_inverse=(du, u, p, t) -> ldiv!(du, transform, u)
-    )
-
-    # Make the operator
-    ik = @. (im * kx)^order
-    if axis == 2
-        ik = transpose(ik)
+Central finite-difference discretisation on a periodic [`PhaseSpaceGrid`](@ref), with the
+given even accuracy `order` for every derivative. The semi-discrete Wigner–Moyal operator is
+then a sparse matrix, available as `sparse(op)`. It needs a truncated Moyal series
+(`moyal_terms`), because the exact operator is nonlocal in momentum.
+"""
+struct FiniteDifference
+    order::Int
+    function FiniteDifference(order::Integer = 4)
+        order >= 2 && iseven(order) || throw(
+            ArgumentError(
+                "finite-difference order must be even and at least 2, got $order",
+            ),
+        )
+        return new(order)
     end
-
-    # Diagonalise the operator
-    ik_diag = DiagonalOperator(ik)
-    # Make the derivative operator
-    Dx = T \ ik_diag * T
-    # Cache the operator
-    Dx = cache_operator(Dx, x)
-    return Dx
 end
 
-function prepare_fft_der_2d_y(x, y, Lx, Ly; order=1)
-    # https://docs.sciml.ai/SciMLOperators/stable/tutorials/fftw/
-    nx = size(x, 1)
-    ny = size(y, 1)
-    # Assert that the grid is square
-    @assert nx == ny
+# Exact weights for offsets -r:r of the central difference approximating the
+# `derivative`-th derivative to accuracy `order` on a unit grid, r = (derivative + order - 1) ÷ 2.
+# They solve the moment equations Σₖ wₖ kʲ = derivative! δⱼ for j = 0, …, 2r in rationals.
+function central_difference_weights(derivative::Integer, order::Integer)
+    r = (derivative + order - 1) ÷ 2
+    moments = [big(k)^j // 1 for j in 0:(2r), k in (-r):r]
+    targets = [j == derivative ? factorial(big(j)) // 1 : big(0) // 1 for j in 0:(2r)]
+    return moments \ targets
+end
 
-    # The frequency modes sampled by our finite grid
-    ky = rfftfreq(ny, 2 * pi * ny / Ly) |> Array
-
-
-    # reshape the grid
-    ky = repeat(ky, 1, nx)
-
-    # Plan the fft
-    transform = plan_rfft(y, 1:2)
-    # Define our wrapper for the FFT object
-    T = FunctionOperator((du, u, p, t) -> mul!(du, transform, u), y, im * ky;
-        isinplace=true,
-        T=ComplexF64,
-        op_adjoint=(du, u, p, t) -> ldiv!(du, transform, u),
-        op_inverse=(du, u, p, t) -> ldiv!(du, transform, u),
-        op_adjoint_inverse=(du, u, p, t) -> ldiv!(du, transform, u)
+# Sparse `n × n` central-difference matrix for the `derivative`-th derivative on a periodic
+# grid of spacing `h`.
+function periodic_difference_matrix(
+    derivative::Integer,
+    order::Integer,
+    n::Integer,
+    h::Real,
+)
+    weights = central_difference_weights(derivative, order)
+    r = length(weights) ÷ 2
+    n >= 2r + 1 || throw(
+        ArgumentError(
+            "order $order differences of derivative $derivative need at least " *
+            "$(2r + 1) points per axis, got $n",
+        ),
     )
-
-    # Make the operator
-    ik = @. (im * ky)^order
-
-    # Diagonalise the operator
-    ik_diag = DiagonalOperator(ik')
-    println("ik_diag =", size(ik_diag))
-    println("T =", size(T))
-    # Make the derivative operator
-    Dy = T \ ik_diag * T
-    #Dy = T \  T
-    # Cache the operator
-    Dy = cache_operator(Dy, y)
-    return Dy
+    rows, cols, values = Int[], Int[], Float64[]
+    for (offset, weight) in zip((-r):r, weights)
+        iszero(weight) && continue
+        append!(rows, 1:n)
+        append!(cols, mod1.((1:n) .+ offset, n))
+        append!(values, fill(Float64(weight) / h^derivative, n))
+    end
+    return sparse(rows, cols, values, n, n)
 end
 
-
-function prepare_fft_dq(q_vec, eq_vec; order=1)
-    # Preparing the derivative operator
-    dq = q_vec[2] - q_vec[1]
-    q_range = q_vec[end] - q_vec[1] + dq
-
-    nq = length(q_vec)
-    kq = rfftfreq(nq, 2 * pi * nq / q_range) |> Array
-    m = length(kq)
-
-    kq = Array{ComplexF64}(repeat(kq, 1, nq))
-    ft = plan_rfft(eq_vec, 1)
-    FDq = Array{ComplexF64}(zeros(m, nq))
-
-    ik = @. (im * kq)^order # make the operator
-    ik = DiagonalOperator(ik) # diagonalise the operator
-    return ft, FDq, ik
-end
-
-function dq_fft!(du, u, ft, fdq, ik)
-    # Taking the derivative
-    mul!(fdq, ft, u) # Take FFT
-    mul!(fdq, ik, fdq) # Multiply by the diagonalised operator
-    ldiv!(du, ft, fdq) # Take inverse FFT
-end
-
-
-function prepare_fft_dp(p_vec, eq_vec; order=1)
-    # Preparing the derivative operator
-    dp = p_vec[2] - p_vec[1]
-    p_range = p_vec[end] - p_vec[1] + dp
-
-    np = length(p_vec)
-    kp = rfftfreq(np, 2 * pi * np / p_range) |> Array
-    m = length(kp)
-
-    kp = Array{ComplexF64}(repeat(kp, 1, np))'
-    ft = plan_rfft(eq_vec, 2)
-    FDp = Array{ComplexF64}(zeros(np, m))
-
-    ik = @. (im * kp)^order # make the operator
-    ik = DiagonalOperator(ik) # diagonalise the operator
-    return ft, FDp, ik
-end
-
-function dp_fft!(du, u, ft, fdp, ik)
-    # Taking the derivative
-    mul!(fdp, ft, u) # Take FFT
-    mul!(fdp, ik, fdp) # Multiply by the diagonalised operator
-    ldiv!(du, ft, fdp) # Take inverse FFT
-end
-
-function prepare_fd_dq(order, apx, dq, n)
-    A = sparse(Array(CenteredDifference{1}(order, apx, dq, n)))
-    A = A[1:end, 1:end.!=1]
-    A = A[1:end, 1:end.!=end]
-    A = Array{eltype(dq)}(A)
-    return A
-end
-
-function dq_fd!(du, u, d_dq)
-    return mul!(du, d_dq, u)
-end
-
-function prepare_fd_dp(order, apx, dp, n)
-    A = sparse(Array(CenteredDifference{1}(order, apx, dp, n)))
-    A = A[1:end, 1:end.!=1]
-    A = A[1:end, 1:end.!=end]
-    A = Array{eltype(dp)}(A)
-    return A'
-end
-
-function dp_fd!(du, u, d_dp)
-    return mul!(du, u, d_dp)
-end
-
-function derivative_1d_interp(x, y, order; k=5)
-    """
-    Calculates the derivative of a function using interpolation
-    """
-    return derivative(Spline1D(x, y; k=k, bc="extrapolate"), x; nu=order)
+# Angular wavenumbers of `rfft` along an axis of `n` points with spacing `h`. For even `n`
+# the unpaired Nyquist wavenumber is set to zero, so that the odd operators built from it map
+# real data to real data.
+function wavenumbers(n::Integer, h::Real)
+    κ = 2π .* collect(rfftfreq(n, 1 / h))
+    iseven(n) && (κ[end] = 0)
+    return κ
 end

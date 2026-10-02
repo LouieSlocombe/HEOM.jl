@@ -1,90 +1,43 @@
+"""
+    HEOM
+
+Phase-space quantum dynamics. The package currently solves the Wigner–Moyal equation for a
+particle of mass `m` in a potential `V(q)`,
+
+    ∂W/∂t = -(p/m) ∂W/∂q + Σₛ cₛ V⁽²ˢ⁺¹⁾(q) ∂²ˢ⁺¹W/∂p²ˢ⁺¹,   cₛ = (-1)ˢ (ħ/2)²ˢ / (2s + 1)!,
+
+by the method of lines. [`wigner_moyal_problem`](@ref) discretises phase space on a
+[`PhaseSpaceGrid`](@ref) and returns an `ODEProblem` that any OrdinaryDiffEq solver can
+integrate in time.
+Analysis functions expose observables, grid diagnostics, trajectory summaries and populations.
+Plotting recipes display Wigner functions, marginal densities and diagnostic trajectories
+when Plots.jl is loaded.
+"""
 module HEOM
-using StaticArrays, LinearAlgebra, SparseArrays, BandedMatrices
-using SciMLOperators, FFTW, Plots, Symbolics, ModelingToolkit, Dierckx, Interpolations
-using BenchmarkTools, LaTeXStrings, Latexify
-using MethodOfLines, OrdinaryDiffEq, DomainSets
-using SciMLBase: AbstractDiffEqLinearOperator
-using Unitful, UnitfulEquivalences, UnitfulAtomic
 
-if Sys.iswindows()
-    const plot_dump =
-        joinpath(homedir(), "OneDrive - University of Surrey/DUMP/")
-else
-    # Set to headless plotting
-    ENV["GKSwstype"] = 100
-    const plot_dump = pwd()
-end
+using FFTW: plan_brfft, plan_rfft, rfft, rfftfreq
+using ForwardDiff: ForwardDiff
+using LinearAlgebra: dot, kron, mul!
+using RecipesBase: @recipe, @series, @userplot
+using SciMLBase: AbstractODESolution, ODEProblem
+using SparseArrays: SparseArrays, SparseMatrixCSC, sparse, spdiagm
 
-# Include unit system
-include("unit_system.jl")
+export PhaseSpaceGrid, on_grid
+export Spectral, FiniteDifference
+export wigner_moyal_operator, wigner_moyal!, wigner_moyal_problem
+export phase_space_integral, expectation, purity, overlap, energy, wigner_negativity
+export position_density, momentum_density, phase_space_mean, phase_space_covariance
+export boundary_weight, spectral_tail, diagnostics
+export probability, probability_current, probability_rate, expectation_rate
+export harmonic_potential, coherent_wigner, fock_wigner, cat_wigner, harmonic_evolution
 
-# Replacement for diff eq operators to calculate the derivative of a vector/matrix
-include("central_finite_differences.jl")
-
-# Misc functions
-include("misc.jl")
-
-# Functions for symbolic utilities
-include("symbolic_utils.jl")
-
-# Functions for derivatives
+include("grid.jl")
 include("derivatives.jl")
-
-# Functions for integration
-include("integration.jl")
-
-# Core equations
-##################################################################################
-# Functions for symbolic forms of the equations
-include("core_eq/symbolic_eq.jl")
-
-# Wigner Moyal equation
-include("core_eq/wigner_moyal.jl")
-
-# Quantum Smoluchowski equation
-include("core_eq/smoluchowski.jl")
-
-# Linear-linear Coupling in the High-Temperature Markovian Limit
-include("core_eq/LL_HT_M.jl")
-
-# Linear-linear Coupling in the High-Temperature non-Markovian Limit
-# include("core_eq/LL_HT_NM.jl")
-
-# Linear-linear Coupling in the Low-Temperature non-Markovian Limit
-# include("core_eq/LL_LT_NM.jl")
-
-# Wigner phase space
-##################################################################################
-# Initial conditions Wigner phase space
-include("phase_space/initial_conditions.jl")
-
-# Functions for phase space grid generation
-include("phase_space/grid.jl")
-
-# Functions for plotting in phase space
-include("phase_space/plots.jl")
-
-# Functions for animating phase space in time
-include("phase_space/animations.jl")
-
-# Functions for the wigner tools
-include("phase_space/tools.jl")
-
-
-# QSE
-##################################################################################
-# Initial conditions Quantum Smoluchowski equation
-include("qse/initial_conditions.jl")
-
-# Quantum Smoluchowski equation tools
-include("qse/tools.jl")
-
-# Quantum Smoluchowski equation plotting
-include("qse/plot.jl")
-
-# Quantum Smoluchowski equation animation
-include("qse/animation.jl")
-
-export HEOM
+include("wigner_moyal.jl")
+include("observables.jl")
+include("diagnostics.jl")
+include("populations.jl")
+include("harmonic_oscillator.jl")
+include("plotting.jl")
 
 end

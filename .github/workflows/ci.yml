@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  test:
+    name: Julia ${{ matrix.julia-version }} / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        julia-version: ["1.10", "1"]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Set up Julia
+        uses: julia-actions/setup-julia@v3
+        with:
+          version: ${{ matrix.julia-version }}
+
+      - name: Cache Julia dependencies
+        uses: julia-actions/cache@v3
+        with:
+          delete-old-caches: "false"
+
+      - name: Instantiate and precompile the package
+        run: julia --startup-file=no --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.precompile()'
+
+      - name: Test the package and check package quality
+        run: julia --startup-file=no --project=. -e 'using Pkg; Pkg.test()'
+
+      - name: Smoke test the package from a separate environment
+        run: |
+          julia --startup-file=no -e '
+            using Pkg
+            repository = pwd()
+            Pkg.activate(mktempdir())
+            Pkg.develop(path=repository)
+            using HEOM
+            grid = PhaseSpaceGrid((-8.0, 8.0), 64, (-8.0, 8.0), 64)
+            W0 = on_grid((q, p) -> fock_wigner(0, q, p; mass=1.0, omega=1.0), grid)
+            V = harmonic_potential(; mass=1.0, omega=1.0)
+            prob = wigner_moyal_problem(W0, (0.0, 1.0), grid; mass=1.0, potential=V)
+            dW = similar(prob.u0)
+            prob.f(dW, prob.u0, prob.p, 0.0)
+            @assert maximum(abs, dW) < 1e-10
+            @assert isapprox(phase_space_integral(prob.u0, grid), 1; atol=1e-10)
+            println(prob.p)
+          '
+
+  quality:
+    name: Formatting and coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Set up Julia
+        uses: julia-actions/setup-julia@v3
+        with:
+          version: "1"
+
+      - name: Cache Julia dependencies
+        uses: julia-actions/cache@v3
+        with:
+          delete-old-caches: "false"
+
+      - name: Install development tools
+        run: julia --startup-file=no --project=build_tools -e 'using Pkg; Pkg.instantiate()'
+
+      - name: Check formatting
+        run: julia --startup-file=no --project=build_tools build_tools/format.jl --check
+
+      - name: Clear previous coverage
+        run: julia --startup-file=no --project=build_tools -e 'using Coverage; clean_folder("src")'
+
+      - name: Test with coverage
+        run: julia --startup-file=no --project=. -e 'using Pkg; Pkg.test(coverage=true)'
+
+      - name: Require full source line coverage
+        run: julia --startup-file=no --project=build_tools build_tools/coverage.jl
+
+      - name: Save the coverage report
+        if: always() && hashFiles('lcov.info') != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: lcov.info

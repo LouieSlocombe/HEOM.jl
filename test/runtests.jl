@@ -1,31 +1,52 @@
+using Aqua
 using HEOM
-using Test, SafeTestsets
+using LinearAlgebra
+using OrdinaryDiffEqVerner
+using SciMLBase: ODEProblem, remake
+using SparseArrays
+using Test
 
-begin
-    @time @safetestset "Derivatives" begin
-        include("derivatives.jl")
-    end
-    @time @safetestset "Symbolic eq check" begin
-        include("core_eq/symbolic_check.jl")
-    end
+"""
+Maximum absolute difference between two arrays.
+"""
+max_error(a, b) = maximum(abs, a - b)
 
-    @time @safetestset "Simple eq check" begin
-        include("core_eq/simple_check.jl")
-    end
-    @time @safetestset "Anharmonic eq check" begin
-        include("core_eq/anharmonic_check.jl")
-    end
-    @time @safetestset "Free Particle" begin
-        include("core_eq/free_particle.jl")
-    end
-    # Harmonic well
-    @time @safetestset "Harmonic well" begin 
-        include("core_eq/harmonic_well.jl") 
-    end
-    # Morse potential
-    @time @safetestset "Morse potential" begin
-        include("core_eq/morse_potential.jl")
-    end
-    # Double well case
+"""
+Normalised Gaussian Wigner function with the given mean and covariance.
+"""
+function gaussian_wigner(q, p; mean, covariance)
+    δ = [q, p] - collect(mean)
+    return exp(-dot(δ, covariance \ δ) / 2) / (2π * sqrt(det(covariance)))
+end
 
+"""
+Evaluate the Wigner–Moyal right-hand side of `op` at `W` into a new matrix.
+"""
+function rhs(op, W)
+    dW = similar(W)
+    wigner_moyal!(dW, W, op, 0.0)
+    return dW
+end
+
+"""
+Bytes allocated by one evaluation of the right-hand side, after a warm-up call.
+"""
+function rhs_allocations(dW, W, op)
+    wigner_moyal!(dW, W, op, 0.0)
+    return @allocated wigner_moyal!(dW, W, op, 0.0)
+end
+
+@testset "HEOM" begin
+    include("grid.jl")
+    include("derivatives.jl")
+    include("wigner_moyal_rhs.jl")
+    include("harmonic_oscillator.jl")
+    include("observables.jl")
+    include("diagnostics.jl")
+    include("populations.jl")
+    include("plotting.jl")
+
+    @testset "Package quality" begin
+        Aqua.test_all(HEOM)
+    end
 end

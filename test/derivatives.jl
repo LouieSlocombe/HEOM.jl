@@ -1,143 +1,36 @@
-using HEOM, Symbolics, ModelingToolkit, LinearAlgebra
-using Test
-const H = HEOM
+@testset "Finite-difference stencils" begin
+    @test HEOM.central_difference_weights(1, 2) == [-1 // 2, 0, 1 // 2]
+    @test HEOM.central_difference_weights(1, 4) == [1 // 12, -2 // 3, 0, 2 // 3, -1 // 12]
+    @test HEOM.central_difference_weights(3, 2) == [-1 // 2, 1, 0, -1, 1 // 2]
+    @test HEOM.central_difference_weights(2, 2) == [1, -2, 1]
 
-tol = 1e-2
+    for order in (2, 4, 6), derivative in (1, 3)
+        D = HEOM.periodic_difference_matrix(derivative, order, 32, 0.1)
+        @test D isa SparseMatrixCSC{Float64,Int}
+        # Odd central differences are exactly antisymmetric.
+        @test iszero(norm(D + transpose(D)))
 
-# Make the grid
-n = 2^9
-q_range = 12.0
-p_range = 60.0
-q_vec, p_vec, Q, P, dq, dp = H.create_basis_even(n, q_range, p_range)
+        # On a periodic function the error falls as hᵒʳᵈᵉʳ.
+        errors = map((32, 64)) do n
+            h = 2π / n
+            x = h .* (0:(n-1))
+            f = @. sin(x) + cos(2x) / 2
+            exact = derivative == 1 ? (@. cos(x) - sin(2x)) : (@. -cos(x) + 4sin(2x))
+            max_error(HEOM.periodic_difference_matrix(derivative, order, n, h) * f, exact)
+        end
+        @test log2(errors[1] / errors[2]) ≈ order atol = 0.5
+    end
 
-# Define the equation and its derivatives
-@parameters t q p q0 p0
-@variables W(..)
+    # A seven-point stencil does not fit on six points.
+    @test_throws ArgumentError HEOM.periodic_difference_matrix(3, 4, 6, 0.1)
+    @test FiniteDifference().order == 4
+    @test FiniteDifference(6).order == 6
+    @test_throws ArgumentError FiniteDifference(3)
+    @test_throws ArgumentError FiniteDifference(0)
+end
 
-eq = exp(-q^2)
-eq_vec = H.make_discretised_1d(eq, [q], q_vec, [])
-
-Dq = Differential(q)
-Dqq = Differential(q)^2
-Dqqq = Differential(q)^3
-Dp = Differential(p)
-Dpp = Differential(p)^2
-Dppp = Differential(p)^3
-
-# Define 2d equation
-eq2d = exp(-q^2 - 0.05 * p^2)
-eq2d_vec = H.make_discretised_2d(eq2d, [q, p], q_vec, p_vec, [])
-
-# 1D first order derivative
-d1_eq1d = expand_derivatives(Dq(eq))
-d1_eq1d_vec = H.make_discretised_1d(d1_eq1d, [q], q_vec, [])
-
-####################################################################################
-# 1D first order derivative using FFT
-Dq_fft = H.prepare_fft_der(q_vec, q_range; order=1)
-# Older version
-fft_der = zeros(n)
-@test ≈(Dq_fft * eq_vec, d1_eq1d_vec; atol=tol)
-mul!(fft_der, Dq_fft, eq_vec)
-@test ≈(fft_der, d1_eq1d_vec; atol=tol)
-
-# 1D first order derivative using finite difference
-d_dq = H.prepare_fd_dq(1, 2, dq, n)
-fd_der = zeros(n)
-H.dq_fd!(fd_der, eq_vec, d_dq)
-@test ≈(fd_der, d1_eq1d_vec; atol=tol)
-
-d_dq = H.prepare_fd_dq(1, 4, dq, n)
-fd_der = zeros(n)
-H.dq_fd!(fd_der, eq_vec, d_dq)
-@test ≈(fd_der, d1_eq1d_vec; atol=tol)
-
-####################################################################################
-# 1D second order derivative
-d2_eq1d = expand_derivatives(Dqq(eq))
-d2_eq1d_vec = H.make_discretised_1d(d2_eq1d, [q], q_vec, [])
-
-Dqq_fft = H.prepare_fft_der(q_vec, q_range; order=2)
-@test ≈(Dqq_fft * eq_vec, d2_eq1d_vec; atol=tol)
-fft_der = zeros(n)
-mul!(fft_der, Dqq_fft, eq_vec)
-@test ≈(fft_der, d2_eq1d_vec; atol=tol)
-
-d_dqq = H.prepare_fd_dq(2, 2, dq, n)
-fd_der = zeros(n)
-H.dq_fd!(fd_der, eq_vec, d_dqq)
-@test ≈(fd_der, d2_eq1d_vec; atol=tol)
-
-####################################################################################
-# 2D first order derivative d/dq
-d1_eq2d = expand_derivatives(Dq(eq2d))
-d1_eq2d_vec = H.make_discretised_2d(d1_eq2d, [q, p], q_vec, p_vec, [])
-
-ft, FDq, ik = H.prepare_fft_dq(q_vec, eq2d_vec; order=1)
-fft_der = zeros(n, n)
-H.dq_fft!(fft_der, eq2d_vec, ft, FDq, ik)
-@test ≈(fft_der, d1_eq2d_vec; atol=tol)
-
-d_dq = H.prepare_fd_dq(1, 4, dq, n)
-fd_der = zeros(n, n)
-H.dq_fd!(fd_der, eq2d_vec, d_dq)
-@test ≈(fd_der, d1_eq2d_vec; atol=tol)
-
-####################################################################################
-# 2D first order derivative d/dp
-d1_eq2d = expand_derivatives(Dp(eq2d))
-d1_eq2d_vec = H.make_discretised_2d(d1_eq2d, [q, p], q_vec, p_vec, [])
-
-ft, FDp, ik = H.prepare_fft_dp(p_vec, eq2d_vec; order=1)
-fft_der = zeros(n, n)
-H.dp_fft!(fft_der, eq2d_vec, ft, FDp, ik)
-@test ≈(fft_der, d1_eq2d_vec; atol=tol)
-
-d_dp = H.prepare_fd_dp(1, 4, dp, n)
-fd_der = zeros(n, n)
-H.dp_fd!(fd_der, eq2d_vec, d_dp)
-@test ≈(fd_der, d1_eq2d_vec; atol=tol)
-
-
-
-
-####################################################################################
-# 2D d2/dq2 + d2/dp2 + d/dq + d/dp
-d2_eq2d = expand_derivatives(Dqq(eq2d) + Dpp(eq2d) + Dq(eq2d) + Dp(eq2d))
-d2_eq2d_vec = H.make_discretised_2d(d2_eq2d, [q, p], q_vec, p_vec, [])
-
-ft, FDq, ik = H.prepare_fft_dq(q_vec, eq2d_vec; order=2)
-d2_dq2 = zeros(n, n)
-H.dq_fft!(d2_dq2, eq2d_vec, ft, FDq, ik)
-
-ft, FDp, ik = H.prepare_fft_dp(p_vec, eq2d_vec; order=2)
-d2_dp2 = zeros(n, n)
-H.dp_fft!(d2_dp2, eq2d_vec, ft, FDp, ik)
-
-ft, FDq, ik = H.prepare_fft_dq(q_vec, eq2d_vec; order=1)
-d1_dq = zeros(n, n)
-H.dq_fft!(d1_dq, eq2d_vec, ft, FDq, ik)
-ft, FDq, ik = H.prepare_fft_dp(p_vec, eq2d_vec; order=1)
-d1_dp = zeros(n, n)
-H.dp_fft!(d1_dp, eq2d_vec, ft, FDp, ik)
-
-fft_der = @. d2_dq2 + d2_dp2 + d1_dq + d1_dp
-@test ≈(fft_der, d2_eq2d_vec; atol=tol)
-
-d_dq = H.prepare_fd_dq(1, 4, dq, n)
-d_dqq = H.prepare_fd_dq(2, 4, dq, n)
-d_dp = H.prepare_fd_dp(1, 4, dp, n)
-d_dpp = H.prepare_fd_dp(2, 4, dp, n)
-
-dw_dq = zeros(n, n)
-dw_dqq = zeros(n, n)
-dw_dp = zeros(n, n)
-dw_dpp = zeros(n, n)
-
-H.dq_fd!(dw_dq, eq2d_vec, d_dq)
-H.dq_fd!(dw_dqq, eq2d_vec, d_dqq)
-H.dp_fd!(dw_dp, eq2d_vec, d_dp)
-H.dp_fd!(dw_dpp, eq2d_vec, d_dpp)
-
-fd_der = @. dw_dq + dw_dp + dw_dqq + dw_dpp
-@test ≈(fd_der, d2_eq2d_vec; atol=tol)
+@testset "Spectral wavenumbers" begin
+    # The unpaired Nyquist wavenumber of an even grid is dropped.
+    @test HEOM.wavenumbers(4, 0.5) ≈ [0, π, 0]
+    @test HEOM.wavenumbers(5, 1.0) ≈ [0, 0.4π, 0.8π]
+end
