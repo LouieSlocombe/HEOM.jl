@@ -28,8 +28,7 @@ julia --project=build_tools build_tools/coverage.jl
 
 Coverage is checked for the package source in `src/`. The gate fails on missing
 coverage or uncovered executable lines and writes an LCOV report to `lcov.info`.
-The test suite, CLI launcher, and development scripts are not part of that
-coverage percentage.
+The test suite and development scripts are not part of that coverage percentage.
 
 To update the tools within their compatibility bounds:
 

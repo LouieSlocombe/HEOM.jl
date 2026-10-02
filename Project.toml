@@ -3,14 +3,28 @@ uuid = "70578a31-f1f2-4961-8c4c-9f0d1a93a64a"
 authors = ["Louie Slocombe <louies@hotmail.co.uk>"]
 version = "0.1.0"
 
+[deps]
+FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+SciMLBase = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+
 [compat]
 Aqua = "0.8"
+FFTW = "1.8"
+ForwardDiff = "1"
+LinearAlgebra = "1.10"
+OrdinaryDiffEqVerner = "2"
+SciMLBase = "3"
+SparseArrays = "1.10"
 Test = "1.10"
 julia = "1.10"
 
 [extras]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
+OrdinaryDiffEqVerner = "79d7bb75-1356-48c1-b8c0-6832512096c2"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Aqua", "Test"]
+test = ["Aqua", "OrdinaryDiffEqVerner", "Test"]

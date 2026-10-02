@@ -45,9 +45,6 @@ jobs:
       - name: Test the package and check package quality
         run: julia --startup-file=no --project=. -e 'using Pkg; Pkg.test()'
 
-      - name: Smoke test the command line
-        run: julia --startup-file=no --project=. bin/heom.jl Ada
-
       - name: Smoke test the package from a separate environment
         run: |
           julia --startup-file=no -e '
@@ -56,8 +53,15 @@ jobs:
             Pkg.activate(mktempdir())
             Pkg.develop(path=repository)
             using HEOM
-            @assert line(-1.0, 1.0; num=3) == [-1.0, 0.0, 1.0]
-            print_hello("Ada")
+            grid = PhaseSpaceGrid((-8.0, 8.0), 64, (-8.0, 8.0), 64)
+            W0 = on_grid((q, p) -> fock_wigner(0, q, p; mass=1.0, omega=1.0), grid)
+            V = harmonic_potential(; mass=1.0, omega=1.0)
+            prob = wigner_moyal_problem(W0, (0.0, 1.0), grid; mass=1.0, potential=V)
+            dW = similar(prob.u0)
+            prob.f(dW, prob.u0, prob.p, 0.0)
+            @assert maximum(abs, dW) < 1e-10
+            @assert isapprox(phase_space_integral(prob.u0, grid), 1; atol=1e-10)
+            println(prob.p)
           '
 
   quality:

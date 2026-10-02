@@ -11,7 +11,7 @@ function main(args)
 
     check = args == ["--check"]
     root = dirname(@__DIR__)
-    paths = [joinpath(root, dir) for dir in ("src", "test", "bin", "build_tools")]
+    paths = [joinpath(root, dir) for dir in ("src", "test", "build_tools")]
     already_formatted =
         format(paths; overwrite = !check, verbose = true, throw_on_error = true)
     if check && !already_formatted
