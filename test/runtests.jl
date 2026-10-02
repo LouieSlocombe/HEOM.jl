@@ -44,6 +44,7 @@ end
     include("observables.jl")
     include("diagnostics.jl")
     include("populations.jl")
+    include("plotting.jl")
 
     @testset "Package quality" begin
         Aqua.test_all(HEOM)

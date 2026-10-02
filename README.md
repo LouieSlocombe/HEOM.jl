@@ -21,6 +21,7 @@ ecosystem integrates it in time.
   [Juliaup](https://julialang.org/downloads/).
 - An ODE solver package in your environment, for example `OrdinaryDiffEqVerner`,
   `OrdinaryDiffEqTsit5`, or the full `OrdinaryDiffEq`.
+- Optional: `Plots` for Wigner heatmaps, marginal densities and diagnostic plots.
 - Optional: [pre-commit](https://pre-commit.com/#installation) for Git hooks.
 
 CI tests the minimum supported Julia version and the latest stable Julia on
@@ -77,6 +78,9 @@ function has a docstring available through Julia's help mode, for example
 | `purity`, `overlap`, `wigner_negativity` | `Tr ρ²`, `Tr ρ₁ρ₂` and the integral of `abs(W) − W` |
 | `boundary_weight`, `spectral_tail` | Fractions of absolute weight near each boundary and Fourier amplitude in high modes |
 | `diagnostics(W, grid; mass, potential, hbar)`, `diagnostics(states, grid; ...)`, `diagnostics(sol; potential)` | State or trajectory summaries, with autocorrelation for trajectories |
+| `wignerplot(W, grid)`, `wignerplot(sol[, index])` | Signed Wigner heatmap, with position horizontal and momentum vertical |
+| `marginalplot(W, grid)`, `marginalplot(sol[, index])` | Position and momentum densities in separate panels |
+| `diagnosticsplot(d)`, `diagnosticsplot(times, d)`, `diagnosticsplot(sol; potential)` | Diagnostic time series, selectable with `fields` |
 | `probability(W, grid; q, p)`, `probability_current(W, grid; mass)` | Window populations and position probability current |
 | `expectation_rate(f, W, op)`, `probability_rate(W, op; q, p)` | Instantaneous rates from the semi-discrete equation |
 | `harmonic_potential`, `coherent_wigner`, `fock_wigner`, `cat_wigner` | Harmonic oscillator and its standard states |
@@ -144,6 +148,57 @@ norm_drift = maximum(abs, d.norm .- first(d.norm))
 energy_drift = maximum(abs, d.energy .- first(d.energy))
 ```
 
+## Plotting
+
+HEOM provides lightweight RecipesBase recipes; `Plots` is optional and does not
+load when you use HEOM for computation alone. Install plotting and solver packages
+in a separate consumer environment, for example:
+
+```julia
+using Pkg
+Pkg.activate("heom-examples")
+Pkg.develop(path = "/path/to/HEOM.jl")
+Pkg.add(["Plots", "OrdinaryDiffEqVerner"])
+```
+
+After running the quick-start simulation in that environment:
+
+```julia
+using Plots
+
+fig = wignerplot(sol)                     # final saved state
+wignerplot(sol, 1; title = "Initial state")
+wignerplot(sol.u[end], grid)              # equivalent matrix-and-grid form
+marginalplot(sol)                         # position and momentum density panels
+diagnosticsplot(sol; potential = V)       # norm, energy, purity and negativity
+diagnosticsplot(d; fields = (:norm, :energy))
+diagnosticsplot(sol.t, diagnostics(sol.u, grid; mass, potential = V);
+    fields = :purity)
+savefig(fig, "wigner.png")
+```
+
+`wignerplot` preserves negative values and uses a diverging `:RdBu` colour map
+with symmetric colour limits centred on zero. `marginalplot` integrates over the
+other axis using the grid quadrature. Neither plot renormalises the data. Both
+accept an integer saved-state index for a solution and default to its final state.
+`diagnosticsplot` accepts a symbol, tuple or vector of symbols in `fields`; its
+default is `(:norm, :energy, :purity, :negativity)`.
+
+All three accept standard Plots attributes such as `size`, `title` and `linewidth`,
+and have `!` forms for adding to an existing plot. Repeat custom attributes on `!`
+calls to keep them in place, and use the same diagnostic field order when adding
+curves to a diagnostic plot. Set `clims` explicitly to compare
+Wigner heatmaps on the same colour scale, including in a Plots animation:
+
+```julia
+limit = maximum(W -> maximum(abs, W), sol.u)
+fixed_limits = (-limit, limit)
+animation = @animate for i in eachindex(sol.t)
+    wignerplot(sol, i; clims = fixed_limits, title = "t = $(round(sol.t[i]; digits = 3))")
+end
+gif(animation, "wigner.gif"; fps = 20)
+```
+
 ## Numerical method
 
 **Discretisation.** `discretization = Spectral()`, the default, uses Fourier
@@ -206,10 +261,11 @@ julia --project=build_tools build_tools/format.jl --check
 julia --project=. -e 'using Pkg; Pkg.test()'
 ```
 
-`Pkg.test()` installs the test-only dependencies, including `OrdinaryDiffEqVerner`.
-It runs the numerical tests, selected type-inference and allocation checks, and Aqua's
-package quality checks. Aqua checks issues such as method ambiguities, undefined
-exports, stale dependencies, and missing compatibility bounds.
+`Pkg.test()` installs the test-only dependencies, including `OrdinaryDiffEqVerner`
+and `Plots`. It runs the numerical and plotting tests, selected type-inference and
+allocation checks, and Aqua's package quality checks. Aqua checks issues such as
+method ambiguities, undefined exports, stale dependencies, and missing compatibility
+bounds.
 
 Apply formatting changes with:
 
@@ -259,6 +315,7 @@ packages are distributed as source; there is no wheel-building step.
 │   ├── observables.jl             # marginals, moments, energy, overlaps, negativity
 │   ├── diagnostics.jl             # grid health and state/trajectory summaries
 │   ├── populations.jl             # window populations, currents and rates
+│   ├── plotting.jl                # optional Plots interface through RecipesBase
 │   └── harmonic_oscillator.jl     # analytic harmonic-oscillator states and evolution
 ├── test/                          # numerical and package quality tests
 ├── .JuliaFormatter.toml           # formatting rules

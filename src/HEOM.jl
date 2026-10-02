@@ -10,12 +10,15 @@ by the method of lines. [`wigner_moyal_problem`](@ref) discretises phase space o
 [`PhaseSpaceGrid`](@ref) and returns an `ODEProblem` that any OrdinaryDiffEq solver can
 integrate in time.
 Analysis functions expose observables, grid diagnostics, trajectory summaries and populations.
+Plotting recipes display Wigner functions, marginal densities and diagnostic trajectories
+when Plots.jl is loaded.
 """
 module HEOM
 
 using FFTW: plan_brfft, plan_rfft, rfft, rfftfreq
 using ForwardDiff: ForwardDiff
 using LinearAlgebra: dot, kron, mul!
+using RecipesBase: @recipe, @series, @userplot
 using SciMLBase: AbstractODESolution, ODEProblem
 using SparseArrays: SparseArrays, SparseMatrixCSC, sparse, spdiagm
 
@@ -35,5 +38,6 @@ include("observables.jl")
 include("diagnostics.jl")
 include("populations.jl")
 include("harmonic_oscillator.jl")
+include("plotting.jl")
 
 end
