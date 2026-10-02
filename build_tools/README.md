@@ -21,13 +21,14 @@ without modifying them. The pre-commit hook uses the same check command.
 For a fresh coverage report:
 
 ```bash
-julia --project=build_tools -e 'using Coverage; clean_folder("src")'
+julia --project=build_tools -e 'using Coverage; foreach(clean_folder, ("src", "ext"))'
 julia --project=. -e 'using Pkg; Pkg.test(coverage=true)'
 julia --project=build_tools build_tools/coverage.jl
 ```
 
-Coverage is checked for the package source in `src/`. The gate fails on missing
-coverage or uncovered executable lines and writes an LCOV report to `lcov.info`.
+Coverage is checked for the package source in `src/` and extensions in `ext/`.
+The gate fails on missing coverage or uncovered executable lines and writes an
+LCOV report to `lcov.info`.
 The test suite and development scripts are not part of that coverage percentage.
 
 To update the tools within their compatibility bounds:

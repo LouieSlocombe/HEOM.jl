@@ -11,7 +11,7 @@ by the method of lines. [`wigner_moyal_problem`](@ref) discretises phase space o
 integrate in time.
 Analysis functions expose observables, grid diagnostics, trajectory summaries and populations.
 Plotting recipes display Wigner functions, marginal densities and diagnostic trajectories
-when Plots.jl is loaded.
+when Plots.jl is loaded. Animation helpers record Wigner and marginal trajectories.
 """
 module HEOM
 
@@ -30,6 +30,7 @@ export position_density, momentum_density, phase_space_mean, phase_space_covaria
 export boundary_weight, spectral_tail, diagnostics
 export probability, probability_current, probability_rate, expectation_rate
 export harmonic_potential, coherent_wigner, fock_wigner, cat_wigner, harmonic_evolution
+export wigneranimation, marginalanimation
 
 include("grid.jl")
 include("derivatives.jl")
@@ -39,5 +40,6 @@ include("diagnostics.jl")
 include("populations.jl")
 include("harmonic_oscillator.jl")
 include("plotting.jl")
+include("animation.jl")
 
 end

@@ -3,7 +3,7 @@ using Coverage
 cd(dirname(@__DIR__)) do
     # Count uncalled function bodies too, including files without a .cov report.
     coverage = withenv("DISABLE_AMEND_COVERAGE_FROM_SRC" => "no") do
-        process_folder("src")
+        vcat(process_folder("src"), process_folder("ext"))
     end
     LCOV.writefile("lcov.info", coverage)
     covered, total = get_summary(coverage)

@@ -21,7 +21,7 @@ ecosystem integrates it in time.
   [Juliaup](https://julialang.org/downloads/).
 - An ODE solver package in your environment, for example `OrdinaryDiffEqVerner`,
   `OrdinaryDiffEqTsit5`, or the full `OrdinaryDiffEq`.
-- Optional: `Plots` for Wigner heatmaps, marginal densities and diagnostic plots.
+- Optional: `Plots` for Wigner heatmaps, marginal densities, diagnostic plots and animations.
 - Optional: [pre-commit](https://pre-commit.com/#installation) for Git hooks.
 
 CI tests the minimum supported Julia version and the latest stable Julia on
@@ -81,6 +81,8 @@ function has a docstring available through Julia's help mode, for example
 | `wignerplot(W, grid)`, `wignerplot(sol[, index])` | Signed Wigner heatmap, with position horizontal and momentum vertical |
 | `marginalplot(W, grid)`, `marginalplot(sol[, index])` | Position and momentum densities in separate panels |
 | `diagnosticsplot(d)`, `diagnosticsplot(times, d)`, `diagnosticsplot(sol; potential)` | Diagnostic time series, selectable with `fields` |
+| `wigneranimation(sol)`, `wigneranimation(states, grid; times)` | Wigner animation with a fixed signed colour scale |
+| `marginalanimation(sol)`, `marginalanimation(states, grid; times)` | Marginal density animation with fixed scales in both panels |
 | `probability(W, grid; q, p)`, `probability_current(W, grid; mass)` | Window populations and position probability current |
 | `expectation_rate(f, W, op)`, `probability_rate(W, op; q, p)` | Instantaneous rates from the semi-discrete equation |
 | `harmonic_potential`, `coherent_wigner`, `fock_wigner`, `cat_wigner` | Harmonic oscillator and its standard states |
@@ -187,17 +189,48 @@ default is `(:norm, :energy, :purity, :negativity)`.
 All three accept standard Plots attributes such as `size`, `title` and `linewidth`,
 and have `!` forms for adding to an existing plot. Repeat custom attributes on `!`
 calls to keep them in place, and use the same diagnostic field order when adding
-curves to a diagnostic plot. Set `clims` explicitly to compare
-Wigner heatmaps on the same colour scale, including in a Plots animation:
+curves to a diagnostic plot. Set `clims` explicitly to compare Wigner heatmaps on
+the same colour scale.
+
+## Animations
+
+With `Plots` loaded, `wigneranimation` and `marginalanimation` record saved states
+as standard `Plots.Animation` objects. Export them with Plots' `gif` or `mp4`:
 
 ```julia
-limit = maximum(W -> maximum(abs, W), sol.u)
-fixed_limits = (-limit, limit)
-animation = @animate for i in eachindex(sol.t)
-    wignerplot(sol, i; clims = fixed_limits, title = "t = $(round(sol.t[i]; digits = 3))")
-end
+using Plots
+
+# Uniform saved times give constant-speed playback of the physical trajectory.
+sol = solve(prob, Vern9(); abstol = 1e-12, reltol = 1e-12,
+    saveat = range(prob.tspan...; length = 101))
+animation = wigneranimation(sol; size = (600, 500))
 gif(animation, "wigner.gif"; fps = 20)
+mp4(animation, "wigner.mp4"; fps = 20)
+
+marginals = marginalanimation(sol; indices = 1:2:length(sol.u))
+gif(marginals, "marginals.gif"; fps = 10)
+
+# Explicit trajectories also work; omit times to label frames by state index.
+wigneranimation(sol.u, grid; times = sol.t, clims = (-0.3, 0.3))
 ```
+
+By default, Wigner animations use one symmetric colour scale across all selected
+states. Marginal animations fix each panel's density limits across those states,
+including zero and negative densities. Neither helper clips or renormalises data.
+Both add time labels and accept ordinary Plots attributes to override defaults,
+including `title`, `clims` for Wigner heatmaps, or `ylims` for marginal densities.
+
+`indices` selects frames in playback order and supports subsets, reversal and
+repetition. All selected states are validated before rendering. Each selected
+state becomes one frame with equal playback duration; the helpers do not
+interpolate irregular saved times. `fps` belongs to `gif`/`mp4`, not the animation
+helper. Frame PNGs are stored in Plots' temporary directory. The animation
+extension loads only when both HEOM and Plots are loaded.
+
+For a complete runnable example, see [the displaced harmonic oscillator](examples/displaced_sho.jl).
+It starts a coherent state at `x = 2`, `p = 0`, checks its motion over one period,
+and writes Wigner and marginal GIFs. Run it in the consumer environment above;
+an optional command-line argument selects the output directory.
 
 ## Numerical method
 
@@ -276,12 +309,12 @@ julia --project=build_tools build_tools/format.jl --fix
 Run the coverage gate used by CI:
 
 ```bash
-julia --project=build_tools -e 'using Coverage; clean_folder("src")'
+julia --project=build_tools -e 'using Coverage; foreach(clean_folder, ("src", "ext"))'
 julia --project=. -e 'using Pkg; Pkg.test(coverage=true)'
 julia --project=build_tools build_tools/coverage.jl
 ```
 
-The gate requires 100% coverage of executable lines in `src/` and writes
+The gate requires 100% coverage of executable lines in `src/` and `ext/` and writes
 `lcov.info`. Julia reports line coverage, so this is not the Python template's
 branch-coverage metric. Clearing previous coverage first prevents stale runs
 from hiding missing tests. Coverage reports do not require a hosted service or
@@ -307,6 +340,7 @@ packages are distributed as source; there is no wheel-building step.
 .
 ├── .github/workflows/ci.yml       # formatting, tests, coverage, consumer smoke test
 ├── build_tools/                   # separate development tools and scripts
+├── ext/HEOMPlotsExt.jl             # optional Plots animation implementation
 ├── src/
 │   ├── HEOM.jl                    # package module and public exports
 │   ├── grid.jl                    # periodic phase-space grid
@@ -316,6 +350,7 @@ packages are distributed as source; there is no wheel-building step.
 │   ├── diagnostics.jl             # grid health and state/trajectory summaries
 │   ├── populations.jl             # window populations, currents and rates
 │   ├── plotting.jl                # optional Plots interface through RecipesBase
+│   ├── animation.jl               # public animation API and documentation
 │   └── harmonic_oscillator.jl     # analytic harmonic-oscillator states and evolution
 ├── test/                          # numerical and package quality tests
 ├── .JuliaFormatter.toml           # formatting rules

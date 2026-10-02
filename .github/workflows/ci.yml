@@ -53,6 +53,7 @@ jobs:
             Pkg.activate(mktempdir())
             Pkg.develop(path=repository)
             using HEOM
+            @assert isnothing(Base.get_extension(HEOM, :HEOMPlotsExt))
             grid = PhaseSpaceGrid((-8.0, 8.0), 64, (-8.0, 8.0), 64)
             W0 = on_grid((q, p) -> fock_wigner(0, q, p; mass=1.0, omega=1.0), grid)
             V = harmonic_potential(; mass=1.0, omega=1.0)
@@ -89,7 +90,7 @@ jobs:
         run: julia --startup-file=no --project=build_tools build_tools/format.jl --check
 
       - name: Clear previous coverage
-        run: julia --startup-file=no --project=build_tools -e 'using Coverage; clean_folder("src")'
+        run: julia --startup-file=no --project=build_tools -e 'using Coverage; foreach(clean_folder, ("src", "ext"))'
 
       - name: Test with coverage
         run: julia --startup-file=no --project=. -e 'using Pkg; Pkg.test(coverage=true)'
