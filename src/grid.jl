@@ -47,6 +47,16 @@ end
 
 Base.size(grid::PhaseSpaceGrid) = (length(grid.q), length(grid.p))
 
+# Reject mismatched samples before reductions or broadcasting can hide their shape.
+function check_size(W::AbstractMatrix, grid::PhaseSpaceGrid)
+    size(W) == size(grid) || throw(
+        DimensionMismatch(
+            "matrix has size $(size(W)), but the grid has size $(size(grid))",
+        ),
+    )
+    return nothing
+end
+
 function Base.show(io::IO, grid::PhaseSpaceGrid)
     nq, np = size(grid)
     qmax = first(grid.q) + nq * grid.dq

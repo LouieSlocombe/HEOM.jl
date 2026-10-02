@@ -9,25 +9,31 @@ particle of mass `m` in a potential `V(q)`,
 by the method of lines. [`wigner_moyal_problem`](@ref) discretises phase space on a
 [`PhaseSpaceGrid`](@ref) and returns an `ODEProblem` that any OrdinaryDiffEq solver can
 integrate in time.
+Analysis functions expose observables, grid diagnostics, trajectory summaries and populations.
 """
 module HEOM
 
-using FFTW: plan_brfft, plan_rfft, rfftfreq
+using FFTW: plan_brfft, plan_rfft, rfft, rfftfreq
 using ForwardDiff: ForwardDiff
-using LinearAlgebra: kron, mul!
-using SciMLBase: ODEProblem
+using LinearAlgebra: dot, kron, mul!
+using SciMLBase: AbstractODESolution, ODEProblem
 using SparseArrays: SparseArrays, SparseMatrixCSC, sparse, spdiagm
 
 export PhaseSpaceGrid, on_grid
 export Spectral, FiniteDifference
 export wigner_moyal_operator, wigner_moyal!, wigner_moyal_problem
-export phase_space_integral, expectation, purity
+export phase_space_integral, expectation, purity, overlap, energy, wigner_negativity
+export position_density, momentum_density, phase_space_mean, phase_space_covariance
+export boundary_weight, spectral_tail, diagnostics
+export probability, probability_current, probability_rate, expectation_rate
 export harmonic_potential, coherent_wigner, fock_wigner, cat_wigner, harmonic_evolution
 
 include("grid.jl")
 include("derivatives.jl")
 include("wigner_moyal.jl")
 include("observables.jl")
+include("diagnostics.jl")
+include("populations.jl")
 include("harmonic_oscillator.jl")
 
 end

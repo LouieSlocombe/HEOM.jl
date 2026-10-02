@@ -19,19 +19,3 @@
     @test_throws ArgumentError PhaseSpaceGrid((1, -1), 8, (-1, 1), 8)
     @test_throws ArgumentError PhaseSpaceGrid((-1, 1), 8, (-1, Inf), 8)
 end
-
-@testset "Observables" begin
-    grid = PhaseSpaceGrid((-8, 8), 64, (-8, 8), 64)
-    σq, σp, q0, p0 = 0.6, 0.9, 0.5, -1.0
-    W = on_grid(
-        (q, p) -> exp(-(q - q0)^2 / (2σq^2) - (p - p0)^2 / (2σp^2)) / (2π * σq * σp),
-        grid,
-    )
-    @test phase_space_integral(W, grid) ≈ 1 atol = 1e-12
-    @test expectation((q, p) -> q, W, grid) ≈ q0 atol = 1e-12
-    @test expectation((q, p) -> p, W, grid) ≈ p0 atol = 1e-12
-    @test expectation((q, p) -> (q - q0)^2, W, grid) ≈ σq^2 atol = 1e-12
-    # A Gaussian with uncorrelated widths σq and σp has purity ħ/(2σqσp).
-    @test purity(W, grid; hbar = 0.7) ≈ 0.7 / (2σq * σp) atol = 1e-12
-    @test_throws DimensionMismatch phase_space_integral(zeros(3, 3), grid)
-end

@@ -51,6 +51,7 @@ W = sol.u[end]                           # back to W0 after one period
 phase_space_integral(W, grid)            # norm, 1
 expectation((q, p) -> q, W, grid)        # ⟨q⟩, 2
 purity(W, grid)                          # Tr ρ², 1 for a pure state
+d = diagnostics(sol; potential = V)      # observables and grid health at every saved time
 ```
 
 A Wigner function on the grid is an `nq × np` matrix with `W[i, j] = W(q[i], p[j])`.
@@ -70,9 +71,78 @@ function has a docstring available through Julia's help mode, for example
 | `wigner_moyal_problem(W0, tspan, grid; mass, potential, ...)` | `ODEProblem` for the Wigner–Moyal equation |
 | `wigner_moyal_operator(grid; mass, potential, hbar, discretization, moyal_terms)` | Reusable semi-discrete operator; `wigner_moyal_problem(W0, tspan, op)` takes it |
 | `wigner_moyal!(dW, W, op, t)` | In-place right-hand side |
-| `phase_space_integral`, `expectation`, `purity` | Norm, phase-space averages and `Tr ρ²` |
+| `phase_space_integral`, `expectation`, `energy` | Norm, Weyl-symbol averages and mean energy |
+| `position_density`, `momentum_density` | Marginal densities, integrating over the other axis |
+| `phase_space_mean`, `phase_space_covariance` | Mean position and momentum, and symmetrised covariance |
+| `purity`, `overlap`, `wigner_negativity` | `Tr ρ²`, `Tr ρ₁ρ₂` and the integral of `abs(W) − W` |
+| `boundary_weight`, `spectral_tail` | Fractions of absolute weight near each boundary and Fourier amplitude in high modes |
+| `diagnostics(W, grid; mass, potential, hbar)`, `diagnostics(states, grid; ...)`, `diagnostics(sol; potential)` | State or trajectory summaries, with autocorrelation for trajectories |
+| `probability(W, grid; q, p)`, `probability_current(W, grid; mass)` | Window populations and position probability current |
+| `expectation_rate(f, W, op)`, `probability_rate(W, op; q, p)` | Instantaneous rates from the semi-discrete equation |
 | `harmonic_potential`, `coherent_wigner`, `fock_wigner`, `cat_wigner` | Harmonic oscillator and its standard states |
 | `harmonic_evolution(W0, t; mass, omega)` | Exact harmonic-oscillator solution, for testing |
+
+## Analysis
+
+Nothing is renormalised: norm drift remains visible in every observable. The
+marginals, means, central covariance and energy use the same grid quadrature as
+`expectation`. `overlap(W1, W2, grid; hbar)` gives `Tr ρ₁ρ₂`, which is the squared
+state overlap for pure states and an eigenstate population when one state is an
+energy eigenstate. `wigner_negativity` integrates `abs(W) − W`; it vanishes for a
+nonnegative Wigner function. Its quadrature is only second-order accurate at the
+zero contours, so resolve these before interpreting small changes.
+
+`diagnostics` collects norm, means, variances, covariance, energy, purity and
+negativity alongside two uncertainty measures: `uncertainty` is σqσp, and
+`robertson_schrodinger` is √det Σ. Both are at least ħ/2 for a normalised physical
+state, with √det Σ invariant under harmonic evolution. For a vector of states or
+an ODE solution, each field is a vector and `autocorrelation` records overlap with
+the first saved state. For a pure initial state this is the survival probability.
+The solution method adds `t` and reads the grid, mass and ħ from the operator.
+
+Keep `boundary_q`, `boundary_p`, `tail_q` and `tail_p` small. Boundary weights are
+fractions of the integral of `abs(W)` in the outer strips (5% of the points at each
+end by default); enlarge the box when they grow. Spectral tails measure the
+relative Fourier amplitude in the highest modes (the upper third by default);
+refine the grid when they grow. These indicators depend on the state and the
+chosen box, so check that observables converge as the box and grid are enlarged.
+
+`probability(W, grid; q = (a, b))` gives a genuine position-window probability,
+and `p = (a, b)` gives a momentum-window probability. Specifying both gives a
+phase-space quasi-probability, which can be negative. Window limits need not be
+grid points: the integral uses the grid's trigonometric interpolant. Omitting an
+axis integrates its whole box, and limits outside the box are clipped.
+
+The rate functions apply the same linear observables to `∂W/∂t`, so they are exact
+for the semi-discrete equations. For a state that decays at the box boundary,
+`probability_rate(W, op; q = (q_surface, Inf))` gives the reactive flux into the
+product region. For a resolved state, spectral derivatives give agreement with the
+interpolated probability current at the dividing surface to spectral accuracy;
+finite differences approximate that continuum relation as the grid is refined.
+
+For example, analyse transfer across `q = 0` in a tilted double well:
+
+```julia
+using HEOM, OrdinaryDiffEqVerner
+
+mass, hbar = 1.3, 0.7
+V(q) = 0.1q^4 - 0.5q^2 + 0.1q
+grid = PhaseSpaceGrid((-7.0, 7.0), 64, (-7.0, 7.0), 64)
+W0 = on_grid(
+    (q, p) -> coherent_wigner(q, p; q0 = -1.0, p0 = 0.5, mass, omega = 1.0, hbar),
+    grid,
+)
+op = wigner_moyal_operator(grid; mass, potential = V, hbar)
+prob = wigner_moyal_problem(W0, (0.0, 0.2), op)
+sol = solve(prob, Vern9(); abstol = 1e-12, reltol = 1e-12, saveat = 0.001)
+
+d = diagnostics(sol; potential = V)
+product_population = [probability(W, grid; q = (0.0, Inf)) for W in sol.u]
+product_flux = [probability_rate(W, op; q = (0.0, Inf)) for W in sol.u]
+survival = d.autocorrelation
+norm_drift = maximum(abs, d.norm .- first(d.norm))
+energy_drift = maximum(abs, d.energy .- first(d.energy))
+```
 
 ## Numerical method
 
@@ -115,6 +185,11 @@ checked against closed forms instead:
   the `N = 2` truncation must agree.
 - For a sine potential, every order contributes, and the exact operator is a pair
   of momentum shifts.
+- Correlated Gaussian moments, harmonic-state overlaps and Fock-state negativity
+  check the analysis formulas against closed forms.
+- Fourier modes test boundary and spectral diagnostics, and exact window integrals.
+- Harmonic trajectories test the summary fields and survival probability; population
+  fluxes, Ehrenfest relations and energy rates test both discretisations.
 
 ## Development
 
@@ -181,7 +256,9 @@ packages are distributed as source; there is no wheel-building step.
 │   ├── grid.jl                    # periodic phase-space grid
 │   ├── derivatives.jl             # spectral and finite-difference discretisations
 │   ├── wigner_moyal.jl            # Wigner–Moyal operators and ODEProblem
-│   ├── observables.jl             # norm, expectation values, purity
+│   ├── observables.jl             # marginals, moments, energy, overlaps, negativity
+│   ├── diagnostics.jl             # grid health and state/trajectory summaries
+│   ├── populations.jl             # window populations, currents and rates
 │   └── harmonic_oscillator.jl     # analytic harmonic-oscillator states and evolution
 ├── test/                          # numerical and package quality tests
 ├── .JuliaFormatter.toml           # formatting rules
