@@ -430,6 +430,17 @@ consumer environment, with an optional output directory:
 julia --project=/path/to/heom-examples examples/animated_heom_sho.jl [output_dir]
 ```
 
+[The Morse oscillator example](examples/heom_morse.jl) follows a displaced quantum
+wavepacket in an asymmetric Morse well coupled to a Drude–Lorentz bath. It retains
+the full spectral Moyal operator, compares hierarchy depths 6 and 8, and checks
+normalization, boundary weight and Fourier tails. It writes GIF/MP4 animations of
+the Wigner distribution, position density and potential, along with diagnostics,
+CSV observables and validation results:
+
+```sh
+julia --project=/path/to/heom-examples examples/heom_morse.jl [output_dir]
+```
+
 ## Numerical method
 
 **Discretisation.** `discretization = Spectral()`, the default, uses Fourier
