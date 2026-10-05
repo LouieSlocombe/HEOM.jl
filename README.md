@@ -418,6 +418,18 @@ It starts a coherent state at `x = 2`, `p = 0`, checks its motion over one perio
 and writes Wigner and marginal GIFs. Run it in the consumer environment above;
 an optional command-line argument selects the output directory.
 
+For bath-coupled dynamics, [the animated HEOM oscillator](examples/animated_heom_sho.jl)
+starts the same displaced coherent state in a Drude–Lorentz thermal bath and shows
+its Wigner distribution, position density, damped centroid motion and oscillator
+energy over 20 time units. It checks the full distribution against the Gaussian
+solution of the retained bath expansion and writes GIF/MP4 animations, snapshots,
+observables and validation results. Run it from the repository in the same
+consumer environment, with an optional output directory:
+
+```sh
+julia --project=/path/to/heom-examples examples/animated_heom_sho.jl [output_dir]
+```
+
 ## Numerical method
 
 **Discretisation.** `discretization = Spectral()`, the default, uses Fourier
