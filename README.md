@@ -65,6 +65,75 @@ To work on this package from another Julia project, use
 function has a docstring available through Julia's help mode, for example
 `?wigner_moyal_operator`.
 
+## General initial states
+
+Prepare a Wigner function from a wavefunction or a position-space density kernel:
+
+```julia
+grid = PhaseSpaceGrid((-8.0, 8.0), 192, (-8.0, 8.0), 128)
+hbar = 1.0
+psi(q) = π^(-1/4) * exp(-q^2 / 2 + im * q / hbar)
+W = wavefunction_wigner(psi, grid; hbar)
+W_samples = wavefunction_wigner(psi.(grid.q), grid; hbar)
+
+rho(q, qp) = psi(q) * conj(psi(qp))
+W_rho = density_matrix_wigner(rho, grid; hbar)
+samples = psi.(grid.q)
+W_matrix = density_matrix_wigner(samples * samples', grid; hbar)
+```
+
+The convention is
+
+```math
+W(q,p) = \frac{1}{2\pi\hbar}\int e^{ipy/\hbar}
+\rho(q-y/2,q+y/2)\,dy,\qquad
+\rho(q,q')=\psi(q)\psi(q')^*.
+```
+
+A sampled density matrix contains kernel values `rho[i, j] = rho(q[i], q[j])`;
+its trace is `sum(diag(rho))*grid.dq`. Wavefunction samples have squared norm
+`sum(abs2, psi)*grid.dq`. The transforms preserve these quantities without
+normalising the input, and return real `nq × np` arrays that retain Wigner negativity.
+Sampled inputs use local cubic interpolation (lower order on very small grids)
+and are zero outside the sampled position interval. Resolve their spatial
+structure and make their boundary values negligible. Callable inputs are evaluated
+at shifted positions up to approximately `π*hbar/(2*grid.dp)` beyond each `q`.
+Both forms need convergence checks in the position and momentum boxes and spacings.
+
+Numerical eigenstates and Gibbs states accept any finite real potential on `grid.q`:
+
+```julia
+mass = 1.0
+V(q) = (q^2 - 4)^2 / 8                 # quartic double well
+states = eigenstates(grid; mass, potential = V, hbar, nstates = 2)
+states.energies                        # ascending energies
+psi0 = states.wavefunctions[:, 1]      # quadrature-normalised columns
+psi1 = states.wavefunctions[:, 2]
+W_superposition = wavefunction_wigner((psi0 + psi1) / sqrt(2), grid; hbar)
+W_ground = eigenstate_wigner(0, grid; mass, potential = V, hbar)
+W_thermal = thermal_wigner(grid; mass, potential = V, kT = 0.3, hbar)
+```
+
+`eigenstate_wigner` uses zero-based state indices, as `fock_wigner` does.
+`eigenstates` diagonalises a dense Fourier spectral Hamiltonian with periodic
+position boundaries; it is intended for moderate position grids and localised
+states that decay before those boundaries. Eigenvector phases are arbitrary,
+so set relative phases explicitly when choosing a particular superposition.
+`thermal_wigner` prepares the normalised, isolated-system finite-box Gibbs state
+for positive `kT = k_B T`. It includes the full discrete spectrum by default;
+`nstates` truncates the Gibbs sum and must be increased to check convergence.
+For an unconfined potential such as Morse, the continuum is discretised by the box:
+its finite-box thermal state does not establish a normalisable Gibbs state on the
+infinite line. For correlated system–bath equilibrium, use [`equilibrate`](#correlated-equilibrium-preparation).
+
+The [initial-state example](examples/initial_states.jl) prepares a tunnelling
+superposition in a double well, compares wavefunction and density-matrix transforms,
+and prepares a Morse ground state. It needs only HEOM:
+
+```sh
+julia --project=. examples/initial_states.jl
+```
+
 ## Wigner-space HEOM
 
 HEOM evolves the physical Wigner function together with auxiliary density
@@ -312,6 +381,10 @@ Caldeira–Leggett operators and solutions.
 | `marginalanimation(sol)`, `marginalanimation(states, grid; times)` | Marginal density animation with fixed scales in both panels |
 | `probability(W, grid; q, p)`, `probability_current(W, grid; mass)` | Window populations and position probability current |
 | `expectation_rate(f, W, op)`, `probability_rate(W, op; q, p)` | Instantaneous rates from the semi-discrete equation |
+| `wavefunction_wigner(psi, grid; hbar)`, `density_matrix_wigner(rho, grid; hbar)` | Wigner transforms of callable or sampled position-space states |
+| `eigenstates(grid; mass, potential, hbar, nstates)` | Numerical energies and quadrature-normalised wavefunction columns |
+| `eigenstate_wigner(n, grid; mass, potential, hbar)` | Numerical eigenstate Wigner function, with zero-based `n` |
+| `thermal_wigner(grid; mass, potential, kT, hbar, nstates)` | Normalised isolated-system Gibbs state on the finite position box |
 | `harmonic_potential`, `coherent_wigner`, `fock_wigner`, `cat_wigner` | Harmonic oscillator and its standard states |
 | `harmonic_evolution(W0, t; mass, omega)` | Exact harmonic-oscillator solution, for testing |
 
@@ -625,8 +698,11 @@ packages are distributed as source; there is no wheel-building step.
 │   ├── populations.jl             # window populations, currents and rates
 │   ├── plotting.jl                # optional Plots interface through RecipesBase
 │   ├── animation.jl               # public animation API and documentation
+│   ├── initial_states.jl          # wavefunction and density-matrix Wigner transforms
+│   ├── stationary_states.jl       # numerical eigenstates and finite-box Gibbs states
 │   └── harmonic_oscillator.jl     # analytic harmonic-oscillator states and evolution
 ├── test/                          # numerical and package quality tests
+├── examples/initial_states.jl      # double-well tunnelling and Morse state preparation
 ├── examples/heom_sho.jl            # bath-coupled oscillator and exact centroid check
 ├── .JuliaFormatter.toml           # formatting rules
 └── Project.toml                   # package metadata, compatibility, test dependencies
