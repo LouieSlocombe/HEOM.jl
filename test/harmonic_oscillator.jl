@@ -37,6 +37,44 @@
     @test harmonic_evolution(W0, T / 2; mass = m, omega = ω)(0.3, 0.4) ≈ W0(-0.3, -0.4)
 end
 
+@testset "Harmonic oscillator parameter validation and free limit" begin
+    for bad in (-1.0, 0.0, Inf, -Inf, NaN)
+        for state in (
+            (m, ω, ħ) -> coherent_wigner(0, 0; mass = m, omega = ω, hbar = ħ),
+            (m, ω, ħ) -> fock_wigner(1, 0, 0; mass = m, omega = ω, hbar = ħ),
+            (m, ω, ħ) -> cat_wigner(0, 0; q0 = 1, mass = m, omega = ω, hbar = ħ),
+        )
+            @test_throws ArgumentError state(bad, 1, 1)
+            @test_throws ArgumentError state(1, bad, 1)
+            @test_throws ArgumentError state(1, 1, bad)
+        end
+        @test_throws ArgumentError harmonic_potential(; mass = bad, omega = 1)
+        @test_throws ArgumentError harmonic_evolution(
+            (q, p) -> q + p,
+            1;
+            mass = bad,
+            omega = 1,
+        )
+    end
+    for bad in (-1.0, Inf, -Inf, NaN)
+        @test_throws ArgumentError harmonic_potential(; mass = 1, omega = bad)
+        @test_throws ArgumentError harmonic_evolution(
+            (q, p) -> q + p,
+            1;
+            mass = 1,
+            omega = bad,
+        )
+    end
+    @test_throws ArgumentError harmonic_evolution((q, p) -> q, Inf; mass = 1, omega = 1)
+    @test harmonic_potential(; mass = 1.3, omega = 0)(2.0) == 0
+    # The old sin(omega*t)/(m*omega) expression produced NaN at zero frequency.
+    W0(q, p) = exp(-q^2 - p^2)
+    for ω in (0.0, 1e-100)
+        evolved = harmonic_evolution(W0, 0.7; mass = 1.3, omega = ω)
+        @test evolved(0.4, 0.8) ≈ W0(0.4 - 0.8 * 0.7 / 1.3, 0.8)
+    end
+end
+
 @testset "Harmonic oscillator dynamics: coherent and Fock states" begin
     T = 2π
     V = harmonic_potential(; mass = 1, omega = 1)

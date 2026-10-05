@@ -139,6 +139,8 @@ function caldeira_leggett!(dW, W, op::SpectralCaldeiraLeggett, t)
 end
 
 function caldeira_leggett!(dW, W, op::FiniteDifferenceCaldeiraLeggett, t)
+    check_size(W, op.grid)
+    check_size(dW, op.grid)
     mul!(vec(dW), op.matrix, vec(W))
     return nothing
 end
@@ -152,7 +154,8 @@ phase_space_rhs!(dW, W, op::AbstractCaldeiraLeggett, t) = caldeira_leggett!(dW, 
 
 Method-of-lines `ODEProblem` for Caldeira–Leggett evolution of the `nq × np` initial
 Wigner matrix `W0`. The grid form passes keywords to [`caldeira_leggett_operator`](@ref);
-the operator form reuses an existing operator. The problem owns a `Float64` copy of `W0`.
+the operator form reuses an existing operator. The problem owns a real, finite `Float64`
+copy of `W0`.
 
 As with [`wigner_moyal_problem`](@ref), use an explicit solver such as `Vern9()`.
 The spectral buffers do not accept dual numbers and no sparse Jacobian is supplied for
@@ -169,7 +172,11 @@ end
 
 function caldeira_leggett_problem(W0::AbstractMatrix, tspan, op::AbstractCaldeiraLeggett)
     check_size(W0, op.grid)
-    return ODEProblem(caldeira_leggett!, Matrix{Float64}(W0), tspan, op)
+    eltype(W0) <: Real || throw(ArgumentError("initial Wigner function must be real"))
+    W = Matrix{Float64}(W0)
+    all(isfinite, W) ||
+        throw(ArgumentError("initial Wigner function must be finite in Float64"))
+    return ODEProblem(caldeira_leggett!, W, tspan, op)
 end
 
 """

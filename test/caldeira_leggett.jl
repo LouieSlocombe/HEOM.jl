@@ -171,11 +171,38 @@ end
           "FiniteDifferenceCaldeiraLeggett($(repr(grid)), order = 4, " *
           "mass = 1.0, hbar = 1.0, friction = 0.5, kT = 2.0, moyal_terms = 1)"
     W = on_grid((q, p) -> coherent_wigner(q, p; mass = 1, omega = 1), grid)
+    for operator in (op, fd)
+        # Equal element counts must not silently reinterpret position/momentum axes.
+        malformed = reshape(W, 16, 64)
+        @test_throws DimensionMismatch caldeira_leggett!(
+            similar(W),
+            malformed,
+            operator,
+            0.0,
+        )
+        @test_throws DimensionMismatch caldeira_leggett!(malformed, W, operator, 0.0)
+    end
     prob = caldeira_leggett_problem(W, (0.0, 1.0), op)
     @test prob.u0 == W
     @test prob.p === op
     @test prob.tspan == (0.0, 1.0)
     @test_throws DimensionMismatch caldeira_leggett_problem(zeros(4, 4), (0.0, 1.0), op)
+    @test_throws ArgumentError caldeira_leggett_problem(
+        fill(NaN, size(grid)),
+        (0.0, 1.0),
+        op,
+    )
+    @test_throws ArgumentError caldeira_leggett_problem(
+        fill(Inf, size(grid)),
+        (0.0, 1.0),
+        op,
+    )
+    @test_throws ArgumentError caldeira_leggett_problem(complex.(W), (0.0, 1.0), op)
+    @test_throws ArgumentError caldeira_leggett_problem(
+        fill(big"1e1000", size(grid)),
+        (0.0, 1.0),
+        op,
+    )
     @test_throws ArgumentError caldeira_leggett_operator(
         grid;
         mass = 1,
@@ -198,6 +225,57 @@ end
     warm = caldeira_leggett_operator(grid; mass = 1, potential = V, friction = 0.5, kT = 2)
     diffusion_only = caldeira_rhs(warm, alternating) - caldeira_rhs(op, alternating)
     @test diffusion_only ≈ -(π / grid.dp)^2 .* alternating atol = 1e-11
+end
+
+@testset "Damped Fock state: exact non-Gaussian Ornstein–Uhlenbeck solution" begin
+    m, ω, ħ, γ, kT = 1.2, 0.8, 0.7, 0.6, 1.1
+    grid = PhaseSpaceGrid((-8, 8), 64, (-8, 8), 64)
+    V = harmonic_potential(; mass = m, omega = ω)
+    W0 = on_grid((q, p) -> fock_wigner(1, q, p; mass = m, omega = ω, hbar = ħ), grid)
+    Σ0 = [ħ / (2m * ω) 0; 0 ħ * m * ω / 2]
+    Σ∞ = [kT / (m * ω^2) 0; 0 m * kT]
+    A = [0 1 / m; -m * ω^2 -γ]
+    times = [0.0, 0.1, 0.5, 1.0]
+    prob = caldeira_leggett_problem(
+        W0,
+        (0.0, last(times)),
+        grid;
+        mass = m,
+        potential = V,
+        friction = γ,
+        kT,
+        hbar = ħ,
+    )
+    sol = solve(prob, Vern7(); abstol = 1e-11, reltol = 1e-11, saveat = times)
+    # Characteristic-function factorization: Roy & Venugopalan, Eq. (20),
+    # https://arxiv.org/abs/quant-ph/9910004. Their damping is 2γ and their D is four
+    # times the momentum diffusion coefficient used here.
+    # The n=1 characteristic function is (1-k'Σ₀k)exp(-k'Σ₀k/2).
+    # The OU propagator maps k -> M'k and adds Gaussian noise. Inverse transforming
+    # gives [1-tr(RΣ⁻¹)+x'Σ⁻¹RΣ⁻¹x]GΣ(x), R=MΣ₀M', Σ=Σ∞+M(Σ₀-Σ∞)M'.
+    # This checks the full evolution of an initially negative Wigner function,
+    # independently of a Gaussian ansatz for W itself.
+    for (t, W) in zip(sol.t, sol.u)
+        M = exp(A * t)
+        R = M * Σ0 * M'
+        Σ = Σ∞ + M * (Σ0 - Σ∞) * M'
+        invΣ = inv(Σ)
+        C = R * invΣ
+        quadratic = invΣ * R * invΣ
+        exact = on_grid(grid) do q, p
+            x = [q, p]
+            (1 - tr(C) + dot(x, quadratic * x)) *
+            gaussian_wigner(q, p; mean = zeros(2), covariance = Σ)
+        end
+        exact_purity = ħ / (2sqrt(det(Σ))) * (1 - tr(C) + tr(C)^2 / 4 + tr(C * C) / 2)
+        @test max_error(W, exact) < 1e-8
+        @test phase_space_integral(W, grid) ≈ 1 atol = 1e-10
+        @test phase_space_covariance(W, grid) ≈ Σ + 2R atol = 1e-7
+        @test purity(W, grid; hbar = ħ) ≈ exact_purity atol = 1e-8
+    end
+    origin = (findfirst(iszero, grid.q), findfirst(iszero, grid.p))
+    @test sol.u[2][origin...] < 0
+    @test sol.u[end][origin...] > 0
 end
 
 @testset "Damped harmonic oscillator: analytical Gaussian evolution" begin

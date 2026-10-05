@@ -198,3 +198,90 @@ end
     )
     @test_throws DimensionMismatch wigner_moyal_problem(zeros(8, 8), (0.0, 1.0), op)
 end
+
+@testset "Reject invalid Hamiltonians and malformed Wigner states" begin
+    grid = PhaseSpaceGrid((-4, 4), 16, (-5, 5), 20)
+    V(q) = q^2 / 2
+    for invalid in (Inf, NaN, big"1e1000", big"1e-1000")
+        @test_throws ArgumentError wigner_moyal_operator(
+            grid;
+            mass = invalid,
+            potential = V,
+        )
+        # Even the classical truncation must reject an unrepresentable Planck constant.
+        @test_throws ArgumentError wigner_moyal_operator(
+            grid;
+            mass = 1,
+            potential = V,
+            hbar = invalid,
+            moyal_terms = 1,
+        )
+    end
+    for (discretization, moyal_terms) in
+        ((Spectral(), nothing), (Spectral(), 2), (FiniteDifference(4), 2))
+        @test_throws ArgumentError wigner_moyal_operator(
+            grid;
+            mass = 1e-320,
+            potential = V,
+            discretization,
+            moyal_terms,
+        )
+        @test_throws ArgumentError wigner_moyal_operator(
+            PhaseSpaceGrid((-1e-310, 1e-310), 16, (-5, 5), 20);
+            mass = 1,
+            potential = V,
+            discretization,
+            moyal_terms,
+        )
+        for potential in (q -> im * q^2, q -> q^2 + im, q -> Inf, q -> NaN)
+            @test_throws ArgumentError wigner_moyal_operator(
+                grid;
+                mass = 1,
+                potential,
+                discretization,
+                moyal_terms,
+            )
+        end
+        op = wigner_moyal_operator(
+            grid;
+            mass = 1,
+            potential = V,
+            discretization,
+            moyal_terms,
+        )
+        W = zeros(size(grid))
+        @test_throws ArgumentError wigner_moyal_problem(complex.(W), (0, 1), op)
+        # Broadcasting a single column and reshaping the same number of entries both used
+        # to bypass the phase-space axis contract in the direct RHS interfaces.
+        for malformed in (zeros(16, 1), zeros(20, 16))
+            @test_throws DimensionMismatch wigner_moyal!(similar(W), malformed, op, 0.0)
+            @test_throws DimensionMismatch wigner_moyal!(malformed, W, op, 0.0)
+        end
+        for invalid in (Inf, NaN, big"1e1000")
+            @test_throws ArgumentError wigner_moyal_problem(
+                fill(invalid, size(grid)),
+                (0, 1),
+                op,
+            )
+        end
+    end
+end
+
+@testset "Moyal skew symmetry on rectangular odd and even FFT grids" begin
+    for (nq, np) in ((15, 18), (16, 19))
+        grid = PhaseSpaceGrid((-3, 3), nq, (-4, 4), np)
+        # Broad Fourier content exercises the last paired mode and the unpaired Nyquist
+        # mode, which are almost absent from smooth Gaussian tests.
+        A = [sin(0.7i * j) for i in 1:nq, j in 1:np]
+        B = [cos(0.4i * j) for i in 1:nq, j in 1:np]
+        op = wigner_moyal_operator(
+            grid;
+            mass = 1.3,
+            hbar = 0.6,
+            potential = q -> sin(q) + q^4,
+        )
+        LA, LB = rhs(op, A), rhs(op, B)
+        @test abs(dot(A, LB) + dot(LA, B)) <= 1e-13 * norm(A) * norm(LB)
+        @test abs(sum(LA)) <= 1e-13 * sum(abs, LA)
+    end
+end

@@ -18,4 +18,12 @@
     @test_throws ArgumentError PhaseSpaceGrid((-1, 1), 8, (-1, 1), 1)
     @test_throws ArgumentError PhaseSpaceGrid((1, -1), 8, (-1, 1), 8)
     @test_throws ArgumentError PhaseSpaceGrid((-1, 1), 8, (-1, Inf), 8)
+    @test_throws ArgumentError PhaseSpaceGrid(
+        (-floatmax(Float64), floatmax(Float64)),
+        8,
+        (-1, 1),
+        8,
+    )
+    @test_throws ArgumentError PhaseSpaceGrid((0.0, nextfloat(0.0)), 8, (-1, 1), 8)
+    @test_throws ArgumentError PhaseSpaceGrid((1.0, nextfloat(1.0)), 8, (-1, 1), 8)
 end

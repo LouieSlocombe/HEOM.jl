@@ -131,7 +131,8 @@ expansion describes a physical thermal environment.
 Converge results independently in `depth`, `matsubara`, phase-space box and grid
 resolution. The Drude constructor requires positive finite temperature and
 rejects coincident Drude and Matsubara poles. With the terminator enabled, include
-enough poles that the first omitted Matsubara rate exceeds `cutoff`.
+enough poles that the first omitted Matsubara rate exceeds `cutoff` and is fast
+compared with the system frequencies of interest.
 Low temperatures generally require more Matsubara poles; their fast decay rates
 can restrict explicit time steps.
 The number of ADOs is `binomial(depth + K + 1, K + 1)` for a nonzero Drude bath with
@@ -428,6 +429,18 @@ checked against closed forms instead:
 - Damped harmonic Gaussians test Caldeira–Leggett evolution against the exact
   time-dependent mean, covariance and full state, including relaxation to thermal
   equilibrium at the bottom of the well.
+- Free and uniformly accelerated wavepackets test exact spreading and force signs.
+- An analytical sextic eigenstate, transformed directly from its wavefunction,
+  tests stationarity through the ħ⁴ Moyal term.
+- A non-Markovian Gaussian Langevin solution tests the full Drude HEOM distribution
+  as depth increases. Accurate first and second moments alone do not establish
+  convergence of the full state.
+- A damped Fock state tests the decay of non-Gaussian structure, and the Drude
+  fluctuation–dissipation spectrum independently tests Matsubara convergence.
+
+The [Wigner–HEOM audit](references/wigner_heom_audit.md) records the literature
+conventions, repaired defects, analytical references, measured errors, and remaining
+convergence limits.
 
 ## Development
 

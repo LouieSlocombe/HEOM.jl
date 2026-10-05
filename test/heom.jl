@@ -149,6 +149,76 @@ end
         kT,
         hbar = 1e-300,
     )
+
+    # The omitted tail is smooth across a pole that was retained. Subtracting the
+    # large Drude/Matsubara residues used to lose up to half of this diffusion.
+    # This reference uses the cot partial-fraction identity at 512-bit precision,
+    # independently of the production Euler–Maclaurin evaluation.
+    for x in
+        (1e-5, 0.1, π / 2, 0.9π, π * (1 - 1e-6), π * (1 + 1e-6), 3π / 2, 7π / 2, 10π + 0.7)
+        for K in (floor(Int, x / π), 10000)
+            γ = 2x * kT / ħ
+            drude = drude_lorentz_bath(;
+                reorganization = λ,
+                cutoff = γ,
+                kT,
+                hbar = ħ,
+                matsubara = K,
+            )
+            reference = setprecision(512) do
+                # Compare at the same rounded dimensionless input; the original
+                # dimensional inputs are ill-conditioned at an omitted pole.
+                xb = big(ħ * γ / (2kT))
+                tail = inv(xb) - cot(xb)
+                for k in 1:K
+                    tail -= 2xb / ((big(π) * k)^2 - xb^2)
+                end
+                Float64(big(λ) * big(ħ) * tail)
+            end
+            @test drude.diffusion > 0
+            @test drude.diffusion ≈ reference rtol = 2e-14
+        end
+    end
+end
+
+@testset "Drude correlation obeys the fluctuation–dissipation spectrum" begin
+    # Fourier transforming the bath correlation must recover the defining
+    # spectral density, independently of its Matsubara partial fractions.
+    # These parameters include a negative low-temperature Matsubara residue.
+    λ, γ, kT, ħ = 0.27, 1.7, 0.13, 0.7
+    frequencies = [0.2, 0.9, 2.4]
+    errors = Float64[]
+    for K in (2, 8, 32)
+        bath = drude_lorentz_bath(;
+            reorganization = λ,
+            cutoff = γ,
+            kT,
+            hbar = ħ,
+            matsubara = K,
+        )
+        @test real(bath.coefficients[2]) < 0
+        errors_at_frequencies = map(frequencies) do ω
+            J = 2λ * γ * ω / (ω^2 + γ^2)
+            antisymmetric = -2sum(
+                imag(c) * ω / (ν^2 + ω^2) for (c, ν) in zip(bath.coefficients, bath.rates)
+            )
+            symmetric =
+                2bath.diffusion + 2sum(
+                    real(c) * ν / (ν^2 + ω^2) for
+                    (c, ν) in zip(bath.coefficients, bath.rates)
+                )
+            @test antisymmetric ≈ ħ * J rtol = 1e-14
+            exact = ħ * J * coth(ħ * ω / (2kT))
+            # Replacing positive fast exponentials with white noise overestimates
+            # their finite-frequency spectrum, with an error vanishing as K^-3.
+            @test symmetric > exact
+            abs(symmetric - exact)
+        end
+        push!(errors, maximum(errors_at_frequencies))
+    end
+    @test errors[1] / errors[2] > 20
+    @test errors[2] / errors[3] > 40
+    @test errors[end] < 2e-5
 end
 
 @testset "Hierarchy indexing and problem construction" begin
@@ -484,4 +554,26 @@ end
         wigner_moyal_problem(W0, (0.0, 0.01), grid; mass = m, potential = V, hbar = ħ)
     isolated_sol = solve(isolated, Vern7())
     @test_throws ArgumentError physical_wigner(isolated_sol)
+end
+
+@testset "Classical Drude correlated equilibrium hierarchy" begin
+    # In the classical Drude limit the joint thermal equilibrium has physical
+    # Boltzmann root Wβ and direct-coordinate auxiliaries Wₙ=(-2λq)^n Wβ.
+    # These become zero auxiliaries after the counterterm-absorbing transformation
+    # used for the momentum-friction hierarchy in Tanimura (2015), Eqs. (28)–(29).
+    # https://arxiv.org/abs/1502.04077
+    m, ω, kT, λ, γ, ħ = 1.3, 0.9, 0.8, 0.2, 1.1, 0.7
+    bath = ExponentialBath([2λ * kT - im * λ * ħ * γ], [γ]; hbar = ħ, counterterm = λ)
+    grid = PhaseSpaceGrid((-9, 9), 64, (-9, 9), 64)
+    V = harmonic_potential(; mass = m, omega = ω)
+    op = heom_operator(grid; mass = m, potential = V, bath, depth = 4, moyal_terms = 1)
+    Wβ = on_grid((q, p) -> ω / (2π * kT) * exp(-(p^2 / (2m) + V(q)) / kT), grid)
+    U = cat([(-2λ .* grid.q) .^ n .* Wβ for n in 0:4]...; dims = 3)
+    dU = hierarchy_rhs(op, U)
+    @test phase_space_integral(Wβ, grid) ≈ 1 atol = 1e-12
+    for n in 0:3
+        @test maximum(abs, dU[:, :, n+1]) < 2e-12
+    end
+    # Only the top tier loses the exact cancellation through the hard cutoff.
+    @test maximum(abs, dU[:, :, end]) > 1e-3
 end

@@ -42,6 +42,37 @@ struct ExponentialBath
     end
 end
 
+# Evaluate Σ_{k=K+1}∞ 2x/(π²k²-x²) directly instead of subtracting retained
+# poles from 1/x-cot(x). The latter loses accuracy near a Drude–Matsubara
+# collision, even when that pole is retained and the omitted tail is smooth.
+function matsubara_tail(x, K)
+    a = x / π
+    k = Float64(K) + 1
+    # Accurate argument reduction also protects k-a when the *first omitted*
+    # pole is close. Direct subtraction of x/π would lose its small separation.
+    offset = rem2pi(2x, RoundNearest) / (2π)
+    nearest = round(a - offset)
+    left, right = (k - nearest) - offset, (k + nearest) + offset
+    tail = 0.0
+    # Move the Euler–Maclaurin endpoint away from the nearest pole. At most
+    # sixteen positive terms are needed because the caller requires K+1 > a.
+    while left < 16
+        tail += (2a / right) / left
+        left += 1
+        right += 1
+    end
+    # Apply Euler–Maclaurin to 1/(k-a)-1/(k+a). Its integral is this logarithm;
+    # log1p/expm1 keep both it and all derivative differences accurate as a → 0.
+    logratio = log1p(2a / left)
+    tail += logratio + (a / right) / left
+    inverse = inv(left)
+    for (n, coefficient) in
+        enumerate((1 / 12, -1 / 120, 1 / 252, -1 / 240, 1 / 132, -691 / 32760))
+        tail += coefficient * inverse^(2n) * (-expm1(-2n * logratio))
+    end
+    return tail / π
+end
+
 """
     drude_lorentz_bath(; reorganization, cutoff, kT, matsubara = 0, hbar = 1.0,
                        terminator = true)
@@ -60,7 +91,8 @@ The system counterterm is `λq²`. With `terminator = true`, the omitted fast Ma
 terms are approximated by momentum diffusion
 `D = 2λ*kT/γ - sum(real(cₖ)/νₖ)`; this is a bath-correlation tail approximation,
 not a closure of the hierarchy depth. Include enough Matsubara terms that the first
-omitted rate exceeds `γ`. Increase both `matsubara` and hierarchy `depth` to check
+omitted rate exceeds `γ` and is fast compared with the relevant system frequencies.
+Increase both `matsubara` and hierarchy `depth` to check
 convergence, especially at low temperature. `terminator = false` simply drops the tail.
 
 `λ` must be finite and nonnegative; `γ`, `kT` and `ħ` finite and positive. Coincident
@@ -104,13 +136,7 @@ function drude_lorentz_bath(;
         2π * (matsubara + 1) * θ / ħ > γ || throw(
             ArgumentError("increase matsubara so the first omitted rate exceeds cutoff"),
         )
-        # Avoid cancellation between the classical area and cot(x) at high T.
-        remainder = abs(x) < 1e-3 ? x / 3 + x^3 / 45 + 2x^5 / 945 : inv(x) - cot(x)
-        D = λ * ħ * remainder - sum(real(c[k]) / ν[k] for k in 2:length(ν); init = 0.0)
-        tolerance = 64eps(Float64) * max(abs(λ * ħ * remainder), floatmin(Float64))
-        D >= -tolerance ||
-            throw(ArgumentError("negative Matsubara tail; increase matsubara"))
-        D = max(D, 0.0)
+        D = λ * ħ * matsubara_tail(x, matsubara)
     end
     return ExponentialBath(c, ν; hbar = ħ, diffusion = D, counterterm = λ)
 end

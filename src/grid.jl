@@ -42,7 +42,14 @@ function periodic_points(lims::Tuple{Real,Real}, n::Integer)
     isfinite(lo) && isfinite(hi) && hi > lo ||
         throw(ArgumentError("grid limits must be finite and increasing, got $lims"))
     h = (hi - lo) / n
-    return [lo + (i - 1) * h for i in 1:n], h
+    isfinite(h) && h > 0 ||
+        throw(ArgumentError("grid spacing must be finite and positive in Float64"))
+    points = [lo + (i - 1) * h for i in 1:n]
+    # Finite endpoints alone do not guarantee a usable Float64 grid: subtraction can
+    # overflow, spacing can underflow, and a large offset can round neighbours together.
+    all(i -> points[i] > points[i-1], 2:n) && last(points) < hi ||
+        throw(ArgumentError("grid points must remain distinct within the Float64 limits"))
+    return points, h
 end
 
 Base.size(grid::PhaseSpaceGrid) = (length(grid.q), length(grid.p))

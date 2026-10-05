@@ -52,6 +52,8 @@ end
 
 Semi-discretise the Wigner–Moyal right-hand side on `grid` for a particle of `mass` in the
 `potential` `V(q)`, and return the operator used by [`wigner_moyal!`](@ref).
+`mass` and `hbar` must be finite and positive in Float64, and `V` must return finite real
+values at every evaluation point.
 
 With `moyal_terms = nothing` (the default) the whole Moyal series is kept. In momentum
 Fourier space, where `∂/∂p` becomes `iκ`, the potential term is then exactly
@@ -78,8 +80,11 @@ function wigner_moyal_operator(
     discretization::Union{Spectral,FiniteDifference} = Spectral(),
     moyal_terms::Union{Nothing,Integer} = nothing,
 )
-    mass > 0 || throw(ArgumentError("mass must be positive, got $mass"))
-    hbar > 0 || throw(ArgumentError("hbar must be positive, got $hbar"))
+    mass, hbar = Float64(mass), Float64(hbar)
+    isfinite(mass) && mass > 0 ||
+        throw(ArgumentError("mass must be finite and positive, got $mass"))
+    isfinite(hbar) && hbar > 0 ||
+        throw(ArgumentError("hbar must be finite and positive, got $hbar"))
     moyal_terms === nothing ||
         1 <= moyal_terms <= MAX_MOYAL_TERMS ||
         throw(
@@ -104,6 +109,9 @@ function build_operator(::Spectral, grid, mass, hbar, potential, moyal_terms)
     Wq = zeros(ComplexF64, nq ÷ 2 + 1, np)
     Wp = zeros(ComplexF64, nq, np ÷ 2 + 1)
     kinetic_symbol = im .* wavenumbers(nq, grid.dq) ./ nq
+    velocity = reshape(-grid.p ./ mass, 1, np)
+    all(isfinite, velocity) && all(isfinite, kinetic_symbol) ||
+        throw(ArgumentError("kinetic coefficients must be finite; rescale mass or grid"))
     κp = wavenumbers(np, grid.dp)
     potential_symbol = moyal_symbol(potential, grid.q, κp, hbar, moyal_terms) ./ np
     check_finite(potential_symbol)
@@ -112,7 +120,7 @@ function build_operator(::Spectral, grid, mass, hbar, potential, moyal_terms)
         mass,
         hbar,
         moyal_terms,
-        reshape(-grid.p ./ mass, 1, np),
+        velocity,
         kinetic_symbol,
         potential_symbol,
         W,
@@ -142,13 +150,30 @@ function build_operator(fd::FiniteDifference, grid, mass, hbar, potential, moyal
         Dp = periodic_difference_matrix(2s + 1, fd.order, np, grid.dp)
         L += kron(Dp, spdiagm(moyal_coefficient(s, hbar) .* derivatives[:, s+1]))
     end
+    all(isfinite, L.nzval) || throw(
+        ArgumentError(
+            "finite-difference coefficients must be finite; rescale parameters or grid",
+        ),
+    )
     return FiniteDifferenceWignerMoyal(grid, mass, hbar, moyal_terms, fd.order, L)
 end
 
 # Fourier symbol of the Moyal potential term: M[i, j] multiplies the mode exp(iκⱼp) of
 # W(qᵢ, ⋅).
 function moyal_symbol(V, q, κ, hbar, ::Nothing)
-    return [im * (V(x + hbar * k / 2) - V(x - hbar * k / 2)) / hbar for x in q, k in κ]
+    return ComplexF64[
+        im * (potential_value(V, x + hbar * k / 2) - potential_value(V, x - hbar * k / 2)) /
+        hbar for x in q, k in κ
+    ]
+end
+
+# A complex potential is not a Hermitian Hamiltonian; the real FFT would silently discard
+# part of its dynamics. Check V itself too: differentiating an infinite constant can give 0.
+function potential_value(V, q)
+    value = V(q)
+    value isa Real && isfinite(value) ||
+        throw(ArgumentError("potential must return finite real values, got $value at q=$q"))
+    return value
 end
 
 # Truncated series Σₛ cₛ V⁽²ˢ⁺¹⁾(q) (iκ)²ˢ⁺¹, the Fourier form of Σₛ cₛ V⁽²ˢ⁺¹⁾ ∂²ˢ⁺¹/∂p²ˢ⁺¹.
@@ -167,6 +192,7 @@ moyal_coefficient(s::Integer, hbar::Real) = (-1)^s * (hbar / 2)^(2s) / factorial
 
 # Odd derivatives V⁽²ˢ⁺¹⁾(qᵢ) for s = 0, …, terms - 1, as a `length(q) × terms` matrix.
 function moyal_derivatives(V, q, terms)
+    foreach(x -> potential_value(V, x), q)
     derivatives = [Float64(potential_derivative(V, x, 2s + 1)) for x in q, s in 0:(terms-1)]
     check_finite(derivatives)
     return derivatives
@@ -196,6 +222,8 @@ The time `t` is unused. The signature is that of an in-place `ODEProblem` functi
 parameter is `op`.
 """
 function wigner_moyal!(dW, W, op::SpectralWignerMoyal, t)
+    check_size(W, op.grid)
+    check_size(dW, op.grid)
     op.W .= W
     mul!(op.Wq, op.forward_q, op.W)
     op.Wq .*= op.kinetic_symbol
@@ -208,6 +236,8 @@ function wigner_moyal!(dW, W, op::SpectralWignerMoyal, t)
 end
 
 function wigner_moyal!(dW, W, op::FiniteDifferenceWignerMoyal, t)
+    check_size(W, op.grid)
+    check_size(dW, op.grid)
     mul!(vec(dW), op.matrix, vec(W))
     return nothing
 end
@@ -246,13 +276,16 @@ function wigner_moyal_problem(W0::AbstractMatrix, tspan, grid::PhaseSpaceGrid; k
 end
 
 function wigner_moyal_problem(W0::AbstractMatrix, tspan, op::AbstractWignerMoyal)
+    eltype(W0) <: Real || throw(ArgumentError("initial Wigner function must be real"))
     size(W0) == size(op.grid) || throw(
         DimensionMismatch(
             "initial Wigner function has size $(size(W0)), but the grid has size " *
             "$(size(op.grid))",
         ),
     )
-    return ODEProblem(wigner_moyal!, Matrix{Float64}(W0), tspan, op)
+    initial = Matrix{Float64}(W0)
+    all(isfinite, initial) || throw(ArgumentError("initial Wigner function must be finite"))
+    return ODEProblem(wigner_moyal!, initial, tspan, op)
 end
 
 """
