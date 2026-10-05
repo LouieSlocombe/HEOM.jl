@@ -1,8 +1,9 @@
 # HEOM.jl
 
-Phase-space quantum dynamics in Julia, developed towards hierarchical equations of
-motion (HEOM). The package solves the Wigner–Moyal equation, with optional
-Caldeira–Leggett friction and thermal diffusion. The Wigner–Moyal equation is the
+Phase-space quantum dynamics in Julia, including hierarchical equations of motion
+(HEOM) for a particle coupled linearly to a Gaussian bath. The package solves the
+Wigner–Moyal equation, its bath hierarchy, and the Caldeira–Leggett model with
+friction and thermal diffusion. The Wigner–Moyal equation is the
 exact quantum evolution of the Wigner function $W(q, p, t)$ of a particle of mass
 $m$ in a potential $V(q)$:
 
@@ -64,6 +65,88 @@ To work on this package from another Julia project, use
 function has a docstring available through Julia's help mode, for example
 `?wigner_moyal_operator`.
 
+## Wigner-space HEOM
+
+HEOM evolves the physical Wigner function together with auxiliary density
+operators (ADOs), represented on the same phase-space grid. Bath correlations are
+expanded as `C(t) = sum(c[k] * exp(-rates[k] * t))` for `t ≥ 0`. The supported
+coupling is linear in the one-dimensional coordinate, with real positive rates
+and complex coefficients. For the unscaled auxiliary Wigner functions,
+
+```math
+\partial_t W_{\mathbf n} =
+\left(\mathcal L_{\mathrm{WM}}[V+\Lambda q^2]
+-\sum_k n_k\nu_k+D\partial_p^2\right)W_{\mathbf n}
++\sum_k\partial_p W_{\mathbf n+\mathbf e_k}
++\sum_k n_k\left(\operatorname{Re}c_k\partial_p
++\frac{2\operatorname{Im}c_k}{\hbar}q\right)W_{\mathbf n-\mathbf e_k}.
+```
+
+Here `W₀` is physical and all ADOs are real arrays; complex bath coefficients
+enter through their real and imaginary parts. The hierarchy retains every
+multi-index with `sum(n) ≤ depth` and sets upward neighbours beyond that depth
+to zero. This is a hard cutoff at the final tier.
+
+The Drude–Lorentz constructor uses the spectral-density convention
+`J(ω) = 2λγω / (ω² + γ²)` and
+`C(t) = (hbar/π) ∫₀∞ J(ω)[coth(hbar*ω/(2kT))*cos(ω*t) - im*sin(ω*t)] dω`.
+Its pole has rate `γ` and coefficient
+`c₀ = λ*hbar*γ*(cot(hbar*γ/(2kT)) - im)`. The `matsubara = K` additional poles
+have `νₖ = 2π*k*kT/hbar` and `cₖ = 4λγ*kT*νₖ / (νₖ² - γ²)`.
+
+```julia
+bath = drude_lorentz_bath(;
+    reorganization = 0.12, cutoff = 1.2, kT = 0.8, matsubara = 1, hbar = 1.0)
+op = heom_operator(grid; mass, potential = V, bath, depth = 5)
+prob = heom_problem(W0, (0.0, 6.0), op)
+sol = solve(prob, Vern7(); saveat = 0.1, abstol = 1e-9, reltol = 1e-9)
+
+W = physical_wigner(sol)              # view of the final physical Wigner function
+W_initial = physical_wigner(sol, 1)   # first saved physical state
+indices = hierarchy_indices(op)      # ADO multi-indices, root first
+d = diagnostics(sol; potential = V)   # diagnostics of the physical states
+```
+
+`sol.u[i]` is an `nq × np × nados` array, with the physical state in its first
+slice. Passing a matrix to `heom_problem` fills all higher ADOs with zero: this
+is a factorized system/bare-bath initial condition. A full three-dimensional
+initial state can instead supply nonzero ADOs or restart a saved trajectory.
+`physical_wigner(U)` returns a view, so copy it if it must be modified independently.
+
+For the Drude bath, `reorganization = λ` sets the counterterm `Λ = λ`:
+the operator adds `λ*q²` internally to the supplied physical potential `V`.
+For dimensional position coupling, `λ` has units of energy divided by position
+squared. Do not add this term to `V` yourself. Zero initial ADOs produce an initial
+slip as the bath adjusts to the system. The default `terminator = true` approximates
+omitted Matsubara poles by momentum diffusion,
+`D = 2λ*kT/γ - sum(real(c[k])/rates[k])`; `terminator = false` sets this diffusion
+to zero. This correction is separate from the final-tier hard cutoff.
+
+For another exponential correlation expansion, use
+`ExponentialBath(coefficients, rates; hbar = 1, diffusion = 0, counterterm = 0)`.
+Here `counterterm` is the coefficient of `q²`, and `diffusion` is the coefficient
+of `∂p²`. Constructing a bath does not establish that an arbitrary correlation
+expansion describes a physical thermal environment.
+
+Converge results independently in `depth`, `matsubara`, phase-space box and grid
+resolution. The Drude constructor requires positive finite temperature and
+rejects coincident Drude and Matsubara poles. With the terminator enabled, include
+enough poles that the first omitted Matsubara rate exceeds `cutoff`.
+Low temperatures generally require more Matsubara poles; their fast decay rates
+can restrict explicit time steps.
+The number of ADOs is `binomial(depth + K + 1, K + 1)` for a nonzero Drude bath with
+`K` Matsubara poles. Each ADO uses the same spectral or finite-difference Wigner–Moyal
+operator, including quantum terms for anharmonic potentials.
+
+See [the HEOM harmonic oscillator example](examples/heom_sho.jl), which checks
+the centroid against an exact bath-memory equation, compares two hierarchy depths,
+and prints the norm drift. Run it with `julia --project=/path/to/environment
+examples/heom_sho.jl` in an environment containing HEOM and OrdinaryDiffEqVerner.
+The physical model is discussed in
+[Tanimura's Wigner-space HEOM derivation](https://arxiv.org/pdf/1502.04077).
+The equation above uses coordinate-coupled, unscaled ADOs; their definitions and
+initial conditions differ from the transformed momentum form in that paper.
+
 ## Caldeira–Leggett damping
 
 The high-temperature, Markovian Caldeira–Leggett model couples the particle to a
@@ -121,6 +204,13 @@ Caldeira–Leggett operators and solutions.
 | `wigner_moyal_problem(W0, tspan, grid; mass, potential, ...)` | `ODEProblem` for the Wigner–Moyal equation |
 | `wigner_moyal_operator(grid; mass, potential, hbar, discretization, moyal_terms)` | Reusable semi-discrete operator; `wigner_moyal_problem(W0, tspan, op)` takes it |
 | `wigner_moyal!(dW, W, op, t)` | In-place right-hand side |
+| `ExponentialBath(coefficients, rates; hbar, diffusion, counterterm)` | Gaussian bath described by an exponential correlation expansion |
+| `drude_lorentz_bath(; reorganization, cutoff, kT, matsubara, hbar, terminator)` | Drude–Lorentz bath with Matsubara poles and optional residual diffusion |
+| `heom_problem(W0, tspan, grid; mass, potential, bath, depth, ...)` | `ODEProblem` for the Wigner-space hierarchy |
+| `heom_operator(grid; mass, potential, bath, depth, ...)` | Reusable hierarchy operator; `heom_problem(W0, tspan, op)` takes it |
+| `heom!(dU, U, op, t)` | In-place hierarchy right-hand side |
+| `hierarchy_indices(op)` | Multi-indices corresponding to the third state-array dimension |
+| `physical_wigner(U)`, `physical_wigner(sol[, index])` | View of the physical Wigner function in a hierarchy state or solution |
 | `caldeira_leggett_problem(W0, tspan, grid; mass, potential, friction, kT, ...)` | `ODEProblem` with Caldeira–Leggett friction and thermal diffusion |
 | `caldeira_leggett_operator(grid; mass, potential, friction, kT, ...)` | Reusable operator; `caldeira_leggett_problem(W0, tspan, op)` takes it |
 | `caldeira_leggett!(dW, W, op, t)` | In-place dissipative right-hand side |
@@ -289,10 +379,12 @@ an optional command-line argument selects the output directory.
 **Discretisation.** `discretization = Spectral()`, the default, uses Fourier
 pseudo-spectral derivatives. It converges spectrally for smooth Wigner functions,
 and its right-hand side allocates nothing. `discretization = FiniteDifference(order)`
-uses central differences of even accuracy `order` (default 4). Its operator is
-available as `sparse(op)`; the Wigner–Moyal part is exactly skew-symmetric, while
-Caldeira–Leggett damping adds dissipative terms. Both discretisations treat the box
-as periodic, so make the grid large enough that `W` decays to zero at its edges.
+uses central differences of even accuracy `order` (default 4). The Wigner–Moyal and
+Caldeira–Leggett finite-difference operators are available as `sparse(op)`; the
+Wigner–Moyal part is exactly skew-symmetric, while Caldeira–Leggett damping adds
+dissipative terms. HEOM applies the hierarchy couplings directly. Both discretisations
+treat the box as periodic, so make the grid large enough that `W` decays to zero at
+its edges.
 
 **Moyal series.** `moyal_terms = nothing`, the default, keeps every order. In
 momentum Fourier space, where `∂/∂p → iκ`, the potential term is applied exactly as
@@ -405,6 +497,7 @@ packages are distributed as source; there is no wheel-building step.
 │   ├── derivatives.jl             # spectral and finite-difference discretisations
 │   ├── wigner_moyal.jl            # Wigner–Moyal operators and ODEProblem
 │   ├── caldeira_leggett.jl        # thermal friction and diffusion operators
+│   ├── heom.jl                    # exponential baths and Wigner-space hierarchy
 │   ├── observables.jl             # marginals, moments, energy, overlaps, negativity
 │   ├── diagnostics.jl             # grid health and state/trajectory summaries
 │   ├── populations.jl             # window populations, currents and rates
@@ -412,6 +505,7 @@ packages are distributed as source; there is no wheel-building step.
 │   ├── animation.jl               # public animation API and documentation
 │   └── harmonic_oscillator.jl     # analytic harmonic-oscillator states and evolution
 ├── test/                          # numerical and package quality tests
+├── examples/heom_sho.jl            # bath-coupled oscillator and exact centroid check
 ├── .JuliaFormatter.toml           # formatting rules
 └── Project.toml                   # package metadata, compatibility, test dependencies
 ```

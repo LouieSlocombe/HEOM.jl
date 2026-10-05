@@ -42,6 +42,7 @@ end
     include("wigner_moyal_rhs.jl")
     include("harmonic_oscillator.jl")
     include("caldeira_leggett.jl")
+    include("heom.jl")
     include("observables.jl")
     include("diagnostics.jl")
     include("populations.jl")

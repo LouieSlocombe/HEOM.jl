@@ -60,15 +60,31 @@ function time_derivative(W::AbstractMatrix, op::AbstractPhaseSpaceOperator)
     return dW
 end
 
+function time_derivative(U::AbstractArray{<:Real,3}, op::WignerHEOM)
+    dU = similar(U, Float64)
+    heom!(dU, U, op, 0.0)
+    return physical_wigner(dU)
+end
+
+function phase_space_rhs!(dW, W, op::WignerHEOM, t)
+    throw(ArgumentError("HEOM rates require the full 3D hierarchy, including auxiliaries"))
+end
+
 """
     expectation_rate(f, W, op)
 
 Instantaneous rate `d⟨f⟩/dt = ∫∫ f(q, p) ∂W/∂t dq dp` for a time-independent Weyl symbol
 `f`, using the grid and right-hand side of `op`. This is exact for the semi-discrete
 equations, since [`expectation`](@ref) is linear in `W`.
+For a HEOM operator pass the full 3D hierarchy in place of `W`; the rate is
+evaluated on its physical member and depends on the auxiliary members.
 """
 function expectation_rate(f, W::AbstractMatrix, op::AbstractPhaseSpaceOperator)
     return expectation(f, time_derivative(W, op), op.grid)
+end
+
+function expectation_rate(f, U::AbstractArray{<:Real,3}, op::WignerHEOM)
+    return expectation(f, time_derivative(U, op), op.grid)
 end
 
 """
@@ -77,6 +93,7 @@ end
 Instantaneous window population rate `dP/dt`, found by applying [`probability`](@ref) to
 the right-hand side of `op`. This is exact for the semi-discrete equations because the
 window integral is linear in `W`.
+For HEOM, pass the full 3D hierarchy instead of only the physical matrix.
 
 `probability_rate(W, op; q = (q‡, Inf))` is the reactive population flux into the product
 region beyond `q‡`. For a resolved state that decays at the box edges, the spectral result
@@ -90,4 +107,13 @@ function probability_rate(
     p = (-Inf, Inf),
 )
     return probability(time_derivative(W, op), op.grid; q, p)
+end
+
+function probability_rate(
+    U::AbstractArray{<:Real,3},
+    op::WignerHEOM;
+    q = (-Inf, Inf),
+    p = (-Inf, Inf),
+)
+    return probability(time_derivative(U, op), op.grid; q, p)
 end

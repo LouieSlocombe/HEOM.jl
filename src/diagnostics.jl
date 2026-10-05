@@ -135,6 +135,7 @@ Evaluate [`diagnostics`](@ref) on the saved states of a phase-space solution. Th
 result puts the saved times `t = sol.t` first, followed by the observable vectors and
 `autocorrelation`. Grid, mass and ħ are read from the operator in `sol.prob.p`; the
 potential must be supplied explicitly.
+For a HEOM solution only the physical hierarchy member is analysed.
 """
 function diagnostics(sol::AbstractODESolution; potential)
     op = sol.prob.p
@@ -144,6 +145,12 @@ function diagnostics(sol::AbstractODESolution; potential)
             "diagnostics(sol.u, grid; mass, potential, hbar) for other solutions",
         ),
     )
-    values = diagnostics(sol.u, op.grid; mass = op.mass, potential, hbar = op.hbar)
+    values = diagnostics(
+        physical_states(sol.u, op),
+        op.grid;
+        mass = op.mass,
+        potential,
+        hbar = op.hbar,
+    )
     return merge((t = sol.t,), values)
 end

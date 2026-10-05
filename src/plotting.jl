@@ -12,7 +12,7 @@ function plotting_state(sol::AbstractODESolution, index::Integer = lastindex(sol
     op = sol.prob.p
     op isa AbstractPhaseSpaceOperator ||
         throw(ArgumentError("solution parameters must be a phase-space operator"))
-    return plotting_state(sol.u[index], op.grid)
+    return plotting_state(physical_state(sol.u[index], op), op.grid)
 end
 
 """

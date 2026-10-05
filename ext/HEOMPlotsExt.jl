@@ -108,12 +108,22 @@ end
 
 function HEOM.wigneranimation(sol::AbstractODESolution; kwargs...)
     op = animation_operator(sol)
-    return HEOM.wigneranimation(sol.u, op.grid; times = sol.t, kwargs...)
+    return HEOM.wigneranimation(
+        HEOM.physical_states(sol.u, op),
+        op.grid;
+        times = sol.t,
+        kwargs...,
+    )
 end
 
 function HEOM.marginalanimation(sol::AbstractODESolution; kwargs...)
     op = animation_operator(sol)
-    return HEOM.marginalanimation(sol.u, op.grid; times = sol.t, kwargs...)
+    return HEOM.marginalanimation(
+        HEOM.physical_states(sol.u, op),
+        op.grid;
+        times = sol.t,
+        kwargs...,
+    )
 end
 
 end

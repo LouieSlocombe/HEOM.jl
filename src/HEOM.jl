@@ -10,6 +10,8 @@ by the method of lines. [`wigner_moyal_problem`](@ref) discretises phase space o
 [`PhaseSpaceGrid`](@ref) and returns an `ODEProblem` that any OrdinaryDiffEq solver can
 integrate in time.
 [`caldeira_leggett_problem`](@ref) adds Markovian friction and thermal momentum diffusion.
+[`heom_problem`](@ref) propagates a hierarchy of auxiliary Wigner functions for a
+Gaussian bath coupled linearly to position, including Drude–Lorentz thermal baths.
 Analysis functions expose observables, grid diagnostics, trajectory summaries and populations.
 Plotting recipes display Wigner functions, marginal densities and diagnostic trajectories
 when Plots.jl is loaded. Animation helpers record Wigner and marginal trajectories.
@@ -27,6 +29,8 @@ export PhaseSpaceGrid, on_grid
 export Spectral, FiniteDifference
 export wigner_moyal_operator, wigner_moyal!, wigner_moyal_problem
 export caldeira_leggett_operator, caldeira_leggett!, caldeira_leggett_problem
+export ExponentialBath, drude_lorentz_bath
+export heom_operator, heom!, heom_problem, hierarchy_indices, physical_wigner
 export phase_space_integral, expectation, purity, overlap, energy, wigner_negativity
 export position_density, momentum_density, phase_space_mean, phase_space_covariance
 export boundary_weight, spectral_tail, diagnostics
@@ -38,6 +42,7 @@ include("grid.jl")
 include("derivatives.jl")
 include("wigner_moyal.jl")
 include("caldeira_leggett.jl")
+include("heom.jl")
 include("observables.jl")
 include("diagnostics.jl")
 include("populations.jl")

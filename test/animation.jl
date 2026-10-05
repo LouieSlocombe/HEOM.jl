@@ -159,6 +159,26 @@
                 end
             end
 
+            bath = ExponentialBath([0.2 - 0.1im], [1.0])
+            hierarchy =
+                heom_problem(W, (0.0, 0.01), grid; mass = 1, potential = V, bath, depth = 1)
+            # Large auxiliaries must not influence physical plot limits or frames.
+            hierarchy.u0[:, :, 2] .= 100W
+            hsol = solve(hierarchy, Vern9(); save_everystep = false)
+            for animate in (wigneranimation, marginalanimation)
+                animation = animate(hsol; indices = [1], size = (400, 200))
+                push!(animations, animation)
+                @test length(animation.frames) == 1
+                figure = Plots.current()
+                if animate === wigneranimation
+                    @test figure.series_list[1][:z].surf == permutedims(W)
+                    @test figure.subplots[1][:clims] == (-25.0, 25.0)
+                else
+                    @test figure.series_list[1][:y] == position_density(W, grid)
+                    @test figure.series_list[2][:y] == momentum_density(W, grid)
+                end
+            end
+
             other_prob = ODEProblem((du, u, p, t) -> fill!(du, 0.0), W, (0.0, 0.01))
             other_sol = solve(other_prob, Vern9(); save_everystep = false)
             @test_throws ArgumentError wigneranimation(other_sol)
