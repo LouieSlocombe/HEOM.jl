@@ -119,7 +119,9 @@ For dimensional position coupling, `λ` has units of energy divided by position
 squared. Do not add this term to `V` yourself. Zero initial ADOs produce an initial
 slip as the bath adjusts to the system. The default `terminator = true` approximates
 omitted Matsubara poles by momentum diffusion,
-`D = 2λ*kT/γ - sum(real(c[k])/rates[k])`; `terminator = false` sets this diffusion
+`D = 2λ*kT/γ - sum(real(c[k])/rates[k])` for independent exponentials;
+in a mixed basis the sum becomes `transpose(weights)*(Γ\real(coefficients))`,
+where `Γ = Diagonal(rates) + mixing`. `terminator = false` sets this diffusion
 to zero. This correction is separate from the final-tier hard cutoff.
 
 For another exponential correlation expansion, use
@@ -130,7 +132,8 @@ expansion describes a physical thermal environment.
 
 Converge results independently in `depth`, `matsubara`, phase-space box and grid
 resolution. The Drude constructor requires positive finite temperature and
-rejects coincident Drude and Matsubara poles. With the terminator enabled, include
+handles coincident Drude and retained Matsubara poles with a finite mixed basis.
+With the terminator enabled, include
 enough poles that the first omitted Matsubara rate exceeds `cutoff` and is fast
 compared with the system frequencies of interest.
 Low temperatures generally require more Matsubara poles; their fast decay rates
@@ -147,6 +150,44 @@ The physical model is discussed in
 [Tanimura's Wigner-space HEOM derivation](https://arxiv.org/pdf/1502.04077).
 The equation above uses coordinate-coupled, unscaled ADOs; their definitions and
 initial conditions differ from the transformed momentum form in that paper.
+
+### Low temperature and strong coupling
+
+Use `drude_lorentz_pade_bath(...; pade=N)` for a compact `[N/N]` Bose Padé expansion
+and `heom_operator(...; scaled=true)` for factorial/amplitude-scaled auxiliaries.
+Both negative bath residues and repeated poles are supported. This path retains the
+full Wigner–Moyal potential and works for anharmonic systems. Increase `N` and
+`depth` independently; scaling changes conditioning, not the retained physics.
+
+```julia
+bath = drude_lorentz_pade_bath(;
+    reorganization = 0.8, cutoff = 0.5, kT = 0.1, hbar = 1, pade = 4)
+members = hierarchy_size(length(bath.rates), 6)
+op = heom_operator(grid; mass, potential = V, bath, depth = 6,
+                   scaled = true, max_ados = 10_000)
+prob = heom_problem(W0, (0.0, 0.8), op)
+```
+
+`heom_problem` supplies an exact Jacobian-vector product for stiff Krylov solvers.
+With `OrdinaryDiffEqRosenbrock`, `LinearSolve` and `ADTypes` installed:
+
+```julia
+using OrdinaryDiffEqRosenbrock, LinearSolve, ADTypes
+alg = Rodas5P(autodiff = AutoFiniteDiff(),
+             linsolve = KrylovJL_GMRES(), concrete_jac = false)
+sol = solve(prob, alg; abstol = 1e-9, reltol = 1e-9)
+```
+
+The supplied product is exact; no finite differences of the FFT are used.
+Finite-difference operators also support `sparse(op)` and
+`heom_problem(W0, tspan, op; jacobian=:sparse)` with `Rodas5P()`.
+Use `rescale_hierarchy(U, old_op; scaled=true)` when converting an unscaled
+correlated state or restart. Passing a matrix still sets higher auxiliaries to zero.
+
+The [cold, strongly coupled anharmonic example](examples/low_temperature_strong_coupling.jl)
+separately varies depth, Padé count, grid spacing and box size. The
+[support and validation notes](references/low_temperature_strong_coupling.md)
+give the equations, exact quantum Brownian-motion comparisons and convergence limits.
 
 ## Caldeira–Leggett damping
 
@@ -206,6 +247,8 @@ Caldeira–Leggett operators and solutions.
 | `wigner_moyal_operator(grid; mass, potential, hbar, discretization, moyal_terms)` | Reusable semi-discrete operator; `wigner_moyal_problem(W0, tspan, op)` takes it |
 | `wigner_moyal!(dW, W, op, t)` | In-place right-hand side |
 | `ExponentialBath(coefficients, rates; hbar, diffusion, counterterm)` | Gaussian bath described by an exponential correlation expansion |
+| `drude_lorentz_pade_bath(; reorganization, cutoff, kT, pade, ...)` | Compact quantum Drude bath for low temperatures |
+| `hierarchy_size(modes, depth)`, `rescale_hierarchy(U, op; scaled)` | Estimate hierarchy size and convert auxiliary scaling |
 | `drude_lorentz_bath(; reorganization, cutoff, kT, matsubara, hbar, terminator)` | Drude–Lorentz bath with Matsubara poles and optional residual diffusion |
 | `heom_problem(W0, tspan, grid; mass, potential, bath, depth, ...)` | `ODEProblem` for the Wigner-space hierarchy |
 | `heom_operator(grid; mass, potential, bath, depth, ...)` | Reusable hierarchy operator; `heom_problem(W0, tspan, op)` takes it |
@@ -398,9 +441,11 @@ keeps only the first `N` terms (1 ≤ N ≤ 4), with derivatives of `V` from For
 
 **Units.** `hbar` defaults to `1`, as in atomic units. Use any consistent unit system.
 
-**Solvers.** Use an explicit method such as `Tsit5()`, `Vern7()` or `Vern9()`. The
-spectral right-hand side runs on FFTW and does not accept dual numbers, and no
-sparse Jacobian is wired up yet. Strongly anharmonic potentials make the problem
+**Solvers.** Explicit methods such as `Tsit5()`, `Vern7()` or `Vern9()` work for all
+three evolution models. HEOM additionally provides exact matrix-free or sparse
+Jacobians for stiff solvers, as described above. The standalone Wigner and CL
+problem constructors do not provide these Jacobians. The spectral right-hand side
+runs on FFTW and does not accept dual numbers. Strongly anharmonic potentials make the problem
 stiff, because the potential symbol grows like `ħ² V‴ κ³`. An operator holds work
 buffers, so give each parallel task (for example in an `EnsembleProblem`) its own.
 Thermal diffusion also restricts explicit time steps as momentum resolution or

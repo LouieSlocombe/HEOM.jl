@@ -1,6 +1,9 @@
 using Aqua
+using ADTypes
 using HEOM
 using LinearAlgebra
+using LinearSolve
+using OrdinaryDiffEqRosenbrock
 using OrdinaryDiffEqVerner
 using SciMLBase: ODEProblem, remake
 using SparseArrays
@@ -43,7 +46,13 @@ end
     include("harmonic_oscillator.jl")
     include("caldeira_leggett.jl")
     include("heom.jl")
+    include("pade_bath.jl")
+    include("bath_degeneracy.jl")
+    include("heom_scaling.jl")
+    include("generalized_heom.jl")
+    include("heom_solvers.jl")
     include("analytic_benchmarks.jl")
+    include("cold_strong_benchmarks.jl")
     include("observables.jl")
     include("diagnostics.jl")
     include("populations.jl")

@@ -108,14 +108,16 @@ end
         kT,
         matsubara = -1,
     )
-    # Coincident Drude and Matsubara poles need a different exponential expansion.
-    @test_throws ArgumentError drude_lorentz_bath(;
+    # Coincident poles are represented by a finite polynomial-exponential block.
+    coincident = drude_lorentz_bath(;
         reorganization = λ,
         cutoff = 2π * kT / ħ,
         kT,
         hbar = ħ,
         matsubara = 1,
     )
+    @test coincident.weights == [1.0, 0.0]
+    @test coincident.mixing[1, 2] == 1
 end
 
 @testset "Drude tail edge cases" begin

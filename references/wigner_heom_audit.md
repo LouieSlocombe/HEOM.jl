@@ -2,8 +2,13 @@
 
 Audit date: 2026-10-05. Scope: Hamiltonian Wigner evolution, real-FFT and central-difference discretisations, exponential/Drude baths, hierarchy couplings and cutoff, Caldeira–Leggett (CL) evolution, and the analytical states used for validation. Tests run with Julia 1.13.1. The results below are implementation checks, not reproductions of published figures.
 
-Final verification: **1,726/1,726 assertions passed**, **656/656 executable source
+Initial audit verification: **1,726/1,726 assertions passed**, **656/656 executable source
 lines covered**, JuliaFormatter check passed, and `git diff --check` passed.
+
+The subsequent [low-temperature and strong-coupling work](low_temperature_strong_coupling.md)
+adds scaled auxiliaries, Padé baths, exact repeated-pole support, stiff integration
+and additional cold/strong benchmarks. The numerical results below describe the
+initial audit; current support is documented in that follow-up.
 
 ## Literature and convention checks
 
@@ -44,8 +49,8 @@ why setting both representations' auxiliaries to zero describes different prepar
    γ=2π(1+1e-6), K=10000`, the old result was `9.34821e-6`; the corrected value is
    `1.9097657434490765e-5`. Accurate argument reduction protects the distance to a
    nearby omitted pole. Independent 512-bit cot-identity regressions cover small
-   `x`, nearby poles, half-integer arguments, and `K=10000`. Coincident poles remain
-   unsupported.
+   `x`, nearby poles, half-integer arguments, and `K=10000`. Exact coincident poles
+   were subsequently supported through a generalized correlation basis.
 
 2. **Invalid Hamiltonians could be accepted.** Complex potentials are incompatible with this real Wigner commutator implementation; constant imaginary offsets could even disappear silently. Infinite constant potentials could disappear under differentiation. Potential evaluations now require finite real values. Mass and ħ must remain finite and positive after Float64 conversion, and constructed kinetic/finite-difference coefficients must be finite.
 
@@ -89,8 +94,13 @@ nonterminal tier; the nonzero top-tier residual explicitly exposes the hard cuto
 
 - Converge hierarchy depth, Matsubara count, box extent, mesh resolution and ODE tolerances independently. A trace or moment check alone cannot certify the full distribution.
 - The first omitted Matsubara rate exceeding the cutoff makes the omitted tail positive; the white-noise approximation also needs that rate to be fast relative to the system dynamics. The README and bath docstring now make this distinction explicit.
-- Hard hierarchy truncation and unscaled auxiliaries remain the implemented method. Very deep/strong-coupling cases can require scaling or a more advanced closure; this audit does not claim convergence throughout that regime.
+- Hard hierarchy truncation remains a convergence-controlled approximation. Scaled
+  auxiliaries are now available for deeper/stronger calculations, as described in
+  the follow-up; no finite truncation is guaranteed converged throughout that regime.
 - The grid is periodic. Edge weight and spectral tails must remain small; no absorbing boundary, positivity projection or automatic renormalisation is applied.
-- General low-temperature quantum equilibrium, response functions from correlated equilibrium, and literal published-figure reproduction remain additional benchmarks. The new finite-bath Gaussian test should not be presented as those validations.
+- The follow-up adds low-temperature coupled-equilibrium FDT and full transient
+  comparisons. Response functions from correlated equilibrium and literal
+  published-figure reproduction remain additional benchmarks. The initial
+  finite-bath Gaussian test should not be presented as those validations.
 
 Reproduce the complete numerical/package checks with `julia --project=. -e 'using Pkg; Pkg.test(coverage=true)'`, then run `julia --project=build_tools build_tools/coverage.jl` and `julia --project=build_tools build_tools/format.jl --check`. Install the build-tool environment as described in the README if needed.

@@ -22,7 +22,7 @@ using FFTW: plan_brfft, plan_rfft, rfft, rfftfreq
 using ForwardDiff: ForwardDiff
 using LinearAlgebra: dot, kron, mul!
 using RecipesBase: @recipe, @series, @userplot
-using SciMLBase: AbstractODESolution, ODEProblem
+using SciMLBase: AbstractODESolution, ODEFunction, ODEProblem
 using SparseArrays: SparseArrays, SparseMatrixCSC, sparse, spdiagm
 
 export PhaseSpaceGrid, on_grid
@@ -30,7 +30,9 @@ export Spectral, FiniteDifference
 export wigner_moyal_operator, wigner_moyal!, wigner_moyal_problem
 export caldeira_leggett_operator, caldeira_leggett!, caldeira_leggett_problem
 export ExponentialBath, drude_lorentz_bath
+export drude_lorentz_pade_bath
 export heom_operator, heom!, heom_problem, hierarchy_indices, physical_wigner
+export hierarchy_size, rescale_hierarchy
 export phase_space_integral, expectation, purity, overlap, energy, wigner_negativity
 export position_density, momentum_density, phase_space_mean, phase_space_covariance
 export boundary_weight, spectral_tail, diagnostics
@@ -43,6 +45,8 @@ include("derivatives.jl")
 include("wigner_moyal.jl")
 include("caldeira_leggett.jl")
 include("heom.jl")
+include("pade_bath.jl")
+include("heom_solvers.jl")
 include("observables.jl")
 include("diagnostics.jl")
 include("populations.jl")
