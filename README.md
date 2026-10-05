@@ -151,6 +151,47 @@ The physical model is discussed in
 The equation above uses coordinate-coupled, unscaled ADOs; their definitions and
 initial conditions differ from the transformed momentum form in that paper.
 
+### Correlated equilibrium preparation
+
+`equilibrate` relaxes a matrix or full hierarchy under an existing HEOM operator
+and tests stationarity of **every** auxiliary, including the physical root:
+
+```julia
+eq = equilibrate(W0, (0.0, 100.0), op, Vern7();
+    stationarity_abstol = 1e-8, stationarity_reltol = 1e-6,
+    check_interval = 1.0, abstol = 1e-10, reltol = 1e-10)
+
+eq.converged                         # check before treating the state as equilibrium
+eq.status                            # :stationary, :time_limit, :solver_failure, :terminated
+eq.residuals.absolute                # maximum |dU/dt| for each hierarchy member
+maximum(eq.residuals.scaled)          # ≤ 1 for full-hierarchy stationarity
+W_eq = physical_wigner(eq)            # view of the final root
+U_eq = eq.hierarchy                   # includes all correlated auxiliaries
+
+restart = heom_problem(eq, (0.0, 10.0))
+sol = solve(restart, Vern7(); abstol = 1e-10, reltol = 1e-10)
+```
+
+For each member `a`, the stopping test is
+`maximum(abs, dU[:,:,a]) ≤ stationarity_abstol + stationarity_reltol*maximum(abs, U[:,:,a])`.
+These RHS tolerances are separate from integration tolerances and apply in the
+operator's auxiliary scaling convention. Checks run initially, after accepted steps
+at least `check_interval` apart, and at the final time. The time span is a finite
+preparation budget; reaching its end does not imply convergence. Failed solves also
+return their final hierarchy, residuals and solver `retcode` with `converged = false`.
+The input must have positive finite root integral and is copied without normalisation.
+
+`eq.restart` records the final time, requested time span, root norm and initial norm,
+hierarchy indices, depth, scaling, Jacobian mode, and the operator (including its
+bath and grid). The operator is retained by reference and shares its work buffers
+with restarts. For a longer preparation, pass `eq.hierarchy` to `equilibrate` again
+with that same operator. Saving only `W_eq` would discard the equilibrium correlations.
+
+Stationarity is a property of the chosen finite hierarchy and grid. Check convergence
+in depth, bath expansion, box and resolution separately, and inspect boundary and
+spectral diagnostics of the physical state. A coupled harmonic oscillator generally
+relaxes to a reduced equilibrium different from the isolated oscillator's Gibbs state.
+
 ### Low temperature and strong coupling
 
 Use `drude_lorentz_pade_bath(...; pade=N)` for a compact `[N/N]` Bose Padé expansion

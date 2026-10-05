@@ -23,6 +23,8 @@ using ForwardDiff: ForwardDiff
 using LinearAlgebra: dot, kron, mul!
 using RecipesBase: @recipe, @series, @userplot
 using SciMLBase: AbstractODESolution, ODEFunction, ODEProblem
+using SciMLBase:
+    CallbackSet, DiscreteCallback, ReturnCode, solve, successful_retcode, terminate!
 using SparseArrays: SparseArrays, SparseMatrixCSC, sparse, spdiagm
 
 export PhaseSpaceGrid, on_grid
@@ -33,6 +35,7 @@ export ExponentialBath, drude_lorentz_bath
 export drude_lorentz_pade_bath
 export heom_operator, heom!, heom_problem, hierarchy_indices, physical_wigner
 export hierarchy_size, rescale_hierarchy
+export equilibrate, EquilibriumResult
 export phase_space_integral, expectation, purity, overlap, energy, wigner_negativity
 export position_density, momentum_density, phase_space_mean, phase_space_covariance
 export boundary_weight, spectral_tail, diagnostics
@@ -47,6 +50,7 @@ include("caldeira_leggett.jl")
 include("heom.jl")
 include("pade_bath.jl")
 include("heom_solvers.jl")
+include("equilibrium.jl")
 include("observables.jl")
 include("diagnostics.jl")
 include("populations.jl")

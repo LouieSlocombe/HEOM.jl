@@ -627,6 +627,8 @@ factorized initial system and bare bath state. With a counterterm this includes 
 physical initial-slip transient. An entire 3D hierarchy may instead be supplied to
 restart a calculation or initialise a correlated state. The input is copied to a
 real, finite `Float64` array, without renormalisation.
+Use [`equilibrate`](@ref) to prepare a correlated state by relaxation and test
+stationarity of the entire hierarchy before restarting with `heom_problem(result, tspan)`.
 
 Use `physical_wigner(sol)` to extract the final root. Explicit solvers such as `Vern7()`
 work; high bath rates and large depth can make the hierarchy stiff. The default
