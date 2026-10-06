@@ -666,12 +666,49 @@ These are total interwell transfer rates. Population relaxation does not separat
 under-barrier tunnelling from thermally activated passage over the barrier.
 Coherent tunnelling oscillations generally do not admit constant two-state rates;
 use populations and fluxes to describe that regime. See the
-[runnable double-well example](examples/tunnelling_rates.jl) for an illustrative
-HEOM calculation and a comparison of fitting windows:
+[runnable double-well example](examples/tunnelling_rates.jl) for a low-temperature
+HEOM calculation with `kT = 0.1`, barrier height 1, and `hbar = 0.75`. Its default
+preparation is close to thermal equilibrium: first solve the stationary HEOM for
+the weakly tilted potential `V(q) + bias*q`, with `bias = 0.002`, then remove the
+tilt at `t = 0`. The positive tilt slightly reduces the right-well population
+(to approximately 0.48939). Every auxiliary is retained on release, preserving
+system–bath correlations. The example uses a Padé bath expansion (`pade = 2`,
+`depth = 4`) and the same weak coupling throughout preparation and propagation.
+It saves a figure, population data and a text report:
 
 ```sh
-julia --project=/path/to/environment examples/tunnelling_rates.jl
+julia --project=/path/to/environment examples/tunnelling_rates.jl [output_dir]
 ```
+
+Set `GKSwstype=100` on headless machines. Without an output path, files go to a
+temporary directory printed by the script. The default run takes a few minutes
+and its stationary preconditioner needs about 2 GB of memory. The companion
+[`double_well_equilibrium.jl`](examples/double_well_equilibrium.jl) solves the
+trace-constrained stationary equations and checks the full HEOM residual before
+release. This accelerator is intended for this small example. It uses odd grid
+sizes (`points = 49`) to avoid conserved Nyquist modes of even spectral grids;
+its dense block factors grow rapidly with grid size and hierarchy depth.
+
+Repeat with `double_well_trajectory(; bias=0.001)` and compare
+`(P_right(t) - 0.5)/(P_right(0) - 0.5)` to check the small-perturbation regime.
+Near-equilibrium preparation does not guarantee a constant rate: coherent modes
+can still oscillate through equilibrium. With the default parameters, the right
+population peaks near 0.50843 at `t = 20.5` and crosses 0.5 twice through `t = 40`.
+Halving the bias changes the normalized response by at most approximately
+`5.1e-6` on this interval, while preserving those oscillations. A single exponential
+`P_right(t) - 0.5 = A*exp(-lambda*t)` would give equal directional rates
+`k_left_to_right = k_right_to_left = lambda/2`. Require stable fits across
+post-transient time windows. The plotted isolated-doublet cosine is a frequency
+reference, not an exact trajectory for the coupled thermal preparation.
+
+After including the file, vary `depth=5`, `pade=3`, odd `points=65`, `qextent`,
+`pextent`, and solver tolerances separately to check convergence. Small boundary
+weights and Fourier tails alone do not establish hierarchy or bath-expansion
+convergence. To recover the strongly displaced pure preparation, use
+`double_well_trajectory(; preparation=:localized_doublet)`; that option starts
+with zero auxiliaries and has a bath transient. This cold setup also changes
+Planck's constant and coupling from the earlier warm example; it is not a
+controlled comparison varying temperature alone.
 
 ## Plotting
 
@@ -683,7 +720,7 @@ in a separate consumer environment, for example:
 using Pkg
 Pkg.activate("heom-examples")
 Pkg.develop(path = "/path/to/HEOM.jl")
-Pkg.add(["Plots", "OrdinaryDiffEqVerner"])
+Pkg.add(["Plots", "OrdinaryDiffEqVerner", "LinearSolve", "SciMLBase"])
 ```
 
 After running the quick-start simulation in that environment:
