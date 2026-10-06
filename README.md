@@ -535,6 +535,7 @@ Caldeira–Leggett operators and solutions.
 | `marginalanimation(sol)`, `marginalanimation(states, grid; times)` | Marginal density animation with fixed scales in both panels |
 | `probability(W, grid; q, p)`, `probability_current(W, grid; mass)` | Window populations and position probability current |
 | `expectation_rate(f, W, op)`, `probability_rate(W, op; q, p)` | Instantaneous rates from the semi-discrete equation |
+| `tunnelling_rates(sol; equilibrium_product, tspan)` | Forward and backward transfer constants from population relaxation |
 | `wavefunction_wigner(psi, grid; hbar)`, `density_matrix_wigner(rho, grid; hbar)` | Wigner transforms of callable or sampled position-space states |
 | `eigenstates(grid; mass, potential, hbar, nstates)` | Numerical energies and quadrature-normalised wavefunction columns |
 | `eigenstate_wigner(n, grid; mass, potential, hbar)` | Numerical eigenstate Wigner function, with zero-based `n` |
@@ -602,6 +603,74 @@ product_flux = [probability_rate(W, op; q = (0.0, Inf)) for W in sol.u]
 survival = d.autocorrelation
 norm_drift = maximum(abs, d.norm .- first(d.norm))
 energy_drift = maximum(abs, d.energy .- first(d.energy))
+```
+
+### Tunnelling rates from population relaxation
+
+`tunnelling_rates` estimates constant forward and backward transfer rates when
+reactant and product populations obey a two-state kinetic equation:
+
+```math
+\dot P_P = k_f(1-P_P)-k_bP_P,\qquad
+P_P(t)=P_P^{\mathrm{eq}}+A e^{-\lambda(t-t_0)},\qquad
+\lambda=k_f+k_b.
+```
+
+The helper fits `log(abs(P_P - equilibrium_product))` by unweighted linear least
+squares in a chosen time window. It returns `relaxation_rate = λ`,
+`forward_rate = equilibrium_product * λ` and
+`backward_rate = (1 - equilibrium_product) * λ`, in inverse time units. This
+two-state description is consistent with the population rate equation in
+[Lindoy, Mandal and Reichman, Methods, Eqs. 16–18](https://www.nature.com/articles/s41467-023-38368-x).
+
+For a saved HEOM trajectory in a symmetric, undriven double well, with reactant
+at `q < 0` and product at `q > 0`, equilibrium symmetry supplies
+`equilibrium_product = 0.5`:
+
+```julia
+rates = tunnelling_rates(sol;
+    equilibrium_product = 0.5, dividing_surface = 0.0,
+    product_side = :right, tspan = (10.0, 20.0))
+rates.forward_rate                      # reactant → product
+rates.backward_rate                     # product → reactant
+rates.r_squared                         # goodness of the log-population fit
+rates.rmse                              # population-space residual RMS
+rates.times, rates.population, rates.fitted_population
+```
+
+The helper integrates the physical HEOM root over the product half of the box;
+`product_side = :left` selects the opposite side. It accepts isolated Wigner and
+Caldeira–Leggett trajectories as well. For saved states use
+`tunnelling_rates(states, op; times, equilibrium_product, ...)`. State norms must
+be within `norm_atol = 1e-6` of one; the helper does not renormalise them and
+rejects time-dependent operators. Already integrated populations can be fitted
+with `tunnelling_rates(times, product_population; equilibrium_product, tspan)`.
+
+Supply the equilibrium population independently. For an asymmetric, bath-coupled
+system, use the product probability of a converged correlated equilibrium from
+`equilibrate`, with the same operator and dividing surface. An isolated Gibbs
+state need not have the coupled equilibrium population. The final sample of a
+short trajectory is not an equilibrium estimate.
+
+Choose `tspan` after intrawell relaxation and initial bath slip, but before the
+population difference reaches numerical noise. The inclusive window must contain
+at least three samples with deviations of one sign, all larger than
+`min_deviation = 1e-8`, and a positive fitted decay rate. Samples are not silently
+removed. With `tspan = nothing`, all supplied samples are fitted. The returned
+`amplitude` is the signed fitted deviation at the first retained time. Compare
+the fitted populations with the trajectory, vary both window endpoints, and
+converge the grid, box, bath expansion and hierarchy depth. A high `r_squared`
+alone does not establish a physical rate.
+
+These are total interwell transfer rates. Population relaxation does not separate
+under-barrier tunnelling from thermally activated passage over the barrier.
+Coherent tunnelling oscillations generally do not admit constant two-state rates;
+use populations and fluxes to describe that regime. See the
+[runnable double-well example](examples/tunnelling_rates.jl) for an illustrative
+HEOM calculation and a comparison of fitting windows:
+
+```sh
+julia --project=/path/to/environment examples/tunnelling_rates.jl
 ```
 
 ## Plotting
@@ -853,6 +922,7 @@ packages are distributed as source; there is no wheel-building step.
 │   ├── observables.jl             # marginals, moments, energy, overlaps, negativity
 │   ├── diagnostics.jl             # grid health and state/trajectory summaries
 │   ├── populations.jl             # window populations, currents and rates
+│   ├── tunnelling.jl              # two-state rates from population relaxation
 │   ├── plotting.jl                # optional Plots interface through RecipesBase
 │   ├── animation.jl               # public animation API and documentation
 │   ├── initial_states.jl          # wavefunction and density-matrix Wigner transforms

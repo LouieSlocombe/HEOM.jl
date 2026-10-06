@@ -16,6 +16,7 @@ Brownian thermal baths and combinations of independent components.
 Initial-state helpers transform wavefunctions and density kernels, and prepare
 numerical energy eigenstates and isolated Gibbs states in arbitrary potentials.
 Analysis functions expose observables, grid diagnostics, trajectory summaries and populations.
+Population-relaxation fits extract forward and backward inter-well transfer rates.
 Time-dependent potentials and separable dipole drives act on the full hierarchy.
 Linear-response helpers propagate dipole perturbations and compute absorption spectra.
 Plotting recipes display Wigner functions, marginal densities and diagnostic trajectories
@@ -48,6 +49,7 @@ export phase_space_integral, expectation, purity, overlap, energy, wigner_negati
 export position_density, momentum_density, phase_space_mean, phase_space_covariance
 export boundary_weight, spectral_tail, diagnostics
 export probability, probability_current, probability_rate, expectation_rate
+export tunnelling_rates
 export harmonic_potential, coherent_wigner, fock_wigner, cat_wigner, harmonic_evolution
 export wavefunction_wigner, density_matrix_wigner
 export eigenstates, eigenstate_wigner, thermal_wigner
@@ -68,6 +70,7 @@ include("equilibrium.jl")
 include("observables.jl")
 include("diagnostics.jl")
 include("populations.jl")
+include("tunnelling.jl")
 include("harmonic_oscillator.jl")
 include("initial_states.jl")
 include("stationary_states.jl")

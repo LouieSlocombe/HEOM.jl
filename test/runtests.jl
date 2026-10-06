@@ -65,6 +65,7 @@ end
     include("observables.jl")
     include("diagnostics.jl")
     include("populations.jl")
+    include("tunnelling.jl")
     include("plotting.jl")
     include("animation.jl")
 
