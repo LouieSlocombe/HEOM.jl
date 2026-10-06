@@ -35,6 +35,15 @@
             oscillatory.coefficients
         @test correlation ≈ exp(-0.3t) * cos(2t)
     end
+    # Adding a long independent tail must not turn oscillator stability
+    # validation into a dense eigensystem of all Matsubara modes.
+    modes = 2002
+    large_coefficients, large_rates = ones(modes), ones(modes)
+    large_mixing = sparse([1, 2], [2, 1], [-2.0, 2.0], modes, modes)
+    ExponentialBath(large_coefficients, large_rates; mixing = large_mixing)
+    allocated =
+        @allocated ExponentialBath(large_coefficients, large_rates; mixing = large_mixing)
+    @test allocated < 2_000_000
     @test_throws DimensionMismatch ExponentialBath(c, rates; weights = [1])
     @test_throws DimensionMismatch ExponentialBath(c, rates; mixing = zeros(2, 1))
     @test_throws ArgumentError ExponentialBath(c, rates; weights = [1 + im, 0])

@@ -230,10 +230,13 @@ julia --project=. examples/initial_states.jl
 ## Wigner-space HEOM
 
 HEOM evolves the physical Wigner function together with auxiliary density
-operators (ADOs), represented on the same phase-space grid. Bath correlations are
-expanded as `C(t) = sum(c[k] * exp(-rates[k] * t))` for `t ≥ 0`. The supported
-coupling is linear in the one-dimensional coordinate, with real positive rates
-and complex coefficients. For the unscaled auxiliary Wigner functions,
+operators (ADOs), represented on the same phase-space grid. Independent exponential
+bath correlations are `C(t) = sum(c[k] * exp(-rates[k] * t))` for `t ≥ 0`.
+The supported coupling is linear in the one-dimensional coordinate. The generalized
+real basis also supports damped oscillations and coincident poles through weights
+and mixing: `C(t) = transpose(weights)*exp(-Γ*t)*coefficients`, with
+`Γ = Diagonal(rates) + mixing`. For independent exponentials with unit weights,
+the unscaled auxiliary Wigner functions obey
 
 ```math
 \partial_t W_{\mathbf n} =
@@ -312,6 +315,57 @@ The physical model is discussed in
 [Tanimura's Wigner-space HEOM derivation](https://arxiv.org/pdf/1502.04077).
 The equation above uses coordinate-coupled, unscaled ADOs; their definitions and
 initial conditions differ from the transformed momentum form in that paper.
+
+### Structured baths and correlation diagnostics
+
+`brownian_oscillator_bath` adds a thermal vibrational resonance with spectral density
+`J(ω) = 2λ*γ*ω₀²*ω / ((ω₀² - ω²)² + γ²*ω²)`, using the same correlation convention
+and counterterm `λ*q²` as the Drude constructor. Set `frequency = ω₀` and
+`damping = γ`, with `0 < γ < 2ω₀`; the oscillation decays at `γ/2` and its damped
+angular frequency is `sqrt(ω₀² - γ²/4)`. Temperature and `hbar` must be positive.
+The bath uses two coupled real modes plus `matsubara` thermal modes. A finite
+mixed basis also handles near-coincident oscillator and retained thermal poles.
+
+```julia
+vibration = brownian_oscillator_bath(;
+    reorganization = 0.08, frequency = 2.0, damping = 0.3,
+    kT = 0.8, matsubara = 3)
+background = drude_lorentz_bath(;
+    reorganization = 0.12, cutoff = 1.2, kT = 0.8, matsubara = 1)
+bath = combine_baths(background, vibration)
+
+times = range(0, 10; length = 201)
+frequencies = range(-5, 5; length = 301)
+correlation = bath_correlation.(Ref(bath), times)
+spectrum = bath_spectrum.(Ref(bath), frequencies)
+members = hierarchy_size(length(bath.rates), 4)
+# Pass bath to heom_operator or heom_problem as usual.
+```
+
+`combine_baths(baths...)` or `combine_baths([bath1, bath2, ...])` sums independent
+components coupled to the same position. It preserves their bases, adds diffusion
+and counterterms, copies all arrays, and requires matching `hbar`. Components at
+different temperatures can be combined, but the sum generally has no single
+thermal temperature. Correlated components and different coupling operators are
+outside this constructor's scope.
+
+Brownian Matsubara coefficients are negative. The constructor retains their signs
+and drops the omitted tail, with zero residual diffusion; that tail cannot be
+represented by a positive diffusion terminator. Increase `matsubara` to converge
+the correlation and spectrum, particularly at low temperature, as well as `depth`
+for dynamics. The decomposition follows the
+[underdamped Brownian correlation](https://doi.org/10.1038/s41467-019-11656-1),
+with coupling expressed as the reorganization coefficient `λ`.
+
+`bath_correlation(bath, t)` evaluates the retained regular correlation, including
+weights and mixing; negative times use `C(-t) = conj(C(t))`. It excludes the
+white-noise term `2bath.diffusion*δ(t)`, even at zero time.
+`bath_spectrum(bath, ω)` evaluates the unsymmetrized, two-sided Fourier transform
+`S(ω) = ∫ exp(im*ω*t)*C(t) dt`, including the constant `2bath.diffusion` contribution.
+It uses angular frequencies and does not clip negative values. For an exact thermal
+bath, `S(ω) = 2hbar*J(ω)/(1-exp(-hbar*ω/kT))` for positive `ω`, and
+`S(-ω) = exp(-hbar*ω/kT)*S(ω)`. These diagnostics expose errors from a finite
+decomposition instead of replacing it with the ideal thermal spectrum.
 
 ### Correlated equilibrium preparation
 
@@ -457,6 +511,9 @@ Caldeira–Leggett operators and solutions.
 | `drude_lorentz_pade_bath(; reorganization, cutoff, kT, pade, ...)` | Compact quantum Drude bath for low temperatures |
 | `hierarchy_size(modes, depth)`, `rescale_hierarchy(U, op; scaled)` | Estimate hierarchy size and convert auxiliary scaling |
 | `drude_lorentz_bath(; reorganization, cutoff, kT, matsubara, hbar, terminator)` | Drude–Lorentz bath with Matsubara poles and optional residual diffusion |
+| `brownian_oscillator_bath(; reorganization, frequency, damping, kT, matsubara, hbar)` | Underdamped Brownian resonance with retained thermal poles |
+| `combine_baths(baths...)`, `combine_baths(baths)` | Sum independent bath components coupled to the same position |
+| `bath_correlation(bath, t)`, `bath_spectrum(bath, omega)` | Retained force correlation and unsymmetrized noise spectrum |
 | `heom_problem(W0, tspan, grid; mass, potential, bath, depth, ...)` | `ODEProblem` for the Wigner-space hierarchy |
 | `heom_operator(grid; mass, potential, bath, depth, ...)` | Reusable hierarchy operator; `heom_problem(W0, tspan, op)` takes it |
 | `heom!(dU, U, op, t)` | In-place hierarchy right-hand side |
@@ -790,6 +847,9 @@ packages are distributed as source; there is no wheel-building step.
 │   ├── wigner_moyal.jl            # Wigner–Moyal operators and ODEProblem
 │   ├── caldeira_leggett.jl        # thermal friction and diffusion operators
 │   ├── heom.jl                    # exponential baths and Wigner-space hierarchy
+│   ├── brownian_bath.jl           # thermal underdamped Brownian oscillators
+│   ├── composite_bath.jl          # independent bath combinations
+│   ├── bath_diagnostics.jl        # force correlations and noise spectra
 │   ├── observables.jl             # marginals, moments, energy, overlaps, negativity
 │   ├── diagnostics.jl             # grid health and state/trajectory summaries
 │   ├── populations.jl             # window populations, currents and rates

@@ -1,5 +1,19 @@
 using LinearAlgebra: eigvals, istril, istriu
 
+# Independent thermal poles need no dense linear algebra. This mask identifies
+# every mode participating in a coupling, including one-way/Jordan transfers.
+function coupled_bath_modes(mixing)
+    coupled = falses(size(mixing, 1))
+    rows = SparseArrays.rowvals(mixing)
+    values = SparseArrays.nonzeros(mixing)
+    for j in axes(mixing, 2), p in SparseArrays.nzrange(mixing, j)
+        iszero(values[p]) && continue
+        coupled[j] = true
+        coupled[rows[p]] = true
+    end
+    return coupled
+end
+
 """
     ExponentialBath(coefficients, rates; hbar = 1.0, diffusion = 0.0, counterterm = 0.0,
                     weights = ones(length(rates)), mixing = spzeros(length(rates), length(rates)))
@@ -24,7 +38,9 @@ J. Chem. Phys. 152, 204101 (2020), DOI: 10.1063/5.0007327.
 `diffusion ≥ 0` adds a Markovian remainder `diffusion * ∂p²W` on every hierarchy member.
 `counterterm ≥ 0` adds `counterterm*q²` to the supplied system potential.
 `hbar` must be finite and positive. Inputs are copied. See [`drude_lorentz_bath`](@ref)
-for a thermal bath with its counterterm and Matsubara remainder included.
+and [`brownian_oscillator_bath`](@ref) for thermal constructors, [`combine_baths`](@ref)
+for independent components, and [`bath_correlation`](@ref) / [`bath_spectrum`](@ref)
+to inspect the retained decomposition.
 """
 struct ExponentialBath
     coefficients::Vector{ComplexF64}
@@ -67,9 +83,10 @@ struct ExponentialBath
             ArgumentError("bath mixing must have a zero diagonal; use rates for damping"),
         )
         if !istriu(M) && !istril(M)
-            rate_matrix = Matrix(M)
-            for i in eachindex(ν)
-                rate_matrix[i, i] = ν[i]
+            indices = findall(coupled_bath_modes(M))
+            rate_matrix = Matrix(M[indices, indices])
+            for (i, k) in enumerate(indices)
+                rate_matrix[i, i] = ν[k]
             end
             all(z -> isfinite(z) && real(z) > 0, eigvals(rate_matrix)) || throw(
                 ArgumentError(

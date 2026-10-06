@@ -11,7 +11,8 @@ by the method of lines. [`wigner_moyal_problem`](@ref) discretises phase space o
 integrate in time.
 [`caldeira_leggett_problem`](@ref) adds Markovian friction and thermal momentum diffusion.
 [`heom_problem`](@ref) propagates a hierarchy of auxiliary Wigner functions for a
-Gaussian bath coupled linearly to position, including Drude–Lorentz thermal baths.
+Gaussian bath coupled linearly to position, including Drude–Lorentz and underdamped
+Brownian thermal baths and combinations of independent components.
 Initial-state helpers transform wavefunctions and density kernels, and prepare
 numerical energy eigenstates and isolated Gibbs states in arbitrary potentials.
 Analysis functions expose observables, grid diagnostics, trajectory summaries and populations.
@@ -38,6 +39,7 @@ export TimeDependentPotential, DrivenPotential
 export caldeira_leggett_operator, caldeira_leggett!, caldeira_leggett_problem
 export ExponentialBath, drude_lorentz_bath
 export drude_lorentz_pade_bath
+export brownian_oscillator_bath, combine_baths, bath_correlation, bath_spectrum
 export heom_operator, heom!, heom_problem, hierarchy_indices, physical_wigner
 export hierarchy_size, rescale_hierarchy
 export equilibrate, EquilibriumResult
@@ -58,6 +60,9 @@ include("driven.jl")
 include("caldeira_leggett.jl")
 include("heom.jl")
 include("pade_bath.jl")
+include("brownian_bath.jl")
+include("composite_bath.jl")
+include("bath_diagnostics.jl")
 include("heom_solvers.jl")
 include("equilibrium.jl")
 include("observables.jl")
