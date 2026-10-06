@@ -130,3 +130,25 @@
         @test_throws DimensionMismatch overlap(W, wrong, grid)
     end
 end
+
+@testset "Instantaneous driven energy" begin
+    grid = PhaseSpaceGrid((-8, 8), 64, (-8, 8), 64)
+    mass, omega, q0, p0 = 1.3, 0.8, 0.4, -0.3
+    W = on_grid((q, p) -> coherent_wigner(q, p; mass, omega, q0, p0), grid)
+    V0 = harmonic_potential(; mass, omega)
+    E(t) = 0.6sin(t)
+    base_energy = omega / 2 + p0^2 / (2mass) + V0(q0)
+    potentials = (
+        DrivenPotential(V0, E, identity),
+        TimeDependentPotential((q, t) -> V0(q) - E(t) * q),
+        (q, t) -> V0(q) - E(t) * q,
+    )
+    for potential in potentials
+        @test_throws ArgumentError energy(W, grid; mass, potential)
+        @test_throws ArgumentError energy(W, grid; mass, potential, t = Inf)
+        for t in (0.0, 0.7, 1.9)
+            @test energy(W, grid; mass, potential, t) ≈ base_energy - E(t) * q0 atol = 1e-12
+        end
+    end
+    @test energy(W, grid; mass, potential = V0, t = 0.7) ≈ base_energy atol = 1e-12
+end

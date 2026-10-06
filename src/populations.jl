@@ -53,16 +53,16 @@ function probability_current(W::AbstractMatrix, grid::PhaseSpaceGrid; mass::Real
 end
 
 # Use the same right-hand side as the integrator, including the selected discretisation.
-function time_derivative(W::AbstractMatrix, op::AbstractPhaseSpaceOperator)
+function time_derivative(W::AbstractMatrix, op::AbstractPhaseSpaceOperator, t)
     check_size(W, op.grid)
     dW = similar(W, Float64)
-    phase_space_rhs!(dW, W, op, 0.0)
+    phase_space_rhs!(dW, W, op, t)
     return dW
 end
 
-function time_derivative(U::AbstractArray{<:Real,3}, op::WignerHEOM)
+function time_derivative(U::AbstractArray{<:Real,3}, op::WignerHEOM, t)
     dU = similar(U, Float64)
-    heom!(dU, U, op, 0.0)
+    heom!(dU, U, op, t)
     return physical_wigner(dU)
 end
 
@@ -71,29 +71,37 @@ function phase_space_rhs!(dW, W, op::WignerHEOM, t)
 end
 
 """
-    expectation_rate(f, W, op)
+    expectation_rate(f, W, op; t = 0.0)
 
 Instantaneous rate `d⟨f⟩/dt = ∫∫ f(q, p) ∂W/∂t dq dp` for a time-independent Weyl symbol
 `f`, using the grid and right-hand side of `op`. This is exact for the semi-discrete
 equations, since [`expectation`](@ref) is linear in `W`.
 For a HEOM operator pass the full 3D hierarchy in place of `W`; the rate is
 evaluated on its physical member and depends on the auxiliary members.
+For driven dynamics, supply the time `t` at which to evaluate the generator. A symbol
+with explicit time dependence also needs its separate contribution `⟨∂f/∂t⟩`.
 """
-function expectation_rate(f, W::AbstractMatrix, op::AbstractPhaseSpaceOperator)
-    return expectation(f, time_derivative(W, op), op.grid)
+function expectation_rate(
+    f,
+    W::AbstractMatrix,
+    op::AbstractPhaseSpaceOperator;
+    t::Real = 0.0,
+)
+    return expectation(f, time_derivative(W, op, t), op.grid)
 end
 
-function expectation_rate(f, U::AbstractArray{<:Real,3}, op::WignerHEOM)
-    return expectation(f, time_derivative(U, op), op.grid)
+function expectation_rate(f, U::AbstractArray{<:Real,3}, op::WignerHEOM; t::Real = 0.0)
+    return expectation(f, time_derivative(U, op, t), op.grid)
 end
 
 """
-    probability_rate(W, op; q = (-Inf, Inf), p = (-Inf, Inf))
+    probability_rate(W, op; q = (-Inf, Inf), p = (-Inf, Inf), t = 0.0)
 
 Instantaneous window population rate `dP/dt`, found by applying [`probability`](@ref) to
 the right-hand side of `op`. This is exact for the semi-discrete equations because the
 window integral is linear in `W`.
 For HEOM, pass the full 3D hierarchy instead of only the physical matrix.
+For driven dynamics, supply the time `t` at which to evaluate the generator.
 
 `probability_rate(W, op; q = (q‡, Inf))` is the reactive population flux into the product
 region beyond `q‡`. For a resolved state that decays at the box edges, the spectral result
@@ -105,8 +113,9 @@ function probability_rate(
     op::AbstractPhaseSpaceOperator;
     q = (-Inf, Inf),
     p = (-Inf, Inf),
+    t::Real = 0.0,
 )
-    return probability(time_derivative(W, op), op.grid; q, p)
+    return probability(time_derivative(W, op, t), op.grid; q, p)
 end
 
 function probability_rate(
@@ -114,6 +123,7 @@ function probability_rate(
     op::WignerHEOM;
     q = (-Inf, Inf),
     p = (-Inf, Inf),
+    t::Real = 0.0,
 )
-    return probability(time_derivative(U, op), op.grid; q, p)
+    return probability(time_derivative(U, op, t), op.grid; q, p)
 end

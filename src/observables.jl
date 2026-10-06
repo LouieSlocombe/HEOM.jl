@@ -87,16 +87,28 @@ function phase_space_covariance(W::AbstractMatrix, grid::PhaseSpaceGrid)
 end
 
 """
-    energy(W, grid::PhaseSpaceGrid; mass, potential)
+    energy(W, grid::PhaseSpaceGrid; mass, potential, t = nothing)
 
 Mean energy `⟨H⟩ = ∫ p²/(2m) momentum_density(p) dp + ∫ V(q) position_density(q) dq`,
 where `potential(q)` evaluates `V(q)`. The Weyl symbol of the Hamiltonian is exactly
-`p²/(2m) + V(q)`. No normalisation is applied.
+`p²/(2m) + V(q)`. For a time-dependent potential, supply `t` to evaluate the
+instantaneous Hamiltonian `p²/(2m) + V(q, t)`. No normalisation is applied.
 """
-function energy(W::AbstractMatrix, grid::PhaseSpaceGrid; mass::Real, potential)
+function energy(
+    W::AbstractMatrix,
+    grid::PhaseSpaceGrid;
+    mass::Real,
+    potential,
+    t::Union{Nothing,Real} = nothing,
+)
     check_size(W, grid)
+    isnothing(t) &&
+        is_time_dependent(potential) &&
+        throw(ArgumentError("supply t to evaluate energy with a time-dependent potential"))
+    isnothing(t) || isfinite(t) || throw(ArgumentError("t must be finite"))
+    V = potential_at(normalize_potential(potential), t)
     kinetic = dot(grid.p .^ 2, momentum_density(W, grid)) * grid.dp / (2mass)
-    potential_energy = dot(potential.(grid.q), position_density(W, grid)) * grid.dq
+    potential_energy = dot(V.(grid.q), position_density(W, grid)) * grid.dq
     return kinetic + potential_energy
 end
 

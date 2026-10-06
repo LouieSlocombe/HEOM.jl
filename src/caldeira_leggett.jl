@@ -13,7 +13,8 @@ struct SpectralCaldeiraLeggett{H<:SpectralWignerMoyal} <: AbstractCaldeiraLegget
     bath::Matrix{ComplexF64}
 end
 
-struct FiniteDifferenceCaldeiraLeggett <: AbstractCaldeiraLeggett
+struct FiniteDifferenceCaldeiraLeggett{H<:FiniteDifferenceWignerMoyal} <:
+       AbstractCaldeiraLeggett
     grid::PhaseSpaceGrid
     mass::Float64
     hbar::Float64
@@ -22,6 +23,8 @@ struct FiniteDifferenceCaldeiraLeggett <: AbstractCaldeiraLeggett
     moyal_terms::Int
     order::Int
     matrix::SparseMatrixCSC{Float64,Int}
+    hamiltonian::H
+    bath_matrix::SparseMatrixCSC{Float64,Int}
 end
 
 """
@@ -102,7 +105,8 @@ function build_caldeira_leggett(op::FiniteDifferenceWignerMoyal, friction, kT, d
     Dpp = periodic_difference_matrix(2, op.order, np, op.grid.dp)
     # Dp * diag(p) differentiates the flux pW; a discrete product rule would lose norm.
     bath = friction * Dp * spdiagm(op.grid.p) + diffusion * Dpp
-    matrix = op.matrix + kron(bath, spdiagm(ones(nq)))
+    bath_matrix = kron(bath, spdiagm(ones(nq)))
+    matrix = op.matrix + bath_matrix
     return FiniteDifferenceCaldeiraLeggett(
         op.grid,
         op.mass,
@@ -112,6 +116,8 @@ function build_caldeira_leggett(op::FiniteDifferenceWignerMoyal, friction, kT, d
         op.moyal_terms,
         op.order,
         matrix,
+        op,
+        bath_matrix,
     )
 end
 
@@ -119,7 +125,8 @@ end
     caldeira_leggett!(dW, W, op, t)
 
 Evaluate the Caldeira–Leggett right-hand side in place using an operator returned by
-[`caldeira_leggett_operator`](@ref). The time `t` is unused. Both discretisations conserve
+[`caldeira_leggett_operator`](@ref). Driven Hamiltonians are evaluated at `t`.
+Both discretisations conserve
 the discrete integral of `W`; energy and purity generally change through the bath.
 """
 function caldeira_leggett!(dW, W, op::SpectralCaldeiraLeggett, t)
@@ -141,6 +148,7 @@ end
 function caldeira_leggett!(dW, W, op::FiniteDifferenceCaldeiraLeggett, t)
     check_size(W, op.grid)
     check_size(dW, op.grid)
+    update_caldeira_leggett!(op, t)
     mul!(vec(dW), op.matrix, vec(W))
     return nothing
 end
@@ -179,13 +187,34 @@ function caldeira_leggett_problem(W0::AbstractMatrix, tspan, op::AbstractCaldeir
     return ODEProblem(caldeira_leggett!, W, tspan, op)
 end
 
+function update_caldeira_leggett!(op::FiniteDifferenceCaldeiraLeggett, t)
+    if is_time_dependent(op)
+        update_generator!(op.hamiltonian, t)
+        copyto!(op.matrix, op.hamiltonian.matrix + op.bath_matrix)
+    end
+    return nothing
+end
+
 """
     sparse(op::FiniteDifferenceCaldeiraLeggett)
+    sparse(op::FiniteDifferenceCaldeiraLeggett, t)
 
 Return a copy of the finite-difference Caldeira–Leggett matrix acting on `vec(W)`.
+A driven operator requires the explicit time argument.
 Its columns sum to zero, conserving the discrete norm. It is generally not skew-symmetric.
 """
-SparseArrays.sparse(op::FiniteDifferenceCaldeiraLeggett) = copy(op.matrix)
+function SparseArrays.sparse(op::FiniteDifferenceCaldeiraLeggett)
+    is_time_dependent(op) &&
+        throw(ArgumentError("use sparse(op, t) for a driven generator"))
+    return copy(op.matrix)
+end
+
+function SparseArrays.sparse(op::FiniteDifferenceCaldeiraLeggett, t::Real)
+    update_caldeira_leggett!(op, t)
+    return copy(op.matrix)
+end
+
+is_time_dependent(op::AbstractCaldeiraLeggett) = is_time_dependent(op.hamiltonian)
 
 function Base.show(io::IO, op::SpectralCaldeiraLeggett)
     print(

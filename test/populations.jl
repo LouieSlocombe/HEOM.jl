@@ -160,3 +160,51 @@
         end
     end
 end
+
+@testset "Driven instantaneous rates" begin
+    grid = PhaseSpaceGrid((-8, 8), 64, (-8, 8), 64)
+    mass, omega, q0, p0 = 1.3, 0.8, 0.4, -0.3
+    W = on_grid((q, p) -> coherent_wigner(q, p; mass, omega, q0, p0), grid)
+    V0 = harmonic_potential(; mass, omega)
+    E(t) = 0.6sin(t)
+    potential = DrivenPotential(V0, E, identity)
+    bath = ExponentialBath([0.0], [1.0])
+    t = 0.7
+    c = 0.17
+    force = -mass * omega^2 * q0 + E(t)
+    momentum_flux = force * exp(-(c - p0)^2 / (mass * omega)) / sqrt(π * mass * omega)
+    for (discretization, moyal_terms) in
+        ((Spectral(), nothing), (Spectral(), 1), (FiniteDifference(4), 1))
+        h = wigner_moyal_operator(grid; mass, potential, discretization, moyal_terms)
+        cl = caldeira_leggett_operator(
+            grid;
+            mass,
+            potential,
+            discretization,
+            moyal_terms,
+            friction = 0,
+            kT = 1,
+        )
+        heom = heom_operator(
+            grid;
+            mass,
+            potential,
+            discretization,
+            moyal_terms,
+            bath,
+            depth = 1,
+        )
+        U = cat(W, zeros(size(grid)); dims = 3)
+        for (op, state) in ((h, W), (cl, W), (heom, U))
+            @test expectation_rate((q, p) -> p, state, op; t) ≈ force atol = 1e-11
+            @test expectation_rate((q, p) -> p, state, op) ≈ -mass * omega^2 * q0 atol =
+                1e-11
+            @test expectation_rate((q, p) -> q, state, op; t) ≈ p0 / mass atol = 1e-11
+            @test probability_rate(state, op; t) ≈ 0 atol = 1e-12
+            if discretization isa Spectral
+                @test probability_rate(state, op; t, p = (c, Inf)) ≈ momentum_flux atol =
+                    1e-11
+            end
+        end
+    end
+end

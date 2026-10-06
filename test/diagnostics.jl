@@ -51,6 +51,42 @@
     end
 end
 
+@testset "Driven diagnostic times" begin
+    grid = PhaseSpaceGrid((-8, 8), 64, (-8, 8), 64)
+    mass, omega = 1.0, 1.0
+    W = on_grid((q, p) -> coherent_wigner(q, p; mass, omega, q0 = 0.4), grid)
+    V0 = harmonic_potential(; mass, omega)
+    potential = DrivenPotential(V0, sin, identity)
+    times = [0.0, 0.1, 0.2]
+    @test_throws ArgumentError diagnostics(W, grid; mass, potential)
+    @test_throws ArgumentError diagnostics([W, W], grid; mass, potential)
+    @test_throws DimensionMismatch diagnostics([W, W], grid; mass, potential, times)
+    @test_throws ArgumentError diagnostics(
+        [W, W],
+        grid;
+        mass,
+        potential,
+        times = [0.0, Inf],
+    )
+    @test diagnostics(W, grid; mass, potential, t = 0.2).energy ≈
+          energy(W, grid; mass, potential, t = 0.2) atol = 1e-12
+
+    bath = ExponentialBath([0.0], [1.0])
+    for prob in (
+        wigner_moyal_problem(W, (0.0, 0.2), grid; mass, potential),
+        heom_problem(W, (0.0, 0.2), grid; mass, potential, bath, depth = 1),
+    )
+        sol = solve(prob, Vern7(); saveat = times, abstol = 1e-11, reltol = 1e-11)
+        values = diagnostics(sol; potential)
+        states = HEOM.physical_states(sol.u, sol.prob.p)
+        expected =
+            [energy(state, grid; mass, potential, t) for (state, t) in zip(states, times)]
+        @test values.t == times
+        @test values.energy ≈ expected atol = 1e-12
+        @test values.energy == diagnostics(states, grid; mass, potential, times).energy
+    end
+end
+
 @testset "Diagnostic summaries" begin
     m, ω, ħ = 1.5, 0.8, 0.7
     q0, p0 = 1.2, -0.8

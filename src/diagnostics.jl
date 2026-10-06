@@ -55,7 +55,7 @@ function axis_spectral_tail(W, dim, fraction)
 end
 
 """
-    diagnostics(W, grid::PhaseSpaceGrid; mass, potential, hbar = 1.0)
+    diagnostics(W, grid::PhaseSpaceGrid; mass, potential, hbar = 1.0, t = nothing)
 
 State observables and grid-health indicators as a named tuple of `Float64` values:
 `norm`, `mean_q`, `mean_p`, `var_q`, `var_p`, `cov_qp`, `uncertainty`,
@@ -67,6 +67,7 @@ State observables and grid-health indicators as a named tuple of `Float64` value
 for a normalised physical state; √det Σ is invariant under harmonic evolution. No
 observable is renormalised, so norm drift remains visible. Boundary and spectral
 indicators use the defaults of [`boundary_weight`](@ref) and [`spectral_tail`](@ref).
+For a time-dependent potential, supply `t` for the instantaneous energy.
 """
 function diagnostics(
     W::AbstractMatrix,
@@ -74,6 +75,7 @@ function diagnostics(
     mass::Real,
     potential,
     hbar::Real = 1.0,
+    t::Union{Nothing,Real} = nothing,
 )
     check_size(W, grid)
     mean = phase_space_mean(W, grid)
@@ -92,7 +94,7 @@ function diagnostics(
             cov_qp = cov_qp,
             uncertainty = sqrt(var_q * var_p),
             robertson_schrodinger = sqrt(var_q * var_p - cov_qp^2),
-            energy = energy(W, grid; mass, potential),
+            energy = energy(W, grid; mass, potential, t),
             purity = purity(W, grid; hbar),
             negativity = wigner_negativity(W, grid),
             boundary_q = boundary.q,
@@ -104,12 +106,14 @@ function diagnostics(
 end
 
 """
-    diagnostics(states::AbstractVector{<:AbstractMatrix}, grid; mass, potential, hbar = 1.0)
+    diagnostics(states::AbstractVector{<:AbstractMatrix}, grid; mass, potential,
+                hbar = 1.0, times = nothing)
 
 Evaluate [`diagnostics`](@ref) for each state and return a named tuple of vectors. The
 additional `autocorrelation` column is the overlap of each state with the first state,
 `Tr ρ(0)ρ(t)`, which is the survival probability for a pure initial state. The vector
 of states must be nonempty.
+For a time-dependent potential, supply one finite time per state with `times`.
 """
 function diagnostics(
     states::AbstractVector{<:AbstractMatrix},
@@ -117,9 +121,18 @@ function diagnostics(
     mass::Real,
     potential,
     hbar::Real = 1.0,
+    times = nothing,
 )
     isempty(states) && throw(ArgumentError("diagnostics needs at least one state"))
-    rows = [diagnostics(W, grid; mass, potential, hbar) for W in states]
+    rows = if isnothing(times)
+        [diagnostics(W, grid; mass, potential, hbar) for W in states]
+    else
+        length(times) == length(states) ||
+            throw(DimensionMismatch("times must have one entry per state"))
+        all(t -> t isa Real && isfinite(t), times) ||
+            throw(ArgumentError("times must contain finite real values"))
+        [diagnostics(W, grid; mass, potential, hbar, t) for (W, t) in zip(states, times)]
+    end
     autocorrelation = [overlap(first(states), W, grid; hbar) for W in states]
     return merge(columns(rows), (; autocorrelation))
 end
@@ -135,6 +148,7 @@ Evaluate [`diagnostics`](@ref) on the saved states of a phase-space solution. Th
 result puts the saved times `t = sol.t` first, followed by the observable vectors and
 `autocorrelation`. Grid, mass and ħ are read from the operator in `sol.prob.p`; the
 potential must be supplied explicitly.
+Time-dependent potentials are evaluated at each saved time for the energy.
 For a HEOM solution only the physical hierarchy member is analysed.
 """
 function diagnostics(sol::AbstractODESolution; potential)
@@ -151,6 +165,7 @@ function diagnostics(sol::AbstractODESolution; potential)
         mass = op.mass,
         potential,
         hbar = op.hbar,
+        times = sol.t,
     )
     return merge((t = sol.t,), values)
 end

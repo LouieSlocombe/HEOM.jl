@@ -405,6 +405,8 @@ Wigner–Moyal hierarchical equations of motion for linear coordinate coupling t
 This is the Wigner transform of the coordinate-coupled density-operator HEOM:
 `[q,ρ]_W = iħ∂pW` and `{q,ρ}_W = 2qW`. The physical state is `W₀`.
 `potential` is the physical system potential; the bath counterterm is added internally.
+It accepts `V(q)`, `V(q,t)`, [`TimeDependentPotential`](@ref), or
+[`DrivenPotential`](@ref). A drive acts on every auxiliary at the same time.
 `hbar` comes from `bath`. Both Hamiltonian discretisations and their Moyal options are
 supported (finite differences require integer `moyal_terms`).
 
@@ -466,7 +468,7 @@ function heom_operator(
         weights = bath.weights,
         mixing = bath.mixing,
     )
-    V(q) = potential(q) + b.counterterm * q^2
+    V = add_counterterm(potential, b.counterterm)
     h = wigner_moyal_operator(
         grid;
         mass = m,
@@ -574,16 +576,18 @@ end
     heom!(dU, U, op, t)
 
 Evaluate the Wigner HEOM in place. `U` and `dU` have shape `(nq, np, number_of_ADOs)`
-and must not alias. The time is unused. Only the root is a normalised Wigner function;
+and must not alias. A driven Hamiltonian is evaluated at `t` for every hierarchy member.
+Only the root is a normalised Wigner function;
 auxiliaries encode bath correlations and may have nonzero integrals.
 """
 function heom!(dU, U, op::WignerHEOM, t)
     check_hierarchy_size(U, op)
     check_hierarchy_size(dU, op)
     h, b = op.hamiltonian, op.bath
+    update_generator!(h, t)
     for a in eachindex(op.indices)
         W, dW = @view(U[:, :, a]), @view(dU[:, :, a])
-        wigner_moyal!(dW, W, h, t)
+        apply_wigner_moyal!(dW, W, h)
         @. dW -= op.damping[a] * W
         if !iszero(b.diffusion)
             heom_derivative!(op.scratch, W, h, op.momentum.second)
@@ -637,8 +641,8 @@ including for spectral operators. For example, `Rodas5P(autodiff = AutoFiniteDif
 dense Jacobian or differentiating FFTW buffers. These solver types are supplied by
 OrdinaryDiffEqRosenbrock, ADTypes and LinearSolve, respectively.
 
-`jacobian = :sparse` assembles the constant finite-difference generator and provides
-an exact sparse Jacobian; it requires `FiniteDifference` and can use `Rodas5P()`.
+`jacobian = :sparse` assembles the finite-difference generator and provides
+an exact sparse Jacobian, updated at each requested time for driven dynamics; it requires `FiniteDifference` and can use `Rodas5P()`.
 It stores a matrix in addition to the hierarchy. Rebuild the problem rather than
 replacing its operator parameter when using this cached sparse Jacobian.
 """
@@ -669,7 +673,7 @@ function heom_problem(
         U = Array{Float64,3}(U0)
     end
     all(isfinite, U) || throw(ArgumentError("initial hierarchy must be finite in Float64"))
-    return ODEProblem(heom_ode_function(op, jacobian), U, tspan, op)
+    return ODEProblem(heom_ode_function(op, jacobian, first(tspan)), U, tspan, op)
 end
 
 """
@@ -714,3 +718,5 @@ function Base.show(io::IO, op::WignerHEOM)
     )
     return nothing
 end
+
+is_time_dependent(op::WignerHEOM) = is_time_dependent(op.hamiltonian)

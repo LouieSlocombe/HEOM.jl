@@ -17,7 +17,7 @@ abstract type AbstractWignerMoyal <: AbstractPhaseSpaceOperator end
 # Pseudo-spectral operator. The FFTs are planned on the stored buffers, and only those
 # buffers are ever passed to them. The backward transforms are unnormalised, so the symbols
 # carry the 1/n factors.
-struct SpectralWignerMoyal{FQ,BQ,FP,BP} <: AbstractWignerMoyal
+struct SpectralWignerMoyal{FQ,BQ,FP,BP,D} <: AbstractWignerMoyal
     grid::PhaseSpaceGrid
     mass::Float64
     hbar::Float64
@@ -34,16 +34,18 @@ struct SpectralWignerMoyal{FQ,BQ,FP,BP} <: AbstractWignerMoyal
     backward_q::BQ
     forward_p::FP
     backward_p::BP
+    drive::D
 end
 
 # Finite-difference operator, stored as a sparse matrix acting on vec(W).
-struct FiniteDifferenceWignerMoyal <: AbstractWignerMoyal
+struct FiniteDifferenceWignerMoyal{D} <: AbstractWignerMoyal
     grid::PhaseSpaceGrid
     mass::Float64
     hbar::Float64
     moyal_terms::Int
     order::Int
     matrix::SparseMatrixCSC{Float64,Int}
+    drive::D
 end
 
 """
@@ -52,6 +54,8 @@ end
 
 Semi-discretise the Wigner–Moyal right-hand side on `grid` for a particle of `mass` in the
 `potential` `V(q)`, and return the operator used by [`wigner_moyal!`](@ref).
+Use `V(q,t)`, [`TimeDependentPotential`](@ref), or [`DrivenPotential`](@ref) for a
+time-dependent potential. Separable drives precompute their spatial coefficients.
 `mass` and `hbar` must be finite and positive in Float64, and `V` must return finite real
 values at every evaluation point.
 
@@ -98,7 +102,7 @@ function wigner_moyal_operator(
         grid,
         Float64(mass),
         Float64(hbar),
-        potential,
+        normalize_potential(potential),
         moyal_terms,
     )
 end
@@ -132,6 +136,7 @@ function build_operator(::Spectral, grid, mass, hbar, potential, moyal_terms)
         plan_brfft(Wq, nq, 1),
         plan_rfft(W, 2),
         plan_brfft(Wp, np, 2),
+        nothing,
     )
 end
 
@@ -155,7 +160,7 @@ function build_operator(fd::FiniteDifference, grid, mass, hbar, potential, moyal
             "finite-difference coefficients must be finite; rescale parameters or grid",
         ),
     )
-    return FiniteDifferenceWignerMoyal(grid, mass, hbar, moyal_terms, fd.order, L)
+    return FiniteDifferenceWignerMoyal(grid, mass, hbar, moyal_terms, fd.order, L, nothing)
 end
 
 # Fourier symbol of the Moyal potential term: M[i, j] multiplies the mode exp(iκⱼp) of
@@ -218,10 +223,16 @@ end
 
 Evaluate the semi-discrete Wigner–Moyal right-hand side `dW = ∂W/∂t` in place, for the
 Wigner function `W` on the grid of the operator `op` from [`wigner_moyal_operator`](@ref).
-The time `t` is unused. The signature is that of an in-place `ODEProblem` function whose
+The potential is evaluated at `t` when it depends on time. The signature is that of an
+in-place `ODEProblem` function whose
 parameter is `op`.
 """
-function wigner_moyal!(dW, W, op::SpectralWignerMoyal, t)
+function wigner_moyal!(dW, W, op::AbstractWignerMoyal, t)
+    update_generator!(op, t)
+    return apply_wigner_moyal!(dW, W, op)
+end
+
+function apply_wigner_moyal!(dW, W, op::SpectralWignerMoyal)
     check_size(W, op.grid)
     check_size(dW, op.grid)
     op.W .= W
@@ -235,7 +246,7 @@ function wigner_moyal!(dW, W, op::SpectralWignerMoyal, t)
     return nothing
 end
 
-function wigner_moyal!(dW, W, op::FiniteDifferenceWignerMoyal, t)
+function apply_wigner_moyal!(dW, W, op::FiniteDifferenceWignerMoyal)
     check_size(W, op.grid)
     check_size(dW, op.grid)
     mul!(vec(dW), op.matrix, vec(W))
@@ -290,12 +301,23 @@ end
 
 """
     sparse(op::FiniteDifferenceWignerMoyal)
+    sparse(op::FiniteDifferenceWignerMoyal, t)
 
 Return a copy of the finite-difference Wigner–Moyal operator as a sparse matrix `L` acting on
 `vec(W)`, so that `vec(dW) == L * vec(W)`. `L` is exactly skew-symmetric, so the discrete
 norm `sum(W)` and purity `sum(abs2, W)` are conserved.
+A driven operator requires the explicit time argument.
 """
-SparseArrays.sparse(op::FiniteDifferenceWignerMoyal) = copy(op.matrix)
+function SparseArrays.sparse(op::FiniteDifferenceWignerMoyal)
+    is_time_dependent(op) &&
+        throw(ArgumentError("use sparse(op, t) for a driven generator"))
+    return copy(op.matrix)
+end
+
+function SparseArrays.sparse(op::FiniteDifferenceWignerMoyal, t::Real)
+    update_generator!(op, t)
+    return copy(op.matrix)
+end
 
 function Base.show(io::IO, op::SpectralWignerMoyal)
     print(io, "SpectralWignerMoyal(", op.grid, ", mass = ", op.mass, ", hbar = ", op.hbar)

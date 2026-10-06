@@ -85,6 +85,21 @@ using SciMLBase: DiscreteCallback, ReturnCode, terminate!
     @test first(hierarchy_indices(op)) == [0]
 end
 
+@testset "Driven dynamics has no stationary equilibration" begin
+    grid = PhaseSpaceGrid((-4, 4), 16, (-4, 4), 16)
+    bath = ExponentialBath([0.0], [1.0])
+    V0 = harmonic_potential(; mass = 1, omega = 1)
+    W0 = on_grid((q, p) -> coherent_wigner(q, p; mass = 1, omega = 1), grid)
+    for potential in (
+        DrivenPotential(V0, sin, identity),
+        TimeDependentPotential((q, t) -> V0(q) - sin(t) * q),
+    )
+        op = heom_operator(grid; mass = 1, potential, bath, depth = 1)
+        @test_throws ArgumentError equilibrate(W0, (0.0, 1.0), op, Vern7())
+        @test_throws ArgumentError equilibrate(W0, (0.0, 0.0), op, Vern7())
+    end
+end
+
 @testset "Equilibrium detection and correlated initialization" begin
     grid = PhaseSpaceGrid((-2, 2), 8, (-2, 2), 8)
     bath = ExponentialBath([0.0], [1.0])

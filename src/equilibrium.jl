@@ -86,6 +86,9 @@ end
                 jacobian = :matrixfree, callback = nothing, kwargs...)
 
 Prepare a correlated equilibrium by real-time relaxation under a [`heom_operator`](@ref).
+The operator must have a time-independent potential. Prepare equilibrium with a static
+operator before starting driven dynamics; an instantaneous zero RHS under a drive does
+not establish stationarity.
 `U0` is a Wigner matrix (zero initial auxiliaries) or a complete hierarchy in `op`'s
 scaling convention. `alg` is a SciML ODE algorithm, supplied by the caller as for
 `solve`. The finite, forward `tspan` bounds the preparation time. Equal endpoints
@@ -139,6 +142,11 @@ function equilibrate(
     callback = nothing,
     kwargs...,
 )
+    is_time_dependent(op) && throw(
+        ArgumentError(
+            "equilibrate requires a time-independent operator; prepare equilibrium before applying a drive",
+        ),
+    )
     atol, rtol, interval =
         Float64.((stationarity_abstol, stationarity_reltol, check_interval))
     isfinite(atol) && atol > 0 ||

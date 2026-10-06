@@ -5,7 +5,7 @@ Phase-space quantum dynamics in Julia, including hierarchical equations of motio
 Wigner–Moyal equation, its bath hierarchy, and the Caldeira–Leggett model with
 friction and thermal diffusion. The Wigner–Moyal equation is the
 exact quantum evolution of the Wigner function $W(q, p, t)$ of a particle of mass
-$m$ in a potential $V(q)$:
+$m$ in a static or time-dependent potential $V(q,t)$:
 
 ```math
 \frac{\partial W}{\partial t} = -\frac{p}{m}\frac{\partial W}{\partial q}
@@ -64,6 +64,99 @@ To work on this package from another Julia project, use
 `Pkg.develop(path="/path/to/HEOM.jl")` in that project's environment. Every public
 function has a docstring available through Julia's help mode, for example
 `?wigner_moyal_operator`.
+
+## Driven dynamics and spectroscopy
+
+Wrap a general potential as `TimeDependentPotential((q, t) -> V(q, t))`, or use
+`DrivenPotential(V0, field, dipole)` for `V(q,t) = V0(q) - field(t)*dipole(q)`.
+Both work with the Wigner–Moyal, HEOM and Caldeira–Leggett problem builders and
+with spectral or finite-difference discretisation. A plain callable `q -> V(q)`
+continues to describe a static potential; plain two-argument callables are also
+accepted for driven dynamics. For separable drives the spatial
+operators are cached and only the field amplitude changes during propagation.
+
+```julia
+using HEOM, OrdinaryDiffEqVerner
+
+mass, omega, hbar = 1.0, 1.0, 1.0
+grid = PhaseSpaceGrid((-7, 7), 64, (-7, 7), 64)
+W0 = on_grid((q, p) -> coherent_wigner(q, p; mass, omega, hbar), grid)
+V0 = harmonic_potential(; mass, omega)
+field(t) = 0.3 * cos(0.75t)
+potential = DrivenPotential(V0, field, q -> q)
+# Equivalent general form:
+# potential = TimeDependentPotential((q, t) -> V0(q) - field(t)*q)
+prob = wigner_moyal_problem(W0, (0.0, 8.0), grid; mass, hbar, potential)
+sol = solve(prob, Vern7(); saveat = 0.05, abstol = 1e-10, reltol = 1e-10)
+d = diagnostics(sol; potential)          # instantaneous driven-system energy
+```
+
+The drive acts on every HEOM auxiliary, while the bath and its counterterm remain
+fixed. The generator is evaluated at the solver's current time. HEOM also supplies
+time-aware Jacobian products and partial time derivatives for stiff methods.
+Time derivatives are obtained with ForwardDiff unless supplied explicitly as
+`TimeDependentPotential(V; derivative = (q,t) -> dVdt(q,t))` or
+`DrivenPotential(V0, field, dipole; field_derivative = t -> dEdt(t))`.
+For discontinuous or sharply varying fields, provide solver `tstops` at the
+switches and resolve the pulse with appropriate integration tolerances and steps.
+At one saved time use `energy(W, grid; mass, potential, t)` or
+`diagnostics(W, grid; mass, hbar, potential, t)`; rates likewise accept `t`.
+Finite-difference operators provide the instantaneous matrix as `sparse(op, t)`;
+`sparse(op)` requires a static generator. HEOM's `jacobian = :sparse` also updates
+its matrix at the current solver time for driven problems.
+
+Linear response starts from an equilibrium state and an **undriven** operator:
+
+```julia
+op = wigner_moyal_operator(grid; mass, hbar, potential = V0)
+response = linear_response(W0, (0.0, 30.0), op, Vern7();
+    dipole = q -> q, saveat = 0.025, abstol = 1e-10, reltol = 1e-10)
+spectrum = absorption_spectrum(response;
+    frequencies = 0.0:0.01:2.0, broadening = 0.3)
+response.times                         # elapsed times since tspan[1]
+response.response                      # causal impulse response R(t)
+spectrum.susceptibility                 # complex retarded susceptibility
+spectrum.intensity                     # omega * imag(susceptibility)
+```
+
+For the perturbation `-E(t)*mu(q)`, the helper propagates
+`delta_rho(0) = (im/hbar)*[mu, rho_eq]` and evaluates
+`R(t) = Tr[observable*delta_rho(t)]`. `observable` defaults to `dipole`; both are
+functions of position. The physical root determines the signal. The response
+state is signed and has zero trace; it must not be normalised as a density.
+`linear_response_problem(initial, tspan, op; dipole)` exposes the same seeded
+problem for custom solve workflows. The helper accepts isolated Wigner matrices
+or full HEOM hierarchies. For a coupled bath, prepare a converged correlated
+equilibrium with `equilibrate`, then pass its full hierarchy so the commutator
+also acts on every correlated auxiliary, or call
+`linear_response(eq, tspan, alg; ...)` directly on the converged result.
+Applying the excitation to the full hierarchy preserves system–bath correlations;
+see [Tanimura's HEOM review, Appendix A](https://arxiv.org/html/2006.05501#A1).
+A factorized initial state describes the response of that preparation and need
+not yield an equilibrium spectrum.
+
+The spectrum convention is
+`chi(omega) = integral exp(im*omega*t - broadening*t)*R(t) dt`, evaluated by
+trapezoidal quadrature over the saved delays. Frequencies are angular frequencies;
+`broadening >= 0` has units of inverse time. Returned intensity is proportional
+to absorption; experimental electromagnetic prefactors are not included.
+`absorption_spectrum(times, response; frequencies, broadening)` also accepts
+sampled response data. Increase the response duration, refine time sampling and
+converge the phase-space grid independently. Exponential broadening controls
+finite-window ringing and does not represent a physical bath by itself.
+
+Start with [the driven harmonic benchmark](examples/driven_harmonic.jl), which
+checks the forced centroid, `R(t) = sin(omega*t)/(mass*omega)` and the analytic
+broadened susceptibility. Then run
+[the anharmonic spectroscopy example](examples/anharmonic_spectroscopy.jl), which
+compares a quartic oscillator's response against an eigenstate Kubo sum, resolves
+its shifted absorption peak and compares a weak pulse with response convolution.
+Both run in an environment containing HEOM and OrdinaryDiffEqVerner:
+
+```sh
+julia --project=/path/to/environment examples/driven_harmonic.jl
+julia --project=/path/to/environment examples/anharmonic_spectroscopy.jl
+```
 
 ## General initial states
 
@@ -356,6 +449,10 @@ Caldeira–Leggett operators and solutions.
 | `wigner_moyal_problem(W0, tspan, grid; mass, potential, ...)` | `ODEProblem` for the Wigner–Moyal equation |
 | `wigner_moyal_operator(grid; mass, potential, hbar, discretization, moyal_terms)` | Reusable semi-discrete operator; `wigner_moyal_problem(W0, tspan, op)` takes it |
 | `wigner_moyal!(dW, W, op, t)` | In-place right-hand side |
+| `TimeDependentPotential(V; derivative)`, `DrivenPotential(V0, field, dipole; field_derivative)` | General `V(q,t)` or separable `V0(q) - field(t)*dipole(q)` |
+| `linear_response(initial, tspan, op, alg; dipole, observable, ...)` | Propagate the impulse response with an undriven generator |
+| `linear_response_problem(initial, tspan, op; dipole)` | Response problem seeded by the dipole commutator |
+| `absorption_spectrum(response; frequencies, broadening)` | Retarded susceptibility and absorption intensity from saved response data |
 | `ExponentialBath(coefficients, rates; hbar, diffusion, counterterm)` | Gaussian bath described by an exponential correlation expansion |
 | `drude_lorentz_pade_bath(; reorganization, cutoff, kT, pade, ...)` | Compact quantum Drude bath for low temperatures |
 | `hierarchy_size(modes, depth)`, `rescale_hierarchy(U, op; scaled)` | Estimate hierarchy size and convert auxiliary scaling |
@@ -559,7 +656,7 @@ julia --project=/path/to/heom-examples examples/heom_morse.jl [output_dir]
 
 **Discretisation.** `discretization = Spectral()`, the default, uses Fourier
 pseudo-spectral derivatives. It converges spectrally for smooth Wigner functions,
-and its right-hand side allocates nothing. `discretization = FiniteDifference(order)`
+and its static right-hand side allocates nothing. `discretization = FiniteDifference(order)`
 uses central differences of even accuracy `order` (default 4). The Wigner–Moyal and
 Caldeira–Leggett finite-difference operators are available as `sparse(op)`; the
 Wigner–Moyal part is exactly skew-symmetric, while Caldeira–Leggett damping adds

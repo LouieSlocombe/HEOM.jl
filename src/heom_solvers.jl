@@ -1,13 +1,26 @@
 """
     sparse(op::WignerHEOM)
+    sparse(op::WignerHEOM, t)
 
-Assemble the complete, constant HEOM generator for a `FiniteDifference` operator.
+Assemble the complete HEOM generator for a `FiniteDifference` operator.
+A driven operator requires the explicit time argument.
 It acts on `vec(U)` and includes the selected auxiliary scaling, diffusion and
 hierarchy couplings. Storage grows with the number of grid points and auxiliaries;
 use the matrix-free Jacobian-vector product from [`heom_problem`](@ref) for large
 hierarchies or spectral discretisation.
 """
 function SparseArrays.sparse(op::WignerHEOM)
+    is_time_dependent(op) &&
+        throw(ArgumentError("use sparse(op, t) for a driven generator"))
+    return sparse_heom_generator(op)
+end
+
+function SparseArrays.sparse(op::WignerHEOM, t::Real)
+    update_generator!(op.hamiltonian, t)
+    return sparse_heom_generator(op)
+end
+
+function sparse_heom_generator(op::WignerHEOM)
     h = op.hamiltonian
     h isa FiniteDifferenceWignerMoyal || throw(
         ArgumentError("a sparse HEOM generator requires FiniteDifference discretisation"),
@@ -44,7 +57,7 @@ function SparseArrays.sparse(op::WignerHEOM)
     return L
 end
 
-# The system is linear and autonomous. These exact derivatives avoid differentiating
+# The system is linear, including with a drive. These exact derivatives avoid differentiating
 # FFTW buffers, and work with both flattened Krylov vectors and the 3D ODE state.
 function heom_jvp!(Jv, v, u, op, t)
     dimensions = (size(op.grid)..., length(op.indices))
@@ -53,22 +66,30 @@ function heom_jvp!(Jv, v, u, op, t)
 end
 
 function heom_tgrad!(dT, u, op, t)
-    fill!(dT, 0)
+    if !is_time_dependent(op)
+        fill!(dT, 0)
+        return nothing
+    end
+    dimensions = (size(op.grid)..., length(op.indices))
+    out, U = reshape(dT, dimensions), reshape(u, dimensions)
+    for a in eachindex(op.indices)
+        wigner_tgrad!(@view(out[:, :, a]), @view(U[:, :, a]), op.hamiltonian, t)
+    end
     return nothing
 end
 
-function heom_ode_function(op, jacobian)
+function heom_ode_function(op, jacobian, t0 = 0.0)
     if jacobian === :matrixfree
         return ODEFunction(heom!; jvp = heom_jvp!, tgrad = heom_tgrad!)
     elseif jacobian === :sparse
-        L = sparse(op)
+        L = sparse(op, t0)
         function jac!(J, u, p, t)
             p === op || throw(
                 ArgumentError(
                     "rebuild heom_problem when changing a cached sparse operator",
                 ),
             )
-            copyto!(J, L)
+            copyto!(J, is_time_dependent(op) ? sparse(op, t) : L)
             return nothing
         end
         return ODEFunction(

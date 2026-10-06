@@ -2,7 +2,7 @@
     HEOM
 
 Phase-space quantum dynamics. The package solves the Wigner–Moyal equation for a
-particle of mass `m` in a potential `V(q)`,
+particle of mass `m` in a potential `V(q,t)`,
 
     ∂W/∂t = -(p/m) ∂W/∂q + Σₛ cₛ V⁽²ˢ⁺¹⁾(q) ∂²ˢ⁺¹W/∂p²ˢ⁺¹,   cₛ = (-1)ˢ (ħ/2)²ˢ / (2s + 1)!,
 
@@ -15,6 +15,8 @@ Gaussian bath coupled linearly to position, including Drude–Lorentz thermal ba
 Initial-state helpers transform wavefunctions and density kernels, and prepare
 numerical energy eigenstates and isolated Gibbs states in arbitrary potentials.
 Analysis functions expose observables, grid diagnostics, trajectory summaries and populations.
+Time-dependent potentials and separable dipole drives act on the full hierarchy.
+Linear-response helpers propagate dipole perturbations and compute absorption spectra.
 Plotting recipes display Wigner functions, marginal densities and diagnostic trajectories
 when Plots.jl is loaded. Animation helpers record Wigner and marginal trajectories.
 """
@@ -32,12 +34,14 @@ using SparseArrays: SparseArrays, SparseMatrixCSC, sparse, spdiagm
 export PhaseSpaceGrid, on_grid
 export Spectral, FiniteDifference
 export wigner_moyal_operator, wigner_moyal!, wigner_moyal_problem
+export TimeDependentPotential, DrivenPotential
 export caldeira_leggett_operator, caldeira_leggett!, caldeira_leggett_problem
 export ExponentialBath, drude_lorentz_bath
 export drude_lorentz_pade_bath
 export heom_operator, heom!, heom_problem, hierarchy_indices, physical_wigner
 export hierarchy_size, rescale_hierarchy
 export equilibrate, EquilibriumResult
+export linear_response_problem, linear_response, LinearResponseResult, absorption_spectrum
 export phase_space_integral, expectation, purity, overlap, energy, wigner_negativity
 export position_density, momentum_density, phase_space_mean, phase_space_covariance
 export boundary_weight, spectral_tail, diagnostics
@@ -50,6 +54,7 @@ export wigneranimation, marginalanimation
 include("grid.jl")
 include("derivatives.jl")
 include("wigner_moyal.jl")
+include("driven.jl")
 include("caldeira_leggett.jl")
 include("heom.jl")
 include("pade_bath.jl")
@@ -61,6 +66,7 @@ include("populations.jl")
 include("harmonic_oscillator.jl")
 include("initial_states.jl")
 include("stationary_states.jl")
+include("spectroscopy.jl")
 include("plotting.jl")
 include("animation.jl")
 
