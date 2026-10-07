@@ -62,6 +62,7 @@ end
     include("analytic_benchmarks.jl")
     include("cold_strong_benchmarks.jl")
     include("equilibrium_harmonic.jl")
+    include("bath_compression.jl")
     include("observables.jl")
     include("diagnostics.jl")
     include("populations.jl")

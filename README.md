@@ -446,6 +446,52 @@ separately varies depth, Padé count, grid spacing and box size. The
 [support and validation notes](references/low_temperature_strong_coupling.md)
 give the equations, exact quantum Brownian-motion comparisons and convergence limits.
 
+### Compressing bath decompositions
+
+The hierarchy size is `binomial(modes + depth, depth)`, so the bath mode count
+dominates the cost of a converged low-temperature calculation. At depth 8, eight
+modes need 12870 auxiliaries and four need 495. `compress_bath` reduces any
+`ExponentialBath` by balanced model-order reduction of `C(t) = wᵀexp(-Γt)c`. For a
+Padé bath this is the truncated Padé decomposition of
+[Takahashi and Tanimura, J. Chem. Phys. 158, 044115 (2023), Appendix B](https://doi.org/10.1063/5.0135725):
+
+```julia
+source = drude_lorentz_pade_bath(;
+    reorganization = 0.8, cutoff = 0.5, kT = 0.1, hbar = 1, pade = 7)  # 8 modes
+σ = hankel_singular_values(source)        # decide how many modes to keep
+bath = compress_bath(source; modes = 4)   # 4 real hierarchy modes
+bound = 4sqrt(2) * sum(σ[5:end])          # max over ω of the spectral change
+covariance = harmonic_covariance(bath; mass = 1, omega = 1)
+```
+
+Every returned mode is real, so `modes` is the hierarchy mode count; a damped
+oscillatory pair uses two. The reduced rate matrix is in real Schur form, with
+upper-triangular `mixing`. The default `method = :truncate` keeps the diffusion and
+counterterm unchanged. `method = :residualize` instead preserves `∫₀^∞ C(t) dt`. It
+moves the eliminated real part into `diffusion` and the eliminated static potential
+into `counterterm`, and refuses to create negative diffusion, as from Brownian
+Matsubara terms. The spectral bound measures the change from `source`, not the error
+of `source` itself.
+
+A small spectral or correlation residual does not establish accurate thermalization
+([Tokieda, Phys. Rev. Research 7, 043178 (2025)](https://doi.org/10.1103/bv19-dtb1)).
+Check a compressed bath three ways:
+
+1. Compare `bath_spectrum` with the thermal target over the frequencies that the
+   system resolves.
+2. Compare `harmonic_covariance`, the exact equilibrium of a harmonic oscillator
+   coupled to the decomposition, for the source, the compressed bath and a continuum
+   result.
+3. Repeat the hierarchy-depth convergence with the compressed bath.
+
+The [bath compression example](examples/bath_compression.jl) performs all three
+checks on the cold anharmonic oscillator above. Four balanced modes from the
+eight-mode source change the final Wigner function by about `2e-6`, while four Padé
+modes differ from the source by `1.4e-3`.
+For spectra without a thermal constructor, a rational fit such as AAA
+([Xu et al., Phys. Rev. Lett. 129, 230601 (2022)](https://doi.org/10.1103/PhysRevLett.129.230601))
+can supply the source; count the real modes of any complex poles it returns.
+
 ## Caldeira–Leggett damping
 
 The high-temperature, Markovian Caldeira–Leggett model couples the particle to a
@@ -514,6 +560,8 @@ Caldeira–Leggett operators and solutions.
 | `brownian_oscillator_bath(; reorganization, frequency, damping, kT, matsubara, hbar)` | Underdamped Brownian resonance with retained thermal poles |
 | `combine_baths(baths...)`, `combine_baths(baths)` | Sum independent bath components coupled to the same position |
 | `bath_correlation(bath, t)`, `bath_spectrum(bath, omega)` | Retained force correlation and unsymmetrized noise spectrum |
+| `compress_bath(bath; modes, method)`, `hankel_singular_values(bath)` | Balanced reduction of an exponential bath to fewer real hierarchy modes |
+| `harmonic_covariance(bath; mass, omega)` | Exact harmonic-oscillator equilibrium covariance for a bath decomposition |
 | `heom_problem(W0, tspan, grid; mass, potential, bath, depth, ...)` | `ODEProblem` for the Wigner-space hierarchy |
 | `heom_operator(grid; mass, potential, bath, depth, ...)` | Reusable hierarchy operator; `heom_problem(W0, tspan, op)` takes it |
 | `heom!(dU, U, op, t)` | In-place hierarchy right-hand side |
@@ -955,7 +1003,8 @@ packages are distributed as source; there is no wheel-building step.
 │   ├── heom.jl                    # exponential baths and Wigner-space hierarchy
 │   ├── brownian_bath.jl           # thermal underdamped Brownian oscillators
 │   ├── composite_bath.jl          # independent bath combinations
-│   ├── bath_diagnostics.jl        # force correlations and noise spectra
+│   ├── bath_compression.jl        # balanced reduction of exponential baths
+│   ├── bath_diagnostics.jl        # correlations, spectra and harmonic equilibrium
 │   ├── observables.jl             # marginals, moments, energy, overlaps, negativity
 │   ├── diagnostics.jl             # grid health and state/trajectory summaries
 │   ├── populations.jl             # window populations, currents and rates

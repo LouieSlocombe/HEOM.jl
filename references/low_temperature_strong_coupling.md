@@ -158,6 +158,70 @@ nor norm conservation establishes convergence of the full distribution. The new
 features provide the numerical paths needed to perform these calculations and
 their convergence studies without a high-temperature or weak-coupling restriction.
 
+## Balanced bath compression
+
+`compress_bath(bath; modes)` treats the retained correlation as the impulse response
+of a real linear system,
+
+```math
+C(t)=w^T e^{-\Gamma t}c,\qquad
+\dot x=-\Gamma x+\begin{pmatrix}\operatorname{Re}c&\operatorname{Im}c\end{pmatrix}u,
+\qquad y=w^Tx,
+```
+
+and retains its `modes` leading balanced states. Balanced truncation of a Padé
+decomposition is the truncated Padé decomposition of
+[Takahashi and Tanimura, JCP 158, 044115 (2023), Appendix B](https://doi.org/10.1063/5.0135725).
+With Hankel singular values `σᵢ`, the H∞ bound `2Σ_{i>r}σᵢ` of
+Glover, Int. J. Control 39, 1115 (1984) gives
+
+```math
+\max_\omega |S(\omega)-S_r(\omega)|\le 4\sqrt2\sum_{i>r}\sigma_i,
+```
+
+because `S(ω)` is twice the real part of a fixed linear combination of the two
+transfer-function columns. Gramian square roots and the SVD avoid inverting either
+Gramian. `method=:residualize` is the singular-perturbation approximation. It is
+computed by truncating the reciprocal system `Γ⁻¹` in the same coordinates, so it needs
+only the retained projections. The eliminated `∫₀^∞ C dt` becomes momentum diffusion
+(real part) and a `q²` potential (imaginary part over `ħ`). Thus `S(0)` and the net
+static force constant are exact.
+
+Truncation at total hierarchy depth is invariant under any linear change of real
+bath basis. In generating-function form, tier `N` is the space of degree-`N`
+polynomials in the mode variables, and a linear substitution preserves degree.
+The reduced rate matrix is therefore returned in real Schur form, without
+changing the root at any depth. The tests confirm this with rotated bases.
+
+`harmonic_covariance(bath; mass, omega)` solves the stationary Lyapunov equation of
+the generalized Langevin system above with signed noise `S`, `S*w=real(c)`. It is the
+exact infinite-depth equilibrium of a harmonic oscillator coupled to that
+decomposition, the test advocated by
+[Tokieda, Phys. Rev. Research 7, 043178 (2025)](https://doi.org/10.1103/bv19-dtb1).
+The source of the measurements below is the 8-mode `[7/7]` Padé bath with the parameters above.
+Its Hankel singular values are `0.429, 0.118, 1.62e-2, 2.02e-3, 1.66e-4, 7.91e-6,
+1.86e-7, 1.53e-9`. The spectral error is relative to the exact thermal maximum on
+`|ω| ≤ 6`. The equilibrium error is relative to the continuum variances above.
+
+| Bath | Modes | Spectral error | Equilibrium error | `max ΔW`, depth 6 | Members | Time |
+|---|---:|---:|---:|---:|---:|---:|
+| Padé 7 (source) | 8 | `2.33e-5` | `3.73e-4` | — | 3003 | 207 s |
+| Padé 3 | 4 | `1.67e-2` | `6.52e-3` | `1.43e-3` | 210 | 13 s |
+| Truncated | 4 | `4.58e-4` | `5.59e-4` | `1.97e-6` | 210 | 14 s |
+| Residualized | 4 | `3.54e-4` | `7.72e-4` | `1.87e-6` | 210 | 13 s |
+| Truncated | 3 | `5.69e-3` | `8.67e-3` | `2.02e-5` | 84 | 5 s |
+
+`max ΔW` is the final-state pointwise difference from the source hierarchy for the
+quartic example at `t=0.8`. The compressed 4-mode bath changes by `4.39e-7` from depth
+6 to 8. Its depth convergence resembles that of an uncompressed Padé bath of equal
+size. Times are single-thread measurements and scale with member count. The source's
+equilibrium error exceeds its spectral error because its white-noise Padé remainder is
+not resolved by the window. A one-mode compression is stable and has a bounded
+spectral change, yet its harmonic covariance violates `det Σ ≥ ħ²/4`. This is why
+compression should be accepted only after spectral, harmonic-equilibrium and depth
+checks. Residualization cannot be applied when the eliminated real part is negative,
+as for fast Brownian Matsubara terms. Use truncation there.
+
 ## Verification
 
 The complete package suite passes **2,542 tests**, with **854/854 executable source

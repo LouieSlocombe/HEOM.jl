@@ -82,3 +82,57 @@ function bath_spectrum(bath::ExponentialBath, omega::Real)
     end
     return 2real(integral) + 2bath.diffusion
 end
+
+"""
+    harmonic_covariance(bath::ExponentialBath; mass, omega)
+
+Exact reduced equilibrium covariance `[⟨q²⟩ ⟨qp⟩; ⟨qp⟩ ⟨p²⟩]` (symmetrized) of the
+harmonic oscillator `V(q) = mass*omega^2*q^2/2` coupled to the retained decomposition
+of `bath`. Its correlation, diffusion and counterterm are included exactly, as in an
+infinitely deep hierarchy. The covariance is that of the stationary Wigner function:
+compare it with `phase_space_covariance(W, grid)` of an equilibrated root. No phase-space
+grid or hierarchy is used.
+
+The oscillator obeys a generalized quantum Langevin equation, where `weights'x` is the
+bath force on `p`. The vector `x` decays with `Γ = Diagonal(rates) + mixing` and responds
+to `q` with `-2imag(coefficients)/ħ`. Its noise has a signed covariance `S` with
+`S*weights = real(coefficients)`, which reproduces the real correlation exactly. The
+joint stationary covariance solves a Lyapunov equation.
+
+This is the harmonic test of a bath decomposition proposed by Tokieda, Phys. Rev.
+Research **7**, 043178 (2025). Compare the result for a compressed or fitted bath with
+its source, and with an exact continuum fluctuation–dissipation result when one is
+available. A finite decomposition need not produce a positive or uncertainty-respecting
+covariance. Throws if the coupled linear system has no unique stationary state.
+`mass` and `omega` must be finite and positive.
+"""
+function harmonic_covariance(bath::ExponentialBath; mass::Real, omega::Real)
+    m, ω = Float64(mass), Float64(omega)
+    isfinite(m) && m > 0 || throw(ArgumentError("mass must be finite and positive"))
+    isfinite(ω) && ω > 0 || throw(ArgumentError("omega must be finite and positive"))
+    n = length(bath.rates)
+    A, Q = zeros(n + 2, n + 2), zeros(n + 2, n + 2)
+    A[1, 2] = 1 / m
+    A[2, 1] = -m * ω^2 - 2bath.counterterm
+    Q[2, 2] = 2bath.diffusion
+    if n > 0
+        Γ, _, w = bath_realization(bath)
+        residues = real.(bath.coefficients)
+        # The symmetric solution of S*w = residues with the smallest Frobenius norm.
+        norm_squared = dot(w, w)
+        S = if iszero(norm_squared)
+            zeros(n, n)
+        else
+            (residues * w' + w * residues') / norm_squared -
+            dot(w, residues) * (w * w') / norm_squared^2
+        end
+        A[2, 3:end] = w
+        A[3:end, 1] = -2imag.(bath.coefficients) / bath.hbar
+        A[3:end, 3:end] = -Γ
+        Q[3:end, 3:end] = Γ * S + S * Γ'
+    end
+    all(z -> real(z) < 0, eigvals(A)) ||
+        throw(ArgumentError("the coupled oscillator and bath decomposition are not stable"))
+    covariance = lyap(A, Q)
+    return Symmetric(covariance[1:2, 1:2])
+end

@@ -23,10 +23,10 @@ function cold_memory_matrices(bath; mass, omega)
     A[3:end, 1] = -2imag.(bath.coefficients) / bath.hbar
     A[3:end, 3:end] = -damping
     residues = real.(bath.coefficients)
-    if all(iszero, bath.mixing)
+    if all(iszero, bath.mixing) && all(isone, bath.weights)
         force_covariance = Matrix(Diagonal(residues))
     else
-        # For a confluent (polynomial-exponential) basis, any symmetric S with
+        # For a confluent (polynomial-exponential) or weighted basis, any symmetric S with
         # S*w=real(c) generates exactly w' exp(-Γt)c. This explicit solution
         # makes the reference independent of a sampled stochastic bath and
         # remains finite at a Drude/thermal-pole collision.
