@@ -1,0 +1,99 @@
+
+== cold_strong depth 2, Spectral ±8/64 (κmax = 12.17), max local rate 3.432 ==
+smallest unstable |q| = 0.75
+  q= 1.00  max rate   0.255 at κ= 0.79   unstable κ ∈ [0.39, 1.57]
+  q= 2.00  max rate   0.807 at κ= 1.57   unstable κ ∈ [0.39, 3.14]
+  q= 3.00  max rate   1.313 at κ= 1.96   unstable κ ∈ [0.39, 4.32]
+  q= 4.00  max rate   1.782 at κ= 2.36   unstable κ ∈ [0.39, 5.11]
+  q= 5.00  max rate   2.224 at κ= 2.36   unstable κ ∈ [0.39, 5.89]
+  q= 6.00  max rate   2.648 at κ= 2.75   unstable κ ∈ [0.39, 6.68]
+  q= 7.00  max rate   3.043 at κ= 3.14   unstable κ ∈ [0.39, 7.07]
+  q=-8.00  max rate   3.432 at κ= 3.14   unstable κ ∈ [0.39, 7.85]
+
+== cold_strong depth 4, Spectral ±8/64 (κmax = 12.17), max local rate 6.083 ==
+smallest unstable |q| = 1.0
+  q= 1.00  max rate   0.201 at κ= 1.18   unstable κ ∈ [0.79, 1.57]
+  q= 2.00  max rate   1.158 at κ= 1.57   unstable κ ∈ [0.39, 3.53]
+  q= 3.00  max rate   2.094 at κ= 2.36   unstable κ ∈ [0.39, 5.11]
+  q= 4.00  max rate   2.970 at κ= 2.75   unstable κ ∈ [0.39, 6.68]
+  q= 5.00  max rate   3.801 at κ= 3.14   unstable κ ∈ [0.39, 7.46]
+  q= 6.00  max rate   4.593 at κ= 3.53   unstable κ ∈ [0.39, 8.64]
+  q= 7.00  max rate   5.350 at κ= 3.93   unstable κ ∈ [0.39, 9.42]
+  q=-8.00  max rate   6.083 at κ= 3.93   unstable κ ∈ [0.39, 10.21]
+
+== cold_strong depth 6, Spectral ±8/64 (κmax = 12.17), max local rate 8.161 ==
+smallest unstable |q| = 1.25
+  q= 1.00  max rate   0.000 at κ= 0.00   unstable none
+  q= 2.00  max rate   1.304 at κ= 1.96   unstable κ ∈ [0.39, 3.53]
+  q= 3.00  max rate   2.567 at κ= 2.36   unstable κ ∈ [0.39, 5.50]
+  q= 4.00  max rate   3.782 at κ= 3.14   unstable κ ∈ [0.39, 7.07]
+  q= 5.00  max rate   4.945 at κ= 3.53   unstable κ ∈ [0.39, 8.25]
+  q= 6.00  max rate   6.058 at κ= 3.93   unstable κ ∈ [0.39, 9.42]
+  q= 7.00  max rate   7.129 at κ= 4.32   unstable κ ∈ [0.39, 10.60]
+  q=-8.00  max rate   8.161 at κ= 4.71   unstable κ ∈ [0.39, 11.39]
+
+== warm depth 2, Spectral ±8/64 (κmax = 12.17), max local rate 2.043 ==
+smallest unstable |q| = 2.5
+  q= 1.00  max rate   0.000 at κ= 0.00   unstable none
+  q= 2.00  max rate   0.000 at κ= 0.00   unstable none
+  q= 3.00  max rate   0.219 at κ= 2.36   unstable κ ∈ [0.79, 4.32]
+  q= 4.00  max rate   0.602 at κ= 2.75   unstable κ ∈ [0.39, 6.68]
+  q= 5.00  max rate   0.974 at κ= 3.53   unstable κ ∈ [0.39, 8.64]
+  q= 6.00  max rate   1.338 at κ= 3.93   unstable κ ∈ [0.39, 10.21]
+  q= 7.00  max rate   1.694 at κ= 4.32   unstable κ ∈ [0.39, 11.78]
+  q=-8.00  max rate   2.043 at κ= 4.71   unstable κ ∈ [0.39, 12.17]
+
+== warm depth 4, Spectral ±8/64 (κmax = 12.17), max local rate 2.867 ==
+smallest unstable |q| = 3.75
+  q= 1.00  max rate   0.000 at κ= 0.00   unstable none
+  q= 2.00  max rate   0.000 at κ= 0.00   unstable none
+  q= 3.00  max rate   0.000 at κ= 0.00   unstable none
+  q= 4.00  max rate   0.330 at κ= 3.14   unstable κ ∈ [1.57, 5.50]
+  q= 5.00  max rate   0.988 at κ= 3.93   unstable κ ∈ [1.18, 8.25]
+  q= 6.00  max rate   1.627 at κ= 4.32   unstable κ ∈ [0.79, 10.60]
+  q= 7.00  max rate   2.251 at κ= 5.11   unstable κ ∈ [0.79, 12.17]
+  q=-8.00  max rate   2.867 at κ= 5.50   unstable κ ∈ [0.79, 12.17]
+
+== warm depth 6, Spectral ±8/64 (κmax = 12.17), max local rate 3.142 ==
+smallest unstable |q| = 4.5
+  q= 1.00  max rate   0.000 at κ= 0.00   unstable none
+  q= 2.00  max rate   0.000 at κ= 0.00   unstable none
+  q= 3.00  max rate   0.000 at κ= 0.00   unstable none
+  q= 4.00  max rate   0.000 at κ= 0.00   unstable none
+  q= 5.00  max rate   0.585 at κ= 4.32   unstable κ ∈ [1.96, 7.07]
+  q= 6.00  max rate   1.458 at κ= 4.71   unstable κ ∈ [1.18, 10.21]
+  q= 7.00  max rate   2.306 at κ= 5.11   unstable κ ∈ [1.18, 12.17]
+  q=-8.00  max rate   3.142 at κ= 5.89   unstable κ ∈ [0.79, 12.17]
+
+== cold_weak depth 2, Spectral ±8/64 (κmax = 12.17), max local rate 0.809 ==
+smallest unstable |q| = 2.0
+  q= 1.00  max rate   0.000 at κ= 0.00   unstable none
+  q= 2.00  max rate   0.001 at κ= 2.36   unstable κ ∈ [1.96, 2.36]
+  q= 3.00  max rate   0.127 at κ= 3.14   unstable κ ∈ [0.79, 5.11]
+  q= 4.00  max rate   0.264 at κ= 3.93   unstable κ ∈ [0.39, 7.07]
+  q= 5.00  max rate   0.404 at κ= 4.32   unstable κ ∈ [0.39, 9.03]
+  q= 6.00  max rate   0.540 at κ= 5.11   unstable κ ∈ [0.39, 10.60]
+  q= 7.00  max rate   0.676 at κ= 5.50   unstable κ ∈ [0.39, 12.17]
+  q=-8.00  max rate   0.809 at κ= 5.89   unstable κ ∈ [0.39, 12.17]
+
+== cold_weak depth 4, Spectral ±8/64 (κmax = 12.17), max local rate 1.17 ==
+smallest unstable |q| = 3.25
+  q= 1.00  max rate   0.000 at κ= 0.00   unstable none
+  q= 2.00  max rate   0.000 at κ= 0.00   unstable none
+  q= 3.00  max rate   0.000 at κ= 0.00   unstable none
+  q= 4.00  max rate   0.201 at κ= 4.71   unstable κ ∈ [2.36, 7.07]
+  q= 5.00  max rate   0.445 at κ= 5.11   unstable κ ∈ [1.96, 9.42]
+  q= 6.00  max rate   0.689 at κ= 5.89   unstable κ ∈ [1.57, 11.39]
+  q= 7.00  max rate   0.931 at κ= 6.28   unstable κ ∈ [1.18, 12.17]
+  q=-8.00  max rate   1.170 at κ= 7.07   unstable κ ∈ [1.18, 12.17]
+
+== cold_weak depth 6, Spectral ±8/64 (κmax = 12.17), max local rate 1.304 ==
+smallest unstable |q| = 4.25
+  q= 1.00  max rate   0.000 at κ= 0.00   unstable none
+  q= 2.00  max rate   0.000 at κ= 0.00   unstable none
+  q= 3.00  max rate   0.000 at κ= 0.00   unstable none
+  q= 4.00  max rate   0.000 at κ= 0.00   unstable none
+  q= 5.00  max rate   0.319 at κ= 5.89   unstable κ ∈ [3.14, 9.03]
+  q= 6.00  max rate   0.648 at κ= 6.28   unstable κ ∈ [1.96, 11.39]
+  q= 7.00  max rate   0.978 at κ= 7.07   unstable κ ∈ [1.57, 12.17]
+  q=-8.00  max rate   1.304 at κ= 7.85   unstable κ ∈ [1.18, 12.17]

@@ -1,0 +1,24 @@
+cold_strong1  FiniteDifference(4)    L= 6.0 d=1  local   1.118 (q=-6.00, j= 4)  dense   0.889-14.617i  outer q 0.99  outer p 0.47
+cold_strong1  FiniteDifference(4)    L= 6.0 d=2  local   2.152 (q=-6.00, j= 5)  dense   1.688-13.435i  outer q 0.99  outer p 0.47
+cold_strong1  FiniteDifference(4)    L= 6.0 d=3  local   3.034 (q=-6.00, j= 5)  dense   2.409-18.569i  outer q 0.96  outer p 0.44
+cold_strong1  FiniteDifference(4)    L=10.0 d=1  local   1.577 (q=-10.00, j= 5)  dense   1.342-32.617i  outer q 1.00  outer p 0.25
+cold_strong1  FiniteDifference(4)    L=10.0 d=2  local   2.889 (q=-10.00, j= 6)  dense   2.613-30.978i  outer q 1.00  outer p 0.24
+cold_strong1  FiniteDifference(4)    L=10.0 d=3  local   3.891 (q=-10.00, j= 6)  dense   3.559-29.634i  outer q 1.00  outer p 0.24
+cold_strong1  Spectral()             L= 6.0 d=1  local   1.135 (q=-6.00, j= 4)  dense   0.606-21.640i  outer q 0.83  outer p 0.43
+cold_strong1  Spectral()             L= 6.0 d=2  local   2.247 (q=-6.00, j= 5)  dense   1.616-20.159i  outer q 0.81  outer p 0.43
+cold_strong1  Spectral()             L= 6.0 d=3  local   3.188 (q=-6.00, j= 6)  dense   2.357-18.949i  outer q 0.79  outer p 0.43
+cold_strong1  Spectral()             L=10.0 d=1  local   1.717 (q=-10.00, j= 7)  dense   1.389-60.957i  outer q 1.00  outer p 0.44
+cold_strong1  Spectral()             L=10.0 d=2  local   3.460 (q=-10.00, j= 9)  dense   3.259-58.600i  outer q 1.00  outer p 0.44
+cold_strong1  Spectral()             L=10.0 d=3  local   4.998 (q=-10.00, j=10)  dense   4.701-56.669i  outer q 1.00  outer p 0.44
+warm          FiniteDifference(4)    L= 6.0 d=1  local   0.796 (q=-6.00, j= 6)  dense   0.610-16.770i  outer q 0.97  outer p 0.37
+warm          FiniteDifference(4)    L= 6.0 d=2  local   1.151 (q=-6.00, j= 6)  dense   0.833-20.383i  outer q 1.00  outer p 0.92
+warm          FiniteDifference(4)    L= 6.0 d=3  local   1.257 (q=-6.00, j= 6)  dense   0.852-19.379i  outer q 1.00  outer p 0.93
+warm          FiniteDifference(4)    L=10.0 d=1  local   1.037 (q=-10.00, j= 7)  dense   0.833-18.388i  outer q 0.97  outer p 0.45
+warm          FiniteDifference(4)    L=10.0 d=2  local   1.537 (q=-10.00, j= 7)  dense   1.202-20.712i  outer q 1.00  outer p 0.91
+warm          FiniteDifference(4)    L=10.0 d=3  local   1.762 (q=-10.00, j= 7)  dense   1.323-19.815i  outer q 1.00  outer p 0.92
+warm          Spectral()             L= 6.0 d=1  local   0.868 (q=-6.00, j= 7)  dense   0.634-31.822i  outer q 0.97  outer p 0.57
+warm          Spectral()             L= 6.0 d=2  local   1.337 (q=-6.00, j= 8)  dense   0.956-29.855i  outer q 0.96  outer p 0.60
+warm          Spectral()             L= 6.0 d=3  local   1.561 (q=-6.00, j= 9)  dense   1.019-28.273i  outer q 0.96  outer p 0.64
+warm          Spectral()             L=10.0 d=1  local   1.462 (q=-10.00, j=10)  dense   1.168-32.368i  outer q 0.97  outer p 0.55
+warm          Spectral()             L=10.0 d=2  local   2.317 (q=-10.00, j=10)  dense   1.784-30.754i  outer q 0.97  outer p 0.57
+warm          Spectral()             L=10.0 d=3  local   2.838 (q=-10.00, j=10)  dense   2.090-29.443i  outer q 0.97  outer p 0.59
