@@ -1,0 +1,108 @@
+
+== harmonic, warm (λ=0.2, γ=1, kT=1), Padé 1: time to exceed 1e3 × initial (Inf = stable to t=40) ==
+depth         none markov_diag markov_full     nz_diag     nz_full
+    0          Inf         Inf         Inf         Inf         Inf
+    1          Inf         Inf         Inf       36.78       38.31
+    2          Inf         Inf         Inf       31.78       33.02
+    3          Inf         Inf         Inf       36.32       37.84
+    4          Inf         Inf         Inf       37.31       38.47
+
+== harmonic, cold weak (λ=0.05, γ=0.5, kT=0.1), Padé 2: time to exceed 1e3 × initial (Inf = stable to t=40) ==
+depth         none markov_diag markov_full     nz_diag     nz_full
+    0          Inf         Inf         Inf         Inf         Inf
+    1          Inf         Inf         Inf         Inf         Inf
+    2          Inf         Inf         Inf         Inf         Inf
+    3          Inf         Inf         Inf         Inf         Inf
+    4          Inf         Inf         Inf         Inf         Inf
+
+== harmonic, cold strong (λ=0.8, γ=0.5, kT=0.1), Padé 2: time to exceed 1e3 × initial (Inf = stable to t=40) ==
+depth         none markov_diag markov_full     nz_diag     nz_full
+    0          Inf         Inf         Inf       15.76       15.76
+    1        23.06        3.90         Inf        7.63       12.62
+    2        12.53        1.84         Inf        5.99       10.70
+    3         9.54        1.48       15.97        4.38        8.66
+    4         7.92        1.38       11.44        3.45        7.37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37

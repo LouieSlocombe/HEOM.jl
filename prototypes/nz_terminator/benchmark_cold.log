@@ -1,0 +1,156 @@
+
+== harmonic, cold strong (λ=0.8, γ=0.5, kT=0.1), Padé 2, t ≤ 2.5 ==
+rates    [0.5, 0.6285, 1.416]
+residues ComplexF64[-0.5354 - 0.4im, 0.6957 + 0.0im, 0.267 + 0.0im]  D = 0.09523809523809523
+reference depth 10 (19 s); change from depth 8: 2.0e-04
+reference vs exact Gaussian (grid floor): 2.2e-02
+closure      depth members solves  rhs (ms)       nf wall (s)     error
+none             0       1      0     0.015     1082     0.02  2.11e-01
+markov_diag      0       1      0     0.031      432     0.19  6.70e-01
+markov_full      0       1      0     0.031      432     0.02  6.70e-01
+nz_diag          0       1      3     4.498     1092     2.17  2.83e-01
+nz_full          0       1      3     1.185     1092     2.08  2.83e-01
+none             1       4      0     0.092     1022     0.19  8.95e-02
+markov_diag      1       4      0     0.206     1092     0.30  8.75e+00
+markov_full      1       4      0     0.187      962     0.23  1.56e-01
+nz_diag          1       4      9     5.405     1042     5.67  1.67e-01
+nz_full          1       4      6     1.862     1042     2.47  8.84e-02
+none             2      10      0     0.254      992     0.54  4.26e-02
+markov_diag      2      10      0     0.441     1842     1.04  1.14e+04
+markov_full      2      10      0     0.263      952     0.61  2.28e-02
+nz_diag          2      10     18     9.605     1002     8.78  1.19e-01
+nz_full          2      10     10     4.343     1002     4.44  3.71e-02
+none             3      20      0     0.504      982     0.63  1.68e-02
+markov_diag      3      20      0     0.764     1962     2.23       Inf
+markov_full      3      20      0     0.511      952     0.65  1.14e-02
+nz_diag          3      20     30    11.686      982    10.30  5.13e-02
+nz_full          3      20     15     5.545      982     6.20  1.16e-02
+none             4      35      0     0.552      972     0.90  6.76e-03
+markov_diag      4      35      0     1.508     1712     1.83       Inf
+markov_full      4      35      0     0.923      952     1.92  3.42e-03
+nz_diag          4      35     45    25.962      972    24.86  5.74e-02
+nz_full          4      35     21    14.238      972    19.06  5.52e-03
+none             5      56      0     0.948      962     1.78  2.92e-03
+markov_diag      5      56      0     1.538     1622     3.62       Inf
+markov_full      5      56      0     1.265      942     2.15  9.26e-04
+nz_diag          5      56     63    25.914      962    24.68  1.76e-01
+nz_full          5      56     28    10.730      962    18.40  2.20e-03
+none             6      84      0     2.158      952     2.37  1.14e-03
+markov_diag      6      84      0     1.757     1592     4.70       Inf
+markov_full      6      84      0     1.946      932     2.39  4.25e-04
+nz_diag          6      84     84    50.538      972    39.83  3.20e-01
+nz_full          6      84     36    28.180      952    28.77  8.63e-04
+
+== quartic q²/2+0.08q⁴, cold strong, Padé 2, t ≤ 2.5 ==
+rates    [0.5, 0.6285, 1.416]
+residues ComplexF64[-0.5354 - 0.4im, 0.6957 + 0.0im, 0.267 + 0.0im]  D = 0.09523809523809523
+reference depth 10 (67 s); change from depth 8: 1.2e-03
+closure      depth members solves  rhs (ms)       nf wall (s)     error
+none             0       1      0     0.017     3212     0.07  1.72e-01
+markov_diag      0       1      0     0.067     2892     0.17  7.02e-01
+markov_full      0       1      0     0.059     2892     0.19  7.02e-01
+nz_diag          0       1      3     1.256     3222     8.71  2.12e-01
+nz_full          0       1      3     2.086     3222     9.27  2.12e-01
+none             1       4      0     0.113     3222     0.41  6.57e-02
+markov_diag      1       4      0     0.208     4102     0.94  1.28e+01
+markov_full      1       4      0     0.189     3202     0.68  1.41e-01
+nz_diag          1       4      9     7.234     3232    18.47  1.29e-01
+nz_full          1       4      6     5.210     3232    19.90  6.94e-02
+none             2      10      0     0.162     3232     0.66  2.78e-02
+markov_diag      2      10      0     0.237     8032     2.28       Inf
+markov_full      2      10      0     0.223     3222     0.88  1.87e-02
+nz_diag          2      10     18    12.699     3232    28.33  9.44e-02
+nz_full          2      10     10     8.968     3232    27.31  2.80e-02
+none             3      20      0     0.349     3272     1.75  7.92e-03
+markov_diag      3      20      0     0.483     6542     4.19       Inf
+markov_full      3      20      0     0.446     3232     1.86  6.55e-03
+nz_diag          3      20     30    23.203     3272    50.05  5.93e-01
+nz_full          3      20     15    13.833     3282    36.52  9.13e-03
+none             4      35      0     0.677     3392     3.81  2.82e-03
+markov_diag      4      35      0     1.951     5622    18.90       Inf
+markov_full      4      35      0     0.744     3252     3.64  1.80e-03
+nz_diag          4      35     45    14.074     3402    76.47  2.95e+00
+nz_full          4      35     21     8.580     3412    52.24  2.90e-03
+none             5      56      0     1.067     3532     6.24  1.72e-03
+markov_diag      5      56      0     1.193     5182    10.33       Inf
+markov_full      5      56      0     1.164     3262     4.77  9.97e-04
+nz_diag          5      56     63    38.652     3542   151.25  8.00e+00
+nz_full          5      56     28    11.596     3552    78.46  1.89e-03
+none             6      84      0     7.674     3662    11.07  1.16e-03
+markov_diag      6      84      0     1.931     4892    32.99       Inf
+markov_full      6      84      0     1.772     3352    11.55  7.88e-04
+nz_diag          6      84     84    24.753     3682    94.62  1.19e+01
+nz_full          6      84     36    16.952     3682    54.83  1.61e-03
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+│ 
+│ Diagnostics:
+│ 
+│ State Analysis:
+│   u[24072] = -1.02e+06 has grown >1e6× its initial value
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+│ 
+│ Diagnostics:
+│ 
+│ State Analysis:
+│   u[47114] = -1.014e+06 has grown >1e6× its initial value
+│   u[47161] = -1.011e+06 has grown >1e6× its initial value
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+│ 
+│ Diagnostics:
+│ 
+│ State Analysis:
+│   u[81673] = 1.036e+06 has grown >1e6× its initial value
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+│ 
+│ Diagnostics:
+│ 
+│ State Analysis:
+│   u[130009] = -1.051e+06 has grown >1e6× its initial value
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+│ 
+│ Diagnostics:
+│ 
+│ State Analysis:
+│   u[9345] = -1.004e+06 has grown >1e6× its initial value
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+│ 
+│ Diagnostics:
+│ 
+│ State Analysis:
+│   u[23741] = -1.015e+06 has grown >1e6× its initial value
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+│ 
+│ Diagnostics:
+│ 
+│ State Analysis:
+│   u[46926] = 1.001e+06 has grown >1e6× its initial value
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+│ 
+│ Diagnostics:
+│ 
+│ State Analysis:
+│   u[81630] = 1.01e+06 has grown >1e6× its initial value
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+│ 
+│ Diagnostics:
+│ 
+│ State Analysis:
+│   u[130014] = -1.031e+06 has grown >1e6× its initial value
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37

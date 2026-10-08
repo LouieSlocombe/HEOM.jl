@@ -1,0 +1,79 @@
+== harmonic, warm (λ=0.2, γ=1, kT=1), Padé 1 ==
+rates    [1.0, 6.481]
+residues ComplexF64[0.3661 - 0.2im, 0.1549 + 0.0im]  D = 0.010000000000000002
+reference depth 12 (7 s); change from depth 10: 2.3e-07
+reference vs exact Gaussian (grid floor): 5.2e-03
+closure      depth members solves  rhs (ms)       nf wall (s)     error
+none             0       1      0     0.013     2202     0.03  5.30e-01
+markov_diag      0       1      0     0.021     1332     0.11  3.82e-01
+markov_full      0       1      0     0.021     1332     0.03  3.82e-01
+nz_diag          0       1      2     0.338     2142     0.77  2.17e-01
+nz_full          0       1      2     0.336     2142     0.76  2.17e-01
+none             1       3      0     0.043     2072     0.10  9.12e-02
+markov_diag      1       3      0     0.058     1602     0.11  5.03e-02
+markov_full      1       3      0     0.059     1612     0.11  5.01e-02
+nz_diag          1       3      4     0.657     2082     1.46  5.23e-02
+nz_full          1       3      3     0.492     2062     1.08  5.07e-02
+none             2       6      0     0.079     1772     0.16  1.58e-02
+markov_diag      2       6      0     0.101     1662     0.20  1.21e-02
+markov_full      2       6      0     0.100     1662     0.19  1.27e-02
+nz_diag          2       6      6     0.988     1822     1.99  8.22e-03
+nz_full          2       6      4     0.689     1812     1.40  7.92e-03
+none             3      10      0     0.138     1702     0.28  3.91e-03
+markov_diag      3      10      0     0.166     1692     0.37  2.52e-03
+markov_full      3      10      0     0.161     1672     0.32  2.58e-03
+nz_diag          3      10      8     1.319     1712     2.55  1.91e-03
+nz_full          3      10      5     0.940     1702     1.81  1.74e-03
+none             4      15      0     0.203     1722     0.44  1.01e-03
+markov_diag      4      15      0     0.272     1712     0.53  4.78e-04
+markov_full      4      15      0     0.236     1722     0.55  5.06e-04
+nz_diag          4      15     10     2.024     1722     3.67  4.75e-04
+nz_full          4      15      6     1.857     1722     2.60  4.51e-04
+none             5      21      0     0.297     1762     0.70  2.25e-04
+markov_diag      5      21      0     0.341     1762     0.79  1.30e-04
+markov_full      5      21      0     0.330     1752     0.72  1.39e-04
+nz_diag          5      21     12     3.465     1762     5.74  1.08e-04
+nz_full          5      21      7     8.558     1762     4.42  1.02e-04
+none             6      28      0     0.972     1802     2.78  6.05e-05
+markov_diag      6      28      0     0.472     1792     1.32  2.66e-05
+markov_full      6      28      0     0.461     1792     1.50  2.82e-05
+nz_diag          6      28     14     5.264     1802    11.34  2.90e-05
+nz_full          6      28      8     3.240     1802     6.60  2.70e-05
+
+== harmonic, cold weak (λ=0.05, γ=0.5, kT=0.1), Padé 2 ==
+rates    [0.5, 0.6285, 1.416]
+residues ComplexF64[-0.03346 - 0.025im, 0.04348 + 0.0im, 0.01669 + 0.0im]  D = 0.005952380952380952
+reference depth 10 (13 s); change from depth 8: 5.1e-10
+reference vs exact Gaussian (grid floor): 2.7e-02
+closure      depth members solves  rhs (ms)       nf wall (s)     error
+none             0       1      0     0.015     1622     0.03  1.76e-01
+markov_diag      0       1      0     0.031     1372     0.05  3.79e-01
+markov_full      0       1      0     0.032     1372     0.05  3.79e-01
+nz_diag          0       1      3     2.404     1632     4.92  1.33e-01
+nz_full          0       1      3     0.785     1632     2.24  1.33e-01
+none             1       4      0     0.091     1482     0.17  1.03e-02
+markov_diag      1       4      0     0.090     1512     0.21  6.90e-02
+markov_full      1       4      0     0.084     1472     0.16  1.28e-02
+nz_diag          1       4      9     2.814     1482     3.43  1.16e-02
+nz_full          1       4      6     1.413     1482     2.09  6.71e-03
+none             2      10      0     0.135     1392     0.23  8.08e-04
+markov_diag      2      10      0     0.222     1402     0.35  4.56e-03
+markov_full      2      10      0     0.211     1392     0.39  3.15e-04
+nz_diag          2      10     18     4.966     1392    11.80  1.59e-03
+nz_full          2      10     10     2.550     1392     5.37  4.70e-04
+none             3      20      0     0.296     1332     0.57  4.78e-05
+markov_diag      3      20      0     0.418     1332     0.70  3.26e-04
+markov_full      3      20      0     0.373     1332     0.72  2.01e-05
+nz_diag          3      20     30     7.354     1332    19.22  9.13e-05
+nz_full          3      20     15     8.185     1332    12.94  2.72e-05
+none             4      35      0     0.540     1312     1.16  3.49e-06
+markov_diag      4      35      0     0.721     1312     1.30  1.91e-05
+markov_full      4      35      0     1.227     1302     1.71  1.04e-06
+nz_diag          4      35     45    30.167     1312    29.07  6.48e-06
+nz_full          4      35     21    10.517     1312    15.81  1.65e-06
+none             5      56      0     0.888     1312     2.36  2.35e-07
+markov_diag      5      56      0     2.145     1312     3.72  1.16e-06
+markov_full      5      56      0     2.004     1302     3.79  6.77e-08
+nz_diag          5      56     63    24.343     1312    49.79  4.32e-07
+nz_full          5      56     28    14.249     1312    24.29  1.12e-07
+

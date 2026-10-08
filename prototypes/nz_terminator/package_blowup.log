@@ -1,0 +1,27 @@
+Spectral warm (λ=0.2, γ=1, kT=1), Padé 1              box ±6 n=48  blow-up time at depth 2/4/6: Inf / Inf / Inf
+Spectral warm (λ=0.2, γ=1, kT=1), Padé 1              box ±8 n=64  blow-up time at depth 2/4/6: Inf / Inf / 36.6
+Spectral cold weak (λ=0.05, γ=0.5, kT=0.1), Padé 2    box ±6 n=48  blow-up time at depth 2/4/6: Inf / Inf / Inf
+Spectral cold weak (λ=0.05, γ=0.5, kT=0.1), Padé 2    box ±8 n=64  blow-up time at depth 2/4/6: Inf / Inf / Inf
+Spectral cold strong (λ=0.8, γ=0.5, kT=0.1), Padé 2   box ±6 n=48  blow-up time at depth 2/4/6: 14.0 / 8.2 / 6.5
+Spectral cold strong (λ=0.8, γ=0.5, kT=0.1), Padé 2   box ±8 n=64  blow-up time at depth 2/4/6: 12.5 / 7.6 / 5.9
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
