@@ -488,9 +488,63 @@ The [bath compression example](examples/bath_compression.jl) performs all three
 checks on the cold anharmonic oscillator above. Four balanced modes from the
 eight-mode source change the final Wigner function by about `2e-6`, while four Padé
 modes differ from the source by `1.4e-3`.
-For spectra without a thermal constructor, a rational fit such as AAA
-([Xu et al., Phys. Rev. Lett. 129, 230601 (2022)](https://doi.org/10.1103/PhysRevLett.129.230601))
-can supply the source; count the real modes of any complex poles it returns.
+For spectral densities without a thermal constructor, `aaa_bath` below fits the source.
+
+### Fitting general spectral densities
+
+`aaa_bath` builds a thermal bath for any spectral density `J(ω)` by fitting the noise
+spectrum `S(ω) = 2hbar*J(ω)/(1 - exp(-hbar*ω/kT))` with the AAA rational algorithm, as
+in free-pole HEOM
+([Xu et al., Phys. Rev. Lett. 129, 230601 (2022)](https://doi.org/10.1103/PhysRevLett.129.230601)).
+The fit chooses its own decay rates instead of the poles of `J` and the Matsubara
+frequencies, so a cold bath needs far fewer modes:
+
+```julia
+drude(ω) = 2 * 0.3 * 0.5 * ω / (ω^2 + 0.5^2)
+vibration(ω) = 2 * 0.2 * 0.2 * 1.5^2 * ω / ((1.5^2 - ω^2)^2 + 0.2^2 * ω^2)
+J(ω) = drude(ω) + vibration(ω)
+
+bath = aaa_bath(J; kT = 0.1, hbar = 1, reltol = 1e-6,
+                frequencies = exp10.(range(-3, 3; length = 600)))
+modes = length(bath.rates)                # 12 real hierarchy modes
+covariance = harmonic_covariance(bath; mass = 1, omega = 1)
+reduced = compress_bath(bath; modes = 8)  # optional balanced reduction
+```
+
+`J` is called only at the positive sample `frequencies`, and `J(-ω) = -J(ω)` is
+implied. The correlation convention is that of the Drude constructor, and the
+counterterm is the reorganization `λ = (1/π)∫₀^∞ J(ω)/ω dω`. It is computed by
+quadrature unless `reorganization = λ` is passed, which is needed when `J(ω)/ω` is
+too singular or too sharply peaked to integrate numerically. The fit raises its
+degree until `|bath_spectrum(bath, ±ω) - S(±ω)| ≤ reltol*maximum(S)` at every sample,
+and throws beyond `max_modes = 40` modes. Sample the thermal scale `kT/hbar` near zero,
+every feature of `J`, and its decay; the fit is not controlled outside the sampled
+range.
+
+The even part of `S` and its odd part divided by `ω` are fitted together as rational
+functions of `ω²`. All rates therefore decay, and complex rates come in conjugate
+pairs. A real rate is one hierarchy mode. A damped oscillation is a real two-mode
+block, like `brownian_oscillator_bath`, so the vibration above uses two of the twelve
+modes and `length(bath.rates)` is always the hierarchy mode count. The coefficients
+are refitted by least squares on the samples. A nonnegative constant remainder of the
+even spectrum becomes white-noise `diffusion`.
+
+For the cold Drude bath of the previous sections (`λ = 0.8`, `γ = 0.5`, `kT = 0.1`),
+eight fitted modes at `reltol = 1e-4` give a harmonic equilibrium within a relative
+`1.1e-6` of the continuum result, compared with `3.7e-4` for the eight-mode Padé bath.
+Sixteen modes at `reltol = 1e-8` reach `1.1e-8`. For very few modes, fit the band the
+system resolves rather than compressing a much wider fit: balanced truncation weighs
+all frequencies equally.
+
+As for compression, a small spectral residual does not establish thermalization.
+`J(ω)/ω` below the lowest sample is missing from the fit, while the counterterm
+contains it. The resulting static imbalance, `bath.counterterm + imag(∫₀^∞ C dt)/hbar`
+with `∫₀^∞ C dt = transpose(weights) * ((Diagonal(rates) + mixing) \ coefficients)`,
+stiffens the equilibrium. For a sub-Ohmic `J ∝ sqrt(ω)exp(-ω/2)` at `kT = 0.1`,
+fits sampled down to `ω = 1e-2` and `1e-4` both meet `reltol = 1e-4`. Their harmonic
+equilibria differ from the continuum result by a relative `3.8e-3` and `3.5e-4`. Check
+`harmonic_covariance`, extend the sampled range, and repeat the hierarchy-depth
+convergence with the fitted bath.
 
 ## Caldeira–Leggett damping
 
@@ -560,6 +614,7 @@ Caldeira–Leggett operators and solutions.
 | `brownian_oscillator_bath(; reorganization, frequency, damping, kT, matsubara, hbar)` | Underdamped Brownian resonance with retained thermal poles |
 | `combine_baths(baths...)`, `combine_baths(baths)` | Sum independent bath components coupled to the same position |
 | `bath_correlation(bath, t)`, `bath_spectrum(bath, omega)` | Retained force correlation and unsymmetrized noise spectrum |
+| `aaa_bath(J; kT, frequencies, hbar, reltol, max_modes, reorganization)` | Thermal bath for a general spectral density, from an AAA fit of its noise spectrum |
 | `compress_bath(bath; modes, method)`, `hankel_singular_values(bath)` | Balanced reduction of an exponential bath to fewer real hierarchy modes |
 | `harmonic_covariance(bath; mass, omega)` | Exact harmonic-oscillator equilibrium covariance for a bath decomposition |
 | `heom_problem(W0, tspan, grid; mass, potential, bath, depth, ...)` | `ODEProblem` for the Wigner-space hierarchy |
@@ -1004,6 +1059,7 @@ packages are distributed as source; there is no wheel-building step.
 │   ├── brownian_bath.jl           # thermal underdamped Brownian oscillators
 │   ├── composite_bath.jl          # independent bath combinations
 │   ├── bath_compression.jl        # balanced reduction of exponential baths
+│   ├── aaa_bath.jl                # AAA rational fits of general spectral densities
 │   ├── bath_diagnostics.jl        # correlations, spectra and harmonic equilibrium
 │   ├── observables.jl             # marginals, moments, energy, overlaps, negativity
 │   ├── diagnostics.jl             # grid health and state/trajectory summaries

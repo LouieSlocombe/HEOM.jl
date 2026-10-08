@@ -12,8 +12,9 @@ integrate in time.
 [`caldeira_leggett_problem`](@ref) adds Markovian friction and thermal momentum diffusion.
 [`heom_problem`](@ref) propagates a hierarchy of auxiliary Wigner functions for a
 Gaussian bath coupled linearly to position, including Drude–Lorentz and underdamped
-Brownian thermal baths and combinations of independent components. Balanced model-order
-reduction compresses a bath decomposition to fewer hierarchy modes.
+Brownian thermal baths and combinations of independent components. AAA rational fits of
+the thermal noise spectrum build compact baths for general spectral densities, and
+balanced model-order reduction compresses a bath decomposition to fewer hierarchy modes.
 Initial-state helpers transform wavefunctions and density kernels, and prepare
 numerical energy eigenstates and isolated Gibbs states in arbitrary potentials.
 Analysis functions expose observables, grid diagnostics, trajectory summaries and populations.
@@ -40,7 +41,7 @@ export wigner_moyal_operator, wigner_moyal!, wigner_moyal_problem
 export TimeDependentPotential, DrivenPotential
 export caldeira_leggett_operator, caldeira_leggett!, caldeira_leggett_problem
 export ExponentialBath, drude_lorentz_bath
-export drude_lorentz_pade_bath
+export drude_lorentz_pade_bath, aaa_bath
 export brownian_oscillator_bath, combine_baths, bath_correlation, bath_spectrum
 export harmonic_covariance, hankel_singular_values, compress_bath
 export heom_operator, heom!, heom_problem, hierarchy_indices, physical_wigner
@@ -67,6 +68,7 @@ include("pade_bath.jl")
 include("brownian_bath.jl")
 include("composite_bath.jl")
 include("bath_compression.jl")
+include("aaa_bath.jl")
 include("bath_diagnostics.jl")
 include("heom_solvers.jl")
 include("equilibrium.jl")

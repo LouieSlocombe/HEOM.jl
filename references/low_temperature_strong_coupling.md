@@ -222,10 +222,89 @@ compression should be accepted only after spectral, harmonic-equilibrium and dep
 checks. Residualization cannot be applied when the eliminated real part is negative,
 as for fast Brownian Matsubara terms. Use truncation there.
 
+## AAA rational fits
+
+`aaa_bath(J; kT, frequencies)` fits the thermal noise spectrum of a general spectral
+density, following the free-pole HEOM of
+[Xu, Yan, Shi, Ankerhold and Stockburger, PRL 129, 230601 (2022)](https://doi.org/10.1103/PhysRevLett.129.230601).
+For `ω > 0`,
+
+```math
+S(\pm\omega)=E(\omega)\pm\omega\,O(\omega),\qquad
+E=\hbar J\coth\frac{\hbar\omega}{2kT},\qquad O=\frac{\hbar J}{\omega}.
+```
+
+`E` and `O` are even, so both are fitted as rational functions of `u = ω²` with a
+common barycentric denominator (set-valued AAA). The two Loewner blocks are weighted
+as `E` and `ωO`, and greedy support selection maximizes `|ΔE| + ω|ΔO|`, which equals
+`max(|ΔS(ω)|, |ΔS(-ω)|)`. A pole `u` gives the rate `z = sqrt(-u)` with `Re z > 0`, so
+complex rates come in conjugate pairs. Fitting `S` directly in `ω` would give lower
+half-plane poles without this pairing, so a damped oscillation would generally cost
+four modes instead of two. Poles on the positive real `u` axis lie on the real frequency
+axis and are discarded.
+
+The finite eigenvalues of the arrowhead pencil lose relative accuracy for poles much
+smaller than the largest support point. With samples spanning twelve decades in `u`,
+the slowest cold Drude poles are only accurate to `5e-3`. Newton steps on the
+barycentric denominator, which is evaluated accurately near each pole, restore
+partial-fraction agreement with the barycentric fit to about `1e-12`. For fixed rates, the
+real part of each mode response is even in `ω` and the imaginary part odd. Least
+squares therefore fits `real(c)` to `E` and `imag(c)` to `ωO` separately, with a
+constant even term as white-noise diffusion when it is nonnegative. The degree rises
+until this refitted bath, not merely the barycentric interpolant, meets `reltol`.
+The counterterm `(1/π)∫J/ω dω` uses exp-sinh quadrature over `10^±30` times the
+geometric mean sample frequency.
+
+For the cold Drude parameters above, with 600 logarithmic samples on `[1e-3, 1e3]`
+and the same error measures as the compression table:
+
+| Bath | Modes | Spectral error | Equilibrium error |
+|---|---:|---:|---:|
+| Padé 7 | 8 | `2.33e-5` | `3.73e-4` |
+| Padé 30 | 31 | `1.58e-15` | `1.79e-6` |
+| AAA, `reltol = 1e-2` | 4 | `1.15e-3` | `6.48e-4` |
+| AAA, `reltol = 1e-3` | 5 | `3.35e-4` | `5.99e-4` |
+| AAA, `reltol = 1e-4` | 8 | `1.63e-5` | `1.07e-6` |
+| AAA, `reltol = 1e-6` | 11 | `6.79e-7` | `1.50e-7` |
+| AAA, `reltol = 1e-8` | 16 | `3.98e-10` | `1.06e-8` |
+| AAA `1e-8`, truncated | 4 | `4.48e-3` | `8.11e-3` |
+
+The fitted rates include the Drude pole and the first Matsubara frequency, to
+`4e-10` and `8e-7` relative error. The static imbalance between the counterterm and
+the fitted `imag ∫C dt` is `1e-12` at `reltol = 1e-8`. At equal mode count, the fit
+reaches the continuum equilibrium more than 300 times more closely than Padé. Direct
+four- and five-mode fits are comparable to the balanced Padé reductions above. A
+four-mode truncation of the 16-mode fit is worse, because its Hankel singular values
+also weigh frequencies up to `10³` that the oscillator never resolves.
+
+For a Drude background with an underdamped vibration (`λ = 0.3, γ = 0.5` and
+`λ = 0.2, ω₀ = 1.5, γ = 0.2`) at `kT = 0.1`, `reltol = 1e-6` gives 12 modes.
+The vibration is a single two-mode block with rate `γ/2` and frequency
+`sqrt(ω₀² - γ²/4)`, both to `2e-8`. The harmonic equilibrium agrees with the
+continuum result to a relative `3.3e-7`. That result is a Matsubara sum with
+closed-form friction kernels, which matches the real-axis Drude integral to `3e-11`.
+Compressing the fit to eight modes keeps the equilibrium within `1.4e-4`. A depth-6
+hierarchy with a four-mode compression reproduces its exact Gaussian dynamics to
+`2e-7`.
+
+For sub-Ohmic `J = 0.6√(2ω) exp(-ω/2)` at `kT = 0.1`, the quadrature reproduces
+`λ = 1.2/√π` to rounding despite the `ω^{-1/2}` singularity of `J/ω`. Fits sampled
+from `ω = 10^{-2}, 10^{-3}, 10^{-4}` all meet `reltol = 1e-4`, with 14, 13 and 15 modes.
+Their static imbalances are `1.4e-2`, `5.0e-3` and `1.6e-3`, from `J/ω` below the
+lowest sample. The equilibrium errors are `3.8e-3`, `1.3e-3` and `3.5e-4` relative to
+the continuum. For the two narrower ranges, the `⟨q²⟩` error is the classical shift
+`2kTΔ/(mω²)²` to within `4%`. Their thermalization is limited by the sampled range,
+not by the spectral tolerance, and the static imbalance diagnoses it. From `10^{-4}`,
+the larger error is in `⟨p²⟩` and comes from the tolerance: with 1000 samples,
+`reltol = 1e-5` uses 24 modes and reduces it from `2.6e-4` to `3e-6`, leaving the
+classical `⟨q²⟩` shift to within `1%`. Samples spanning many more decades in `u` make
+the slowest poles ill-conditioned in Float64; such fits fail `reltol` and throw
+instead of returning an inaccurate bath.
+
 ## Verification
 
-The complete package suite passes **2,542 tests**, with **854/854 executable source
-lines covered (100%)**. The standalone seven-run quartic example also passes its
+The complete package suite passes **4,315 tests**, with **1,651/1,651 executable
+source lines covered (100%)**. The standalone seven-run quartic example also passes its
 assertions and produces the convergence changes reported above. JuliaFormatter and
 `git diff --check` pass. Coverage records exercised code; the independent physical
 references and convergence studies establish the numerical checks described here.
