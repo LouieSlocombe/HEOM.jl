@@ -17,6 +17,28 @@ It uses the method of lines. Phase space is discretised on a periodic grid, and 
 result is a SciML `ODEProblem`, so any solver from the DifferentialEquations.jl
 ecosystem integrates it in time.
 
+## Contents
+
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Quick start](#quick-start), with the package [conventions](#conventions)
+- [Choosing an evolution model](#choosing-an-evolution-model)
+- [Driven dynamics and spectroscopy](#driven-dynamics-and-spectroscopy)
+- [General initial states](#general-initial-states)
+- [Wigner-space HEOM](#wigner-space-heom): baths, equilibrium, low temperature,
+  stability, compression and spectral-density fits
+- [Caldeira–Leggett damping](#caldeiraleggett-damping)
+- [Examples](#examples)
+- [API](#api)
+- [Analysis](#analysis), including tunnelling rates
+- [Plotting](#plotting) and [Animations](#animations)
+- [Numerical method](#numerical-method)
+- [Scope and limitations](#scope-and-limitations)
+- [Troubleshooting](#troubleshooting)
+- [References and background notes](#references-and-background-notes)
+- [Development](#development), with contributing notes and exploratory prototypes
+- [Project layout](#project-layout)
+
 ## Requirements
 
 - Julia 1.10 or newer in the 1.x series. Install it with
@@ -26,16 +48,33 @@ ecosystem integrates it in time.
 - Optional: `Plots` for Wigner heatmaps, marginal densities, diagnostic plots and animations.
 - Optional: [pre-commit](https://pre-commit.com/#installation) for Git hooks.
 
-CI tests the minimum supported Julia version and the latest stable Julia on
-Linux, macOS, and Windows.
+CI runs the test suite on Julia 1.13 on Linux only. The declared lower bound of
+Julia 1.10 in `Project.toml` is not exercised in CI.
 
-## Quick start
+## Installation
 
-From the repository root, instantiate and precompile the package:
+HEOM.jl is not registered. Add it to a project environment directly from GitHub,
+together with an ODE solver package:
+
+```julia
+using Pkg
+Pkg.add(url = "https://github.com/LouieSlocombe/HEOM.jl")
+Pkg.add("OrdinaryDiffEqVerner")
+```
+
+To track local changes, or to work on the package itself from another project, use
+`Pkg.develop(path = "/path/to/HEOM.jl")` in that project's environment instead. From
+a clone, instantiate and precompile the package's own environment with:
 
 ```bash
 julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.precompile()'
 ```
+
+That environment holds only the runtime dependencies. Solver and plotting packages
+belong in the consumer environment that runs your scripts; [Plotting](#plotting)
+shows a complete example environment.
+
+## Quick start
 
 A coherent state in a harmonic well, solved over one period:
 
@@ -57,13 +96,48 @@ purity(W, grid)                          # Tr ρ², 1 for a pure state
 d = diagnostics(sol; potential = V)      # observables and grid health at every saved time
 ```
 
-A Wigner function on the grid is an `nq × np` matrix with `W[i, j] = W(q[i], p[j])`.
-The solution's states are `sol.u` at times `sol.t`.
+Every public function has a docstring available through Julia's help mode, for
+example `?wigner_moyal_operator`.
 
-To work on this package from another Julia project, use
-`Pkg.develop(path="/path/to/HEOM.jl")` in that project's environment. Every public
-function has a docstring available through Julia's help mode, for example
-`?wigner_moyal_operator`.
+### Conventions
+
+- **Arrays.** A Wigner function is an `nq × np` matrix with `W[i, j] = W(q[i], p[j])`:
+  position along the first dimension, momentum along the second. HEOM states are
+  `nq × np × nados` arrays with the physical Wigner function in the first slice.
+- **Grid.** `PhaseSpaceGrid(qlims, nq, plims, np)` is uniform and periodic on the
+  half-open box `[qmin, qmax) × [pmin, pmax)`. Its fields are `q`, `p`, `dq` and `dp`,
+  and `size(grid)` is `(nq, np)`. Every integral uses the uniform grid quadrature
+  `sum(W) * dq * dp`.
+- **Normalisation.** A physical state has `phase_space_integral(W, grid) == 1`.
+  Nothing is renormalised during propagation or analysis, so drift stays visible.
+- **Units.** `hbar` defaults to `1`. Mass, energy, time and `kT = k_B T` must share one
+  consistent unit system; the package performs no unit conversion.
+- **Potentials.** A one-argument callable `q -> V(q)` is static. A two-argument callable
+  `(q, t) -> V(q, t)`, a `TimeDependentPotential` or a `DrivenPotential` is
+  time-dependent and is evaluated at the solver's current time.
+- **Baths.** Bath correlations are `C(t) = ⟨B(t)B(0)⟩` for the coupling `H_SB = q B`.
+  The Drude–Lorentz spectral density is `J(ω) = 2λγω/(ω² + γ²)`. Thermal constructors
+  add their counterterm `λq²` internally; do not add it to `V` yourself.
+- **Solutions.** Every problem is an ordinary SciML `ODEProblem`. `sol.u[i]` is the state
+  at `sol.t[i]`, and `physical_wigner(sol, i)` views a hierarchy's physical slice.
+
+## Choosing an evolution model
+
+The package provides three semi-discrete generators. They share the grid, potentials,
+discretisations, observables, diagnostics and plotting.
+
+| Model | Problem builder | Environment | State | Main cost |
+|---|---|---|---|---|
+| Wigner–Moyal | `wigner_moyal_problem` | None. Exact closed-system quantum dynamics with the full Moyal series, or a truncation of it | `nq × np` | Grid size; two FFT pairs per evaluation |
+| Caldeira–Leggett | `caldeira_leggett_problem` | Markovian Ohmic bath at high temperature, `kT ≫ hbar*omega`, through friction and momentum diffusion | `nq × np` | Grid size; diffusion stiffens fine momentum grids |
+| HEOM | `heom_problem` | Non-Markovian Gaussian bath with an exponential correlation expansion, at any positive temperature and coupling strength | `nq × np × nados` | `binomial(modes + depth, depth)` auxiliaries, each a full Wigner function |
+
+Start with the Wigner–Moyal problem to converge the grid and box for the isolated
+system. Use Caldeira–Leggett as a quick damped reference when the bath is hot and
+memoryless. Use HEOM when bath memory, low temperature, strong coupling or system–bath
+correlations matter, and converge its depth and bath expansion separately. Nothing in
+the HEOM path is restricted to harmonic systems: every auxiliary uses the same
+Wigner–Moyal operator as the isolated problem, including the exact Moyal series.
 
 ## Driven dynamics and spectroscopy
 
@@ -307,6 +381,18 @@ The number of ADOs is `binomial(depth + K + 1, K + 1)` for a nonzero Drude bath 
 `K` Matsubara poles. Each ADO uses the same spectral or finite-difference Wigner–Moyal
 operator, including quantum terms for anharmonic potentials.
 
+Estimate the size and memory of a hierarchy before building it:
+
+```julia
+members = hierarchy_size(length(bath.rates), depth)   # BigInt, root included
+bytes_per_state = 8 * prod(size(grid)) * members      # one Float64 hierarchy state
+op = heom_operator(grid; mass, potential = V, bath, depth, max_ados = 20_000)
+```
+
+An explicit solver holds several state-sized work arrays, and `saveat` multiplies the
+storage by the number of saved times. `max_ados` makes `heom_operator` throw instead of
+allocating a hierarchy larger than intended.
+
 See [the HEOM harmonic oscillator example](examples/heom_sho.jl), which checks
 the centroid against an exact bath-memory equation, compares two hierarchy depths,
 and prints the norm drift. Run it with `julia --project=/path/to/environment
@@ -315,6 +401,24 @@ The physical model is discussed in
 [Tanimura's Wigner-space HEOM derivation](https://arxiv.org/pdf/1502.04077).
 The equation above uses coordinate-coupled, unscaled ADOs; their definitions and
 initial conditions differ from the transformed momentum form in that paper.
+
+### Bath constructors at a glance
+
+Every constructor returns an `ExponentialBath`. The hierarchy mode count is
+`length(bath.rates)`; a damped oscillation occupies two real modes.
+
+| Constructor | Describes | Modes | When to use |
+|---|---|---|---|
+| `ExponentialBath(c, ν; ...)` | Any `C(t) = Σ cₖ exp(-νₖ t)`, or a general real basis through `weights` and `mixing` | As supplied | Custom or externally fitted decompositions; thermal consistency is not checked |
+| `drude_lorentz_bath` | Drude–Lorentz `J(ω)` with `K` Matsubara poles and an optional diffusion terminator | `1 + K` | Warm baths, where few Matsubara poles are needed; the cheapest thermal constructor |
+| `drude_lorentz_pade_bath` | Drude–Lorentz `J(ω)` with an `[N/N]` Bose Padé expansion | `1 + N` | Cold baths; far fewer modes than Matsubara at the same accuracy |
+| `brownian_oscillator_bath` | Underdamped vibrational resonance with `K` thermal poles | `2 + K` | Structured environments with a discrete mode; its Matsubara coefficients are negative |
+| `aaa_bath` | Any `J(ω)`, through an AAA rational fit of the thermal noise spectrum | Chosen by the fit | Spectral densities without a closed-form decomposition, or very cold baths |
+| `combine_baths` | Independent components coupled to the same position | Sum of the components | A background plus a resonance, or several fitted bands |
+| `compress_bath` | Balanced reduction of any of the above | Chosen | Reduce the mode count before building a deep hierarchy |
+
+Inspect any bath with `bath_correlation`, `bath_spectrum` and `harmonic_covariance`
+before using it, and estimate the hierarchy with `hierarchy_size`.
 
 ### Structured baths and correlation diagnostics
 
@@ -425,13 +529,11 @@ op = heom_operator(grid; mass, potential = V, bath, depth = 6,
 prob = heom_problem(W0, (0.0, 0.8), op)
 ```
 
-Keep such propagations short. The hard cutoff has growing modes near the box edges
-`|q| ≈ L`, because the upward coupling `2imag(c)q/hbar` grows with `|q|`. In this
-cold, strong regime they corrupt the moments within a few time units and diverge by
-t ≈ 6–13, depending on depth; deeper hierarchies grow faster. Warmer and weaker baths
-take tens of time units. `hierarchy_stability(op)` estimates the growth rate and the
-radius beyond which the truncated hierarchy is unstable. The `heom_operator` docstring
-and [`prototypes/box_edge`](prototypes/box_edge/README.md) give the details.
+Keep such propagations short. In this cold, strong regime the hard cutoff's growing
+box-edge modes corrupt the moments within a few time units and diverge by t ≈ 6–13,
+depending on depth. See [Long propagations and the box-edge
+instability](#long-propagations-and-the-box-edge-instability) for the mechanism, the
+`hierarchy_stability` indicator and how to stop a diverging run.
 
 `heom_problem` supplies an exact Jacobian-vector product for stiff Krylov solvers.
 With `OrdinaryDiffEqRosenbrock`, `LinearSolve` and `ADTypes` installed:
@@ -453,6 +555,50 @@ The [cold, strongly coupled anharmonic example](examples/low_temperature_strong_
 separately varies depth, Padé count, grid spacing and box size. The
 [support and validation notes](references/low_temperature_strong_coupling.md)
 give the equations, exact quantum Brownian-motion comparisons and convergence limits.
+
+### Long propagations and the box-edge instability
+
+The hard depth cutoff is not stable over long times on a finite box. The upward
+coupling `2imag(cₖ)q/hbar` grows linearly with `|q|`, so a fixed depth represents the
+bath faithfully only where `|q|` times the momentum wavenumber is small compared with
+the depth and the bath rates. Beyond that radius the truncated hierarchy has growing
+modes. On a periodic box they concentrate near the edges `|q| ≈ L`, and the tails of
+the physical state seed them even when it never approaches the edge. The growth rate
+rises with coupling strength, depth and box half-width, affects both discretisations,
+and depends only weakly on momentum resolution. Amplitude scaling is a diagonal
+similarity transformation and leaves it unchanged.
+
+Estimate the growth before a long run, and stop a diverging solve with `unstable_check`:
+
+```julia
+s = hierarchy_stability(op)
+s.rate                      # largest frozen-coefficient growth rate; 0 means no local growth
+s.radius                    # smallest |q| at which any wavenumber is unstable, or Inf
+s.position, s.wavenumber    # where the largest rate occurs
+
+limit = 1e3 * maximum(abs, W0)
+sol = solve(heom_problem(W0, (0.0, 30.0), op), Vern7();
+    abstol = 1e-9, reltol = 1e-9,
+    unstable_check = (dt, u, p, t) -> !(maximum(abs, u) < limit))
+sol.retcode                 # ReturnCode.Unstable once the limit is reached
+```
+
+`rate` is a heuristic, not a bound. In the package tests and in the box-edge study it
+was never below the spectral abscissa of the complete generator, but it can lie well
+above it, because the kinetic term carries modes out of a narrow unstable band before
+they grow. A positive rate means the hard cutoff may diverge over times of order
+`1/rate`; in the cases studied the root's second moments were wrong by `1e-3` after 6 to
+20 multiples of `1/rate`. Warm, weak baths on moderate boxes often stay stable for a
+whole run, and not oversizing the box helps. Confirm any long-time result with a
+different box and depth, and watch the physical state's boundary weights.
+
+For scale, the cold Padé bath above (`λ = 0.8`, `γ = 0.5`, `kT = 0.1`, `pade = 2`) with a
+unit harmonic oscillator on a ±8, 64-point grid has second moments wrong by `1e-2` at
+`t = 5` at depth 2, and exceeds `10³` times its initial amplitude at `t ≈ 12.5`, `7.6`
+and `5.9` for depths 2, 4 and 6. A warm bath (`λ = 0.2`, `γ = kT = 1`, `pade = 1`)
+reaches an error of `1e-3` near `t = 10` and diverges near `t = 40`. The test suite
+records the cold case as a known defect with `@test_broken`. No remedy evaluated so far
+repairs the cold, strong regime; see [Exploratory prototypes](#exploratory-prototypes).
 
 ### Compressing bath decompositions
 
@@ -602,17 +748,48 @@ comparison of the full Wigner function and its moments against this solution.
 The existing observables, diagnostics, plots and rate functions also accept
 Caldeira–Leggett operators and solutions.
 
+## Examples
+
+Each script in [`examples/`](examples) runs on its own and prints or writes its own
+checks. Run one from the repository root with
+`julia --project=/path/to/environment examples/<script>.jl`, in an environment that
+contains HEOM and the packages listed below. Scripts that write figures accept an
+optional output directory as their first argument and need `GKSwstype=100` on
+headless machines.
+
+| Script | What it demonstrates | Also needs |
+|---|---|---|
+| [`displaced_sho.jl`](examples/displaced_sho.jl) | A coherent state over one harmonic period; writes Wigner and marginal GIFs | OrdinaryDiffEqVerner, Plots |
+| [`damped_sho.jl`](examples/damped_sho.jl) | Caldeira–Leggett relaxation against the exact Gaussian mean and covariance | OrdinaryDiffEqVerner |
+| [`driven_harmonic.jl`](examples/driven_harmonic.jl) | Forced centroid, impulse response and the analytic broadened susceptibility | OrdinaryDiffEqVerner |
+| [`anharmonic_spectroscopy.jl`](examples/anharmonic_spectroscopy.jl) | Quartic-oscillator response against an eigenstate Kubo sum; a weak pulse against response convolution | OrdinaryDiffEqVerner |
+| [`initial_states.jl`](examples/initial_states.jl) | Double-well tunnelling superposition, wavefunction and density-matrix transforms, Morse ground state | nothing |
+| [`heom_sho.jl`](examples/heom_sho.jl) | Drude–Lorentz HEOM oscillator against an exact bath-memory centroid; two depths; norm drift | OrdinaryDiffEqVerner |
+| [`animated_heom_sho.jl`](examples/animated_heom_sho.jl) | Displaced oscillator relaxing in a Drude–Lorentz bath, checked against a Gaussian reference; GIF and MP4 output | OrdinaryDiffEqVerner, Plots |
+| [`heom_morse.jl`](examples/heom_morse.jl) | Morse wavepacket relaxation at depths 6 and 8, with animations and grid diagnostics | OrdinaryDiffEqVerner, Plots |
+| [`low_temperature_strong_coupling.jl`](examples/low_temperature_strong_coupling.jl) | Cold, strongly coupled anharmonic dynamics with separate depth, Padé, spacing and box sweeps; solves seven hierarchies | OrdinaryDiffEqVerner |
+| [`bath_compression.jl`](examples/bath_compression.jl) | Balanced compression of an eight-mode Padé bath, with spectral, covariance and depth checks; several minutes | OrdinaryDiffEqVerner |
+| [`tunnelling_rates.jl`](examples/tunnelling_rates.jl) | Low-temperature double-well tunnelling rates from a near-equilibrium HEOM preparation; about 2 GB and a few minutes | OrdinaryDiffEqVerner, LinearSolve, SciMLBase, Plots |
+
+Two files are helpers included by the scripts above rather than examples in their own
+right. [`heom_gaussian_reference.jl`](examples/heom_gaussian_reference.jl) is the
+generalized Langevin Gaussian solution for a finite exponential bath, the same
+construction the tests use, and
+[`double_well_equilibrium.jl`](examples/double_well_equilibrium.jl) is the
+trace-constrained stationary solver used by the tunnelling example.
+
 ## API
 
 | Function | Purpose |
 |---|---|
 | `PhaseSpaceGrid(qlims, nq, plims, np)` | Uniform periodic grid on `[qmin, qmax) × [pmin, pmax)` |
 | `on_grid(f, grid)` | Sample `f(q, p)` on the grid |
+| `Spectral()`, `FiniteDifference(order = 4)` | Discretisation options for every operator; finite differences need an integer `moyal_terms` |
 | `wigner_moyal_problem(W0, tspan, grid; mass, potential, ...)` | `ODEProblem` for the Wigner–Moyal equation |
 | `wigner_moyal_operator(grid; mass, potential, hbar, discretization, moyal_terms)` | Reusable semi-discrete operator; `wigner_moyal_problem(W0, tspan, op)` takes it |
 | `wigner_moyal!(dW, W, op, t)` | In-place right-hand side |
 | `TimeDependentPotential(V; derivative)`, `DrivenPotential(V0, field, dipole; field_derivative)` | General `V(q,t)` or separable `V0(q) - field(t)*dipole(q)` |
-| `linear_response(initial, tspan, op, alg; dipole, observable, ...)` | Propagate the impulse response with an undriven generator |
+| `linear_response(initial, tspan, op, alg; dipole, observable, ...)` | Propagate the impulse response with an undriven generator; returns a `LinearResponseResult` with `times`, `response` and `solution` |
 | `linear_response_problem(initial, tspan, op; dipole)` | Response problem seeded by the dipole commutator |
 | `absorption_spectrum(response; frequencies, broadening)` | Retarded susceptibility and absorption intensity from saved response data |
 | `ExponentialBath(coefficients, rates; hbar, diffusion, counterterm)` | Gaussian bath described by an exponential correlation expansion |
@@ -629,7 +806,10 @@ Caldeira–Leggett operators and solutions.
 | `heom_problem(W0, tspan, grid; mass, potential, bath, depth, ...)` | `ODEProblem` for the Wigner-space hierarchy |
 | `heom_operator(grid; mass, potential, bath, depth, ...)` | Reusable hierarchy operator; `heom_problem(W0, tspan, op)` takes it |
 | `heom!(dU, U, op, t)` | In-place hierarchy right-hand side |
+| `sparse(op)`, `sparse(op, t)` | Full sparse generator of a finite-difference Wigner–Moyal, Caldeira–Leggett or HEOM operator |
 | `hierarchy_indices(op)` | Multi-indices corresponding to the third state-array dimension |
+| `equilibrate(U0, tspan, op, alg; stationarity_abstol, stationarity_reltol, check_interval, ...)` | Relax to a correlated equilibrium and test stationarity of every member; returns an `EquilibriumResult` |
+| `heom_problem(eq, tspan)`, `linear_response(eq, tspan, alg; ...)`, `physical_wigner(eq)` | Restart, excite or view a converged `EquilibriumResult` with all its correlations |
 | `physical_wigner(U)`, `physical_wigner(sol[, index])` | View of the physical Wigner function in a hierarchy state or solution |
 | `caldeira_leggett_problem(W0, tspan, grid; mass, potential, friction, kT, ...)` | `ODEProblem` with Caldeira–Leggett friction and thermal diffusion |
 | `caldeira_leggett_operator(grid; mass, potential, friction, kT, ...)` | Reusable operator; `caldeira_leggett_problem(W0, tspan, op)` takes it |
@@ -672,6 +852,21 @@ state, with √det Σ invariant under harmonic evolution. For a vector of states
 an ODE solution, each field is a vector and `autocorrelation` records overlap with
 the first saved state. For a pure initial state this is the survival probability.
 The solution method adds `t` and reads the grid, mass and ħ from the operator.
+
+| Field | Meaning |
+|---|---|
+| `norm` | `∫W dq dp`, which should stay at 1 |
+| `mean_q`, `mean_p` | Centroid |
+| `var_q`, `var_p`, `cov_qp` | Central second moments, with the symmetrised covariance |
+| `uncertainty` | σqσp, at least ħ/2 for a normalised physical state |
+| `robertson_schrodinger` | √det Σ, at least ħ/2 and invariant under harmonic evolution |
+| `energy` | `⟨p²/2m + V⟩`, instantaneous for a driven potential |
+| `purity` | `Tr ρ²`, 1 for a pure state |
+| `negativity` | `∫(abs(W) − W) dq dp`, zero for a nonnegative Wigner function |
+| `boundary_q`, `boundary_p` | Fraction of `∫abs(W)` in the outer 5% of points at both ends of the axis |
+| `tail_q`, `tail_p` | Relative Fourier amplitude in the upper third of modes along the axis |
+| `autocorrelation` | Trajectories only: `overlap` with the first saved state |
+| `t` | Solutions only: the saved times |
 
 Keep `boundary_q`, `boundary_p`, `tail_q` and `tail_p` small. Boundary weights are
 fractions of the integral of `abs(W)` in the outer strips (5% of the points at each
@@ -996,6 +1191,118 @@ The [Wigner–HEOM audit](references/wigner_heom_audit.md) records the literatur
 conventions, repaired defects, analytical references, measured errors, and remaining
 convergence limits.
 
+## Scope and limitations
+
+- **One dimension.** The phase space is a single position `q` and momentum `p`. There
+  is no multi-particle or multi-dimensional grid.
+- **Linear position coupling.** Baths couple through `H_SB = q B`. Several independent
+  components can be summed, but all couple to the same operator; nonlinear or momentum
+  coupling is not supported.
+- **Periodic box.** Both discretisations treat the box as periodic. States must decay to
+  negligible weight at the edges, and there are no absorbing boundaries; watch
+  `boundary_q` and `boundary_p` and enlarge the box when they grow.
+- **Hard depth cutoff.** The hierarchy sets tiers beyond `depth` to zero. On a finite
+  box this truncation has growing modes near the edges, so long HEOM propagations need
+  the checks in [Long propagations and the box-edge
+  instability](#long-propagations-and-the-box-edge-instability).
+- **Positive temperature.** The thermal bath constructors require `kT > 0`. Exactly zero
+  temperature needs a different correlation decomposition, which is not provided.
+- **High-temperature Caldeira–Leggett.** The friction-and-diffusion model is a Markovian,
+  high-temperature approximation and does not cool into the quantum ground state.
+- **No positivity correction.** Nothing renormalises the state or enforces positivity
+  of the reduced density operator; inaccuracies show up in norm, purity and negativity.
+- **Finite expansions.** Bath decompositions, hierarchy depth, grid, box and ODE
+  tolerances are separate approximations and must be converged independently. A small
+  spectral residual of a fitted or compressed bath does not establish thermalization.
+- **Differentiation.** The spectral right-hand side runs on FFTW and does not accept dual
+  numbers, so the ODE right-hand side cannot be differentiated by ForwardDiff. With
+  `moyal_terms = N`, the potential itself must accept dual numbers.
+- **Dense eigenstates.** `eigenstates` and `thermal_wigner` diagonalise a dense `nq × nq`
+  Hamiltonian; they are meant for moderate position grids and localised states.
+- **Operators are stateful.** Every operator owns FFT or scratch buffers. Construct a
+  separate operator for each concurrent solve, for example in an `EnsembleProblem`, and
+  do not mutate an operator retained by an `EquilibriumResult`.
+
+## Troubleshooting
+
+- **Norm, energy or purity drift grows in time.** The state is reaching the box edge or
+  is under-resolved. Inspect `boundary_q`, `boundary_p`, `tail_q` and `tail_p` from
+  `diagnostics`. Enlarge the box when boundary weights grow and refine the grid when
+  spectral tails grow, then tighten `abstol` and `reltol`.
+- **A HEOM solve stops with `ReturnCode.Unstable` or produces huge values.** The
+  hard-cutoff box-edge modes have grown. Check `hierarchy_stability(op)`, shorten the
+  time span, avoid oversizing the box, compare a different depth, and locate the
+  hierarchy's largest values; see [Long propagations and the box-edge
+  instability](#long-propagations-and-the-box-edge-instability).
+- **An explicit solver takes very small steps.** The problem is stiff: fast Matsubara
+  rates, momentum diffusion on a fine grid, or a strongly anharmonic potential whose
+  Moyal symbol grows like `ħ²V‴κ³`. Switch to a Padé or AAA bath with fewer, slower
+  modes, or use the stiff path with `Rodas5P` and the Krylov or sparse Jacobian from
+  [Low temperature and strong coupling](#low-temperature-and-strong-coupling).
+- **`heom_operator` refuses a hierarchy because of `max_ados`.** The requested depth
+  and bath produce more members than the limit. Lower `depth`, reduce the mode count
+  with `compress_bath` or `aaa_bath`, or raise `max_ados` after checking
+  `hierarchy_size`.
+- **A finite-difference operator rejects `moyal_terms = nothing`.** The exact Moyal
+  operator is nonlocal in momentum and exists only for `Spectral()`. Pass an integer
+  `moyal_terms` with `FiniteDifference`, or use the spectral discretisation.
+- **`sparse(op)` throws for a driven problem.** The generator changes in time. Use
+  `sparse(op, t)` for the instantaneous matrix, or `jacobian = :sparse` in
+  `heom_problem`, which updates the matrix itself.
+- **`equilibrate` returns `converged = false`.** Read `status`. `:time_limit` means
+  the budget ran out, so pass `eq.hierarchy` back in with a longer span.
+  `:solver_failure` carries the solver `retcode`, and `:terminated` means another
+  callback stopped the run. Loosen the stationarity tolerances only after checking
+  `residuals` member by member.
+- **`wigneranimation` or `marginalanimation` is undefined.** The animation extension
+  loads only when both HEOM and Plots are loaded in the same session.
+- **Plotting fails on a headless machine.** Set the environment variable
+  `GKSwstype=100` before starting Julia.
+- **The potential errors on dual numbers.** `moyal_terms = N` differentiates `V` with
+  ForwardDiff, so `V` must be generic in its argument type. Use `moyal_terms = nothing`
+  with `Spectral()` to avoid derivatives entirely.
+
+## References and background notes
+
+The [`references/`](references) directory holds implementation notes written for this
+package. They record conventions, derivations, measured errors and open problems, and
+they separate what each paper states from what the implementation derives.
+
+- [`wigner_heom_audit.md`](references/wigner_heom_audit.md): the audit of the
+  Wigner–Moyal, hierarchy and Caldeira–Leggett conventions, the repaired defects and the
+  analytical validations behind the test suite.
+- [`low_temperature_strong_coupling.md`](references/low_temperature_strong_coupling.md):
+  scaled auxiliaries, Padé baths, repeated poles, stiff integration and the cold,
+  strong-coupling benchmarks.
+- [`cabrera_2015_wigner_implementation.md`](references/cabrera_2015_wigner_implementation.md):
+  notes on Cabrera, Bondar, Jacobs and Rabitz, *Phys. Rev. A* **92**, 042122 (2015), the
+  spectral Wigner propagation scheme and Caldeira–Leggett terms that the Hamiltonian
+  operator follows.
+- [`tanimura_2020_heom_implementation_notes.md`](references/tanimura_2020_heom_implementation_notes.md):
+  notes on Tanimura, *J. Chem. Phys.* **153**, 020901 (2020), the HEOM review that
+  supplies the density-operator hierarchy, its Wigner form and the Brownian-oscillator
+  acceptance tests.
+- [`stabilized_heom_implementation.md`](references/stabilized_heom_implementation.md):
+  notes on Gatto, Rudge, Hou, Rabani and Thoss, arXiv:2609.35484 (2026), a transformed
+  bosonic hierarchy with improved truncation stability. It is not implemented; the
+  box-edge study found its frozen symbol worse than the package form in the cold,
+  strong case.
+
+Methods used by the package, with the links cited in the sections above:
+
+- Wigner-space HEOM and its harmonic benchmarks: [Tanimura, *J. Chem. Phys.* **142**, 144110 (2015)](https://arxiv.org/pdf/1502.04077).
+- Factorial and amplitude scaling of auxiliaries: Shi et al., *J. Chem. Phys.* **130**, 084105 (2009), [doi:10.1063/1.3077918](https://doi.org/10.1063/1.3077918).
+- Bose Padé decomposition: Hu et al., *J. Chem. Phys.* **134**, 244106 (2011), [doi:10.1063/1.3602466](https://doi.org/10.1063/1.3602466), and [Ding et al., *J. Chem. Phys.* **135**, 164107 (2011)](https://arxiv.org/pdf/1107.0249).
+- General real correlation bases with weights and mixing: Ikeda and Scholes, *J. Chem. Phys.* **152**, 204101 (2020), [doi:10.1063/5.0007327](https://doi.org/10.1063/5.0007327).
+- Underdamped Brownian correlation decomposition: [doi:10.1038/s41467-019-11656-1](https://doi.org/10.1038/s41467-019-11656-1).
+- Truncated Padé decomposition and balanced compression: [Takahashi and Tanimura, *J. Chem. Phys.* **158**, 044115 (2023)](https://doi.org/10.1063/5.0135725); on the limits of spectral residuals, [Tokieda, *Phys. Rev. Research* **7**, 043178 (2025)](https://doi.org/10.1103/bv19-dtb1).
+- Free-pole HEOM with AAA fits: [Xu et al., *Phys. Rev. Lett.* **129**, 230601 (2022)](https://doi.org/10.1103/PhysRevLett.129.230601).
+- Caldeira–Leggett coefficients: [García-Palacios and Zueco](https://arxiv.org/pdf/cond-mat/0407454). Two-state rate equations: [Lindoy, Mandal and Reichman, *Nat. Commun.* (2023)](https://www.nature.com/articles/s41467-023-38368-x).
+- Nakajima–Zwanzig terminators, evaluated and not adopted: [Fay, *J. Chem. Phys.* **157**, 054108 (2022)](https://arxiv.org/abs/2205.09270).
+
+There is no registered release or archived DOI yet. When citing the package, give the
+repository URL and the commit used, together with the method papers above.
+
 ## Development
 
 Install the separate formatting and coverage tools once:
@@ -1051,38 +1358,79 @@ The hooks check file hygiene and Julia formatting. They require `julia` on your
 CI also tests loading this package from a fresh consumer environment. Julia
 packages are distributed as source; there is no wheel-building step.
 
+### Contributing
+
+- Add a test for every new public function or convention, and keep the coverage gate
+  at 100% of executable lines in `src/` and `ext/`.
+- Give every public function a docstring and a row in the [API](#api) table, and
+  update [Project layout](#project-layout) when adding a source file.
+- Validate numerics against a closed form or an independent reference where one exists;
+  the analytic benchmarks in `test/` show the pattern.
+- Run the formatter before committing; the pre-commit hook enforces it.
+
+### Exploratory prototypes
+
+[`prototypes/`](prototypes) holds studies that informed the package but are not part of
+it. They are not tested, not covered and not loaded by `using HEOM`. Each has its own
+environment that develops the package from the repository root, so run a script with
+`julia --project=prototypes/<study> prototypes/<study>/<script>.jl`.
+
+- [`nz_terminator`](prototypes/nz_terminator/README.md) asked whether the
+  Nakajima–Zwanzig terminator of Fay (2022) or a scalar Markov closure should replace
+  the hard depth cutoff. Neither was adopted. The terminator gains at most 2.4× at a
+  fixed depth, costs 9–64× per evaluation and destabilises the hierarchy, while one
+  extra depth level gains 2–18×. The only useful variant was the scalar closure fed by
+  all parents, and the study also uncovered the box-edge instability.
+- [`box_edge`](prototypes/box_edge/README.md) characterised that instability across
+  baths, depths, boxes, discretisations and scalings, derived the frozen-coefficient
+  symbol that became `hierarchy_stability`, and tested absorbers, tapers, closures and
+  the transformed hierarchy of Gatto et al. None repaired the cold, strong regime; warm
+  and weak baths can be stabilised by the scalar closure or by not oversizing the box.
+
 ## Project layout
 
 ```text
 .
-├── .github/workflows/ci.yml       # formatting, tests, coverage, consumer smoke test
-├── build_tools/                   # separate development tools and scripts
-├── ext/HEOMPlotsExt.jl             # optional Plots animation implementation
+├── .github/
+│   ├── dependabot.yml             # monthly GitHub Actions updates
+│   └── workflows/ci.yml           # tests, consumer smoke test, formatting, coverage
+├── build_tools/                   # separate JuliaFormatter and Coverage environment
+├── examples/                      # runnable scripts, listed under Examples
+├── ext/HEOMPlotsExt.jl            # Plots-only animation implementation
+├── prototypes/                    # exploratory studies, not part of the package
+│   ├── box_edge/                  # box-edge instability characterisation and remedies
+│   └── nz_terminator/             # final-tier closure benchmarks
+├── references/                    # implementation notes and audits
 ├── src/
 │   ├── HEOM.jl                    # package module and public exports
 │   ├── grid.jl                    # periodic phase-space grid
 │   ├── derivatives.jl             # spectral and finite-difference discretisations
 │   ├── wigner_moyal.jl            # Wigner–Moyal operators and ODEProblem
+│   ├── driven.jl                  # time-dependent and separable driven potentials
 │   ├── caldeira_leggett.jl        # thermal friction and diffusion operators
-│   ├── heom.jl                    # exponential baths and Wigner-space hierarchy
+│   ├── heom.jl                    # exponential baths, Drude–Lorentz bath, hierarchy operator
+│   ├── hierarchy_stability.jl     # frozen-coefficient stability indicator
+│   ├── pade_bath.jl               # Bose Padé Drude–Lorentz bath
 │   ├── brownian_bath.jl           # thermal underdamped Brownian oscillators
 │   ├── composite_bath.jl          # independent bath combinations
 │   ├── bath_compression.jl        # balanced reduction of exponential baths
 │   ├── aaa_bath.jl                # AAA rational fits of general spectral densities
 │   ├── bath_diagnostics.jl        # correlations, spectra and harmonic equilibrium
+│   ├── heom_solvers.jl            # sparse generator, Jacobian products, ODEFunction
+│   ├── equilibrium.jl             # equilibrate and EquilibriumResult
 │   ├── observables.jl             # marginals, moments, energy, overlaps, negativity
 │   ├── diagnostics.jl             # grid health and state/trajectory summaries
 │   ├── populations.jl             # window populations, currents and rates
 │   ├── tunnelling.jl              # two-state rates from population relaxation
-│   ├── plotting.jl                # optional Plots interface through RecipesBase
-│   ├── animation.jl               # public animation API and documentation
+│   ├── harmonic_oscillator.jl     # analytic harmonic-oscillator states and evolution
 │   ├── initial_states.jl          # wavefunction and density-matrix Wigner transforms
 │   ├── stationary_states.jl       # numerical eigenstates and finite-box Gibbs states
-│   └── harmonic_oscillator.jl     # analytic harmonic-oscillator states and evolution
-├── test/                          # numerical and package quality tests
-├── examples/initial_states.jl      # double-well tunnelling and Morse state preparation
-├── examples/heom_sho.jl            # bath-coupled oscillator and exact centroid check
+│   ├── spectroscopy.jl            # linear response and absorption spectra
+│   ├── plotting.jl                # optional Plots interface through RecipesBase
+│   └── animation.jl               # public animation API and documentation
+├── test/                          # one file per source area, plus Aqua
 ├── .JuliaFormatter.toml           # formatting rules
+├── .pre-commit-config.yaml        # file hygiene and formatting hooks
 └── Project.toml                   # package metadata, compatibility, test dependencies
 ```
 
