@@ -61,6 +61,7 @@ end
     include("equilibrium.jl")
     include("analytic_benchmarks.jl")
     include("cold_strong_benchmarks.jl")
+    include("hierarchy_stability.jl")
     include("equilibrium_harmonic.jl")
     include("bath_compression.jl")
     include("aaa_bath.jl")

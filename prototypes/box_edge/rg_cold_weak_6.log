@@ -1,0 +1,6 @@
+cold_weak    depth 6  hard cutoff                  growth   0.5883  [ 905s]
+cold_weak    depth 6  absorb q0=4 σ0=20            growth  -0.0247  [ 272s]
+cold_weak    depth 6  absorb q0=3 σ0=20            growth  -0.0271  [ 168s]
+cold_weak    depth 6  taper q0=4                   growth  -0.0234  [ 206s]
+cold_weak    depth 6  markov_full                  growth   0.0731  [ 553s]
+cold_weak    depth 6  markov_full + absorb q0=4    growth  -0.0247  [ 411s]

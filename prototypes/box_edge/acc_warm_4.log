@@ -1,0 +1,11 @@
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+== warm depth 4: moment error vs exact Gaussian (max over saved t in window) ==
+absorb q0=3 σ0=20    bounded to t=60     t≤10 9.2e-03  t≤30 1.4e-02  t≤60 1.4e-02
+absorb q0=4 σ0=20    bounded to t=60     t≤10 1.1e-03  t≤30 2.2e-03  t≤60 2.2e-03
+absorb q0=5 σ0=20    bounded to t=60     t≤10 4.1e-04  t≤30 6.0e-04  t≤60 7.8e-04
+hard cutoff          blew up at t=44.0   t≤10 1.7e-04  t≤30 2.7e-01  t≤60 7.6e+04
+absorb q0=3 σ0=20    max|W - W_hard|/max|W0| for t ≤ 10: 1.1e-03
+absorb q0=4 σ0=20    max|W - W_hard|/max|W0| for t ≤ 10: 7.9e-05
+absorb q0=5 σ0=20    max|W - W_hard|/max|W0| for t ≤ 10: 3.7e-05

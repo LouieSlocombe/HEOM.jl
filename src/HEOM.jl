@@ -45,7 +45,7 @@ export drude_lorentz_pade_bath, aaa_bath
 export brownian_oscillator_bath, combine_baths, bath_correlation, bath_spectrum
 export harmonic_covariance, hankel_singular_values, compress_bath
 export heom_operator, heom!, heom_problem, hierarchy_indices, physical_wigner
-export hierarchy_size, rescale_hierarchy
+export hierarchy_size, rescale_hierarchy, hierarchy_stability
 export equilibrate, EquilibriumResult
 export linear_response_problem, linear_response, LinearResponseResult, absorption_spectrum
 export phase_space_integral, expectation, purity, overlap, energy, wigner_negativity
@@ -64,6 +64,7 @@ include("wigner_moyal.jl")
 include("driven.jl")
 include("caldeira_leggett.jl")
 include("heom.jl")
+include("hierarchy_stability.jl")
 include("pade_bath.jl")
 include("brownian_bath.jl")
 include("composite_bath.jl")

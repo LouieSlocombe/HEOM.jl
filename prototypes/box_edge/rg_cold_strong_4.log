@@ -1,0 +1,6 @@
+cold_strong  depth 4  hard cutoff                  growth   4.8452  [ 156s]
+cold_strong  depth 4  absorb q0=4 σ0=20            growth   1.3962  [  62s]
+cold_strong  depth 4  absorb q0=3 σ0=20            growth   0.9981  [  74s]
+cold_strong  depth 4  taper q0=4                   growth   1.5197  [  85s]
+cold_strong  depth 4  markov_full                  growth   3.2501  [ 213s]
+cold_strong  depth 4  markov_full + absorb q0=4    growth   0.6454  [  75s]

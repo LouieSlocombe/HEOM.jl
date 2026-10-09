@@ -1,0 +1,6 @@
+== sweep: box (harmonic m=ω=ħ=1; Spectral, scaled, ±8/64 unless stated) ==
+warm depth 4 L=4.0 n=32                      members   15  growth  -0.0004  indicator   0.3299 (radius 3.75)  [   10s]
+warm depth 4 L=6.0 n=48                      members   15  growth  -0.0135  indicator   1.6249 (radius 3.75)  [   52s]
+warm depth 4 L=8.0 n=64                      members   15  growth   1.1896  indicator   2.8670 (radius 3.75)  [  155s]
+warm depth 4 L=10.0 n=80                     members   15  growth   2.6522  indicator   4.0667 (radius 3.75)  [  309s]
+warm depth 4 L=12.0 n=96                     members   15  growth   3.9806  indicator   5.2353 (radius 3.75)  [  533s]

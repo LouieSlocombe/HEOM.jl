@@ -425,6 +425,14 @@ op = heom_operator(grid; mass, potential = V, bath, depth = 6,
 prob = heom_problem(W0, (0.0, 0.8), op)
 ```
 
+Keep such propagations short. The hard cutoff has growing modes near the box edges
+`|q| ≈ L`, because the upward coupling `2imag(c)q/hbar` grows with `|q|`. In this
+cold, strong regime they corrupt the moments within a few time units and diverge by
+t ≈ 6–13, depending on depth; deeper hierarchies grow faster. Warmer and weaker baths
+take tens of time units. `hierarchy_stability(op)` estimates the growth rate and the
+radius beyond which the truncated hierarchy is unstable. The `heom_operator` docstring
+and [`prototypes/box_edge`](prototypes/box_edge/README.md) give the details.
+
 `heom_problem` supplies an exact Jacobian-vector product for stiff Krylov solvers.
 With `OrdinaryDiffEqRosenbrock`, `LinearSolve` and `ADTypes` installed:
 
@@ -610,6 +618,7 @@ Caldeira–Leggett operators and solutions.
 | `ExponentialBath(coefficients, rates; hbar, diffusion, counterterm)` | Gaussian bath described by an exponential correlation expansion |
 | `drude_lorentz_pade_bath(; reorganization, cutoff, kT, pade, ...)` | Compact quantum Drude bath for low temperatures |
 | `hierarchy_size(modes, depth)`, `rescale_hierarchy(U, op; scaled)` | Estimate hierarchy size and convert auxiliary scaling |
+| `hierarchy_stability(op)` | Frozen-coefficient growth rate and stability radius of the truncated hierarchy |
 | `drude_lorentz_bath(; reorganization, cutoff, kT, matsubara, hbar, terminator)` | Drude–Lorentz bath with Matsubara poles and optional residual diffusion |
 | `brownian_oscillator_bath(; reorganization, frequency, damping, kT, matsubara, hbar)` | Underdamped Brownian resonance with retained thermal poles |
 | `combine_baths(baths...)`, `combine_baths(baths)` | Sum independent bath components coupled to the same position |

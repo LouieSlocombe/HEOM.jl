@@ -1,0 +1,51 @@
+
+== warm Padé 1: max frozen Re λ over |q| ≤ 8, κ ≤ 12 (smallest unstable |q|) ==
+depth 2
+  package        2.043 at q= -8.0 κ= 4.8 (onset |q|= 2.5)
+  markov_full    0.128 at q= -8.0 κ= 3.6 (onset |q|= 7.5)
+  standard       2.043 at q= -8.0 κ= 4.8 (onset |q|= 2.5)
+  gatto          2.899 at q=  8.0 κ= 0.8 (onset |q|= 1.5)
+depth 4
+  package        2.865 at q= -8.0 κ= 5.6 (onset |q|= 4.0)
+  markov_full    1.478 at q= -8.0 κ= 4.8 (onset |q|= 5.0)
+  standard       2.865 at q= -8.0 κ= 5.6 (onset |q|= 4.0)
+  gatto          3.958 at q=  8.0 κ= 2.4 (onset |q|= 3.0)
+depth 6
+  package        3.140 at q= -8.0 κ= 6.0 (onset |q|= 4.5)
+  markov_full    2.021 at q= -8.0 κ= 5.6 (onset |q|= 5.5)
+  standard       3.140 at q=  8.0 κ= 6.0 (onset |q|= 4.5)
+  gatto          4.609 at q= -8.0 κ= 2.8 (onset |q|= 3.0)
+
+== cold weak Padé 2: max frozen Re λ over |q| ≤ 8, κ ≤ 12 (smallest unstable |q|) ==
+depth 2
+  package        0.809 at q= -8.0 κ= 6.0 (onset |q|= 2.0)
+  markov_full    0.000 at q= -8.0 κ= 0.0 (onset |q|= Inf)
+  standard       0.809 at q= -8.0 κ= 6.0 (onset |q|= 2.0)
+  gatto          0.912 at q=  8.0 κ= 6.0 (onset |q|= 2.0)
+depth 4
+  package        1.170 at q= -8.0 κ= 7.2 (onset |q|= 3.5)
+  markov_full    0.502 at q= -8.0 κ= 6.4 (onset |q|= 5.5)
+  standard       1.170 at q= -8.0 κ= 7.2 (onset |q|= 3.5)
+  gatto          1.323 at q=  8.0 κ= 7.2 (onset |q|= 3.5)
+depth 6
+  package        1.304 at q= -8.0 κ= 7.6 (onset |q|= 4.5)
+  markov_full    0.751 at q= -8.0 κ= 7.2 (onset |q|= 5.5)
+  standard       1.304 at q= -8.0 κ= 7.6 (onset |q|= 4.5)
+  gatto        skipped (C(12,6)=924)
+
+== cold strong Padé 2: max frozen Re λ over |q| ≤ 8, κ ≤ 12 (smallest unstable |q|) ==
+depth 2
+  package        3.432 at q= -8.0 κ= 3.2 (onset |q|= 1.0)
+  markov_full    1.252 at q= -8.0 κ= 2.4 (onset |q|= 2.5)
+  standard       3.432 at q= -8.0 κ= 3.2 (onset |q|= 1.0)
+  gatto         10.438 at q= -8.0 κ= 0.0 (onset |q|= 0.5)
+depth 4
+  package        6.086 at q= -8.0 κ= 4.0 (onset |q|= 1.0)
+  markov_full    4.341 at q= -8.0 κ= 3.6 (onset |q|= 1.5)
+  standard       6.086 at q=  8.0 κ= 4.0 (onset |q|= 1.0)
+  gatto         16.251 at q=  8.0 κ= 2.8 (onset |q|= 0.5)
+depth 6
+  package        8.155 at q= -8.0 κ= 4.4 (onset |q|= 1.5)
+  markov_full    6.675 at q= -8.0 κ= 4.4 (onset |q|= 1.5)
+  standard       8.155 at q= -8.0 κ= 4.4 (onset |q|= 1.5)
+  gatto        skipped (C(12,6)=924)

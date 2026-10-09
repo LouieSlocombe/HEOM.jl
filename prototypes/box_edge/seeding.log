@@ -1,0 +1,32 @@
+== warm depth 2 ±8.0/64  (moment error / max|U| over |q|>L/2) ==
+  t= 0 2e-16/8e-06  t= 1 4e-13/9e-08  t= 2 2e-13/1e-04  t= 3 1e-12/6e-04  t= 4 4e-08/4e-05  t= 5 8e-08/1e-03  t= 6 2e-07/2e-03  t= 7 2e-05/1e-04
+  t= 8 3e-05/7e-04  t= 9 4e-04/7e-04  t=10 2e-03/2e-04  t=11 2e-03/9e-04  t=12 2e-03/6e-04  t=13 3e-03/3e-04  t=14 2e-03/7e-04  t=15 6e-03/5e-04
+  t=16 7e-03/4e-04  t=17 1e-02/1e-03  t=18 2e-02/1e-03  t=19 8e-03/3e-03  t=20 3e-02/4e-03  t=21 4e-02/7e-03  t=22 8e-02/2e-02  t=23 1e-01/2e-02
+  t=24 3e-01/5e-02  t=25 3e-01/5e-02  t=26 7e-01/2e-01  t=27 9e-01/2e-01  t=28 3e+00/6e-01  t=29 4e+00/5e-01  t=30 5e+00/1e+00
+== cold_strong depth 2 ±6.0/32  (moment error / max|U| over |q|>L/2) ==
+  t= 0 8e-11/1e-03  t= 1 4e-04/3e-05  t= 2 8e-04/6e-03  t= 3 9e-03/1e-03  t= 4 2e-02/1e-02  t= 5 1e-01/9e-03  t= 6 1e-01/4e-02  t= 7 8e-01/2e-01
+  t= 8 6e+00/1e+00  t= 9 1e+01/7e+00  t=10 9e+02/4e+01  t=11 4e+03/2e+02  t=12 2e+05/1e+03  t=13 5e+07/8e+03  t=14 5e+08/5e+04  t=15 7e+10/3e+05
+== cold_strong depth 2 ±8.0/64  (moment error / max|U| over |q|>L/2) ==
+  t= 0 2e-16/8e-06  t= 1 9e-07/1e-09  t= 2 5e-07/4e-04  t= 3 6e-04/5e-06  t= 4 9e-04/5e-03  t= 5 1e-02/1e-04  t= 6 3e-02/2e-02  t= 7 3e-01/6e-03
+  t= 8 4e-01/8e-02  t= 9 3e+00/1e-01  t=10 2e+00/7e-01  t=11 8e+00/9e+00  t=12 1e+03/9e+01  t=13 2e+05/1e+03  t=14 7e+06/1e+04  t=15 4e+07/1e+05
+== cold_weak depth 2 ±8.0/64  (moment error / max|U| over |q|>L/2) ==
+  t= 0 2e-16/8e-06  t= 1 3e-13/1e-07  t= 2 2e-13/3e-07  t= 3 8e-14/1e-05  t= 4 3e-13/2e-07  t= 5 6e-13/3e-07  t= 6 4e-13/9e-06  t= 7 2e-13/3e-07
+  t= 8 3e-13/2e-07  t= 9 6e-13/7e-06  t=10 9e-13/3e-07  t=11 9e-13/2e-07  t=12 8e-13/5e-06  t=13 4e-13/3e-07  t=14 3e-13/1e-07  t=15 4e-13/4e-06
+  t=16 8e-13/3e-07  t=17 1e-11/1e-07  t=18 1e-11/3e-06  t=19 2e-11/3e-07  t=20 3e-11/1e-07  t=21 2e-11/2e-06  t=22 4e-11/3e-07  t=23 1e-10/8e-08
+  t=24 1e-10/2e-06  t=25 2e-10/3e-07  t=26 2e-10/7e-08  t=27 1e-10/1e-06  t=28 2e-10/3e-07  t=29 2e-10/6e-08  t=30 2e-10/1e-06
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+│ 
+│ Diagnostics:
+│ 
+│ State Analysis:
+│   u[4769] = 1.003e+06 has grown >1e6× its initial value
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+│ 
+│ Diagnostics:
+│ 
+│ State Analysis:
+│   u[17091] = 1.012e+06 has grown >1e6× its initial value
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37

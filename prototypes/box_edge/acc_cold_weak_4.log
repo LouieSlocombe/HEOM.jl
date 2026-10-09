@@ -1,0 +1,8 @@
+== cold_weak depth 4: moment error vs exact Gaussian (max over saved t in window) ==
+absorb q0=3 σ0=20    bounded to t=60     t≤10 1.0e-04  t≤30 1.2e-04  t≤60 1.2e-04
+absorb q0=4 σ0=20    bounded to t=60     t≤10 6.8e-07  t≤30 7.5e-07  t≤60 7.5e-07
+absorb q0=5 σ0=20    bounded to t=60     t≤10 1.8e-09  t≤30 2.3e-09  t≤60 2.3e-09
+hard cutoff          bounded to t=60     t≤10 2.0e-12  t≤30 2.1e-12  t≤60 1.0e-10
+absorb q0=3 σ0=20    max|W - W_hard|/max|W0| for t ≤ 10: 2.8e-05
+absorb q0=4 σ0=20    max|W - W_hard|/max|W0| for t ≤ 10: 1.3e-07
+absorb q0=5 σ0=20    max|W - W_hard|/max|W0| for t ≤ 10: 2.4e-10

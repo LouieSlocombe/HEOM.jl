@@ -122,7 +122,7 @@ function growth_rate(op; T = 60.0, dt = 2.0, seed = 1, rhs! = heom!)
     prob = HEOM.ODEProblem(rhs!, U, (0.0, dt), op)
     t = 0.0
     while t < T - 1e-9
-        sol = solve(HEOM.remake(prob; u0 = U), Vern7(); abstol = 1e-10, reltol = 1e-8,
+        sol = solve(remake(prob; u0 = U), Vern7(); abstol = 1e-10, reltol = 1e-8,
             save_everystep = false, save_start = false)
         U = sol.u[end]
         g = norm(U)

@@ -1,0 +1,11 @@
+== cold_strong depth 2: root moment error vs exact Gaussian, max over saved t in window ==
+hard cutoff                  blew up at t=12.0  t≤2 5.1e-07  t≤10 2.0e+00  t≤30 1.4e+03  t≤60 1.4e+03
+markov_full                  blew up at t=52.0  t≤2 3.4e-07  t≤10 1.2e-03  t≤30 6.6e-03  t≤60 1.2e+04
+markov_full + absorb q0=4    bounded to t=60    t≤2 6.2e-06  t≤10 2.5e-03  t≤30 8.4e-03  t≤60 1.5e-02
+markov_full + absorb q0=5    bounded to t=60    t≤2 5.4e-07  t≤10 1.1e-03  t≤30 9.7e-03  t≤60 1.7e-02
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37

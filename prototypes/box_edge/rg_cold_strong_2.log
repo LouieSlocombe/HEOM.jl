@@ -1,0 +1,6 @@
+cold_strong  depth 2  hard cutoff                  growth   2.5487  [  70s]
+cold_strong  depth 2  absorb q0=4 σ0=20            growth   0.8052  [  28s]
+cold_strong  depth 2  absorb q0=3 σ0=20            growth   0.5626  [  24s]
+cold_strong  depth 2  taper q0=4                   growth   0.8719  [  29s]
+cold_strong  depth 2  markov_full                  growth   0.5214  [  72s]
+cold_strong  depth 2  markov_full + absorb q0=4    growth  -0.0122  [  42s]

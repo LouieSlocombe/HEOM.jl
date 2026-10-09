@@ -1,0 +1,4 @@
+== sweep: baths (harmonic m=ω=ħ=1; Spectral, scaled, ±8/64 unless stated) ==
+cold strong Padé 2, no terminator, depth 4   members   35  growth   9.2890  indicator  10.2534 (radius 0.75)  [  545s]
+Brownian λ=0.2 Ω=1 γ=0.5 kT=1, depth 4       members   15  growth   1.6639  indicator   3.2061 (radius 2.25)  [   17s]
+cold weak depth 6                            members   84  growth   0.5883  indicator   1.3036 (radius 4.25)  [  502s]

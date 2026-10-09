@@ -1,0 +1,8 @@
+== warm Padé 1 ==
+x= 0.3 x'=-0.2 |ρ|=8.089e-01  rel err: package d=2 2.1e-04  standard d=2 2.1e-04  gatto d=2 8.3e-04  package d=6 4.0e-12  standard d=6 4.0e-12  gatto d=6 1.3e-09  package d=10 9.6e-16  standard d=10 1.5e-14  gatto d=10 1.2e-14
+x= 1.0 x'= 0.5 |ρ|=8.089e-01  rel err: package d=2 1.4e-03  standard d=2 1.4e-03  gatto d=2 2.1e-02  package d=6 3.2e-10  standard d=6 3.2e-10  gatto d=6 5.5e-06  package d=10 3.1e-14  standard d=10 2.4e-14  gatto d=10 3.7e-10
+x= 2.0 x'=-1.0 |ρ|=4.828e-04  rel err: package d=2 1.2e+02  standard d=2 1.2e+02  gatto d=2 1.0e+02  package d=6 2.8e+00  standard d=6 2.8e+00  gatto d=6 9.6e-01  package d=10 7.5e-03  standard d=10 7.5e-03  gatto d=10 7.4e-04
+== cold strong Padé 1 ==
+x= 0.3 x'=-0.2 |ρ|=7.710e-01  rel err: package d=2 5.0e-05  standard d=2 5.0e-05  gatto d=2 5.4e-03  package d=6 1.6e-13  standard d=6 1.6e-13  gatto d=6 1.4e-06  package d=10 2.0e-15  standard d=10 2.5e-16  gatto d=10 1.0e-10
+x= 1.0 x'= 0.5 |ρ|=7.710e-01  rel err: package d=2 2.9e-02  standard d=2 2.9e-02  gatto d=2 5.9e-01  package d=6 6.7e-07  standard d=6 6.7e-07  gatto d=6 1.8e-02  package d=10 1.3e-12  standard d=10 1.3e-12  gatto d=10 1.5e-04
+x= 2.0 x'=-1.0 |ρ|=8.574e-05  rel err: package d=2 1.5e+01  standard d=2 1.5e+01  gatto d=2 2.1e+02  package d=6 1.9e-01  standard d=6 1.9e-01  gatto d=6 6.1e+01  package d=10 2.4e-04  standard d=10 2.4e-04  gatto d=10 8.5e+00

@@ -1,0 +1,9 @@
+== sweep: discretisation (harmonic m=ω=ħ=1; Spectral, scaled, ±8/64 unless stated) ==
+cold_strong depth 4 Spectral()               members   35  growth   4.8452  local bound   6.0827 (q= -8.00)  [  146s]
+cold_strong depth 4 FiniteDifference(2)      members   35  growth   5.1053  local bound   5.6808 (q= -8.00)  [   55s]
+cold_strong depth 4 FiniteDifference(4)      members   35  growth   5.4237  local bound   6.0081 (q= -8.00)  [  141s]
+cold_strong depth 4 FiniteDifference(8)      members   35  growth   5.4646  local bound   6.0797 (q= -8.00)  [  156s]
+warm depth 4 Spectral()                      members   15  growth   1.1896  local bound   2.8670 (q= -8.00)  [   96s]
+warm depth 4 FiniteDifference(2)             members   15  growth   2.1769  local bound   2.6154 (q= -8.00)  [   34s]
+warm depth 4 FiniteDifference(4)             members   15  growth   2.2451  local bound   2.8110 (q= -8.00)  [   63s]
+warm depth 4 FiniteDifference(8)             members   15  growth   2.1603  local bound   2.8609 (q= -8.00)  [  120s]

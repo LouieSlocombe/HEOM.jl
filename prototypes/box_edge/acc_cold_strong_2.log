@@ -1,0 +1,20 @@
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+== cold_strong depth 2: moment error vs exact Gaussian (max over saved t in window) ==
+absorb q0=3 σ0=20    blew up at t=22.0   t≤10 7.2e-02  t≤30 5.5e+02  t≤60 5.5e+02
+absorb q0=4 σ0=20    blew up at t=18.0   t≤10 5.6e-01  t≤30 5.1e+03  t≤60 5.1e+03
+absorb q0=5 σ0=20    blew up at t=16.0   t≤10 1.3e+00  t≤30 4.1e+04  t≤60 4.1e+04
+hard cutoff          blew up at t=12.0   t≤10 2.0e+00  t≤30 1.4e+03  t≤60 1.4e+03
+absorb q0=3 σ0=20    max|W - W_hard|/max|W0| for t ≤ 10: 4.7e-01
+absorb q0=4 σ0=20    max|W - W_hard|/max|W0| for t ≤ 10: 3.6e-01
+absorb q0=5 σ0=20    max|W - W_hard|/max|W0| for t ≤ 10: 3.6e-01

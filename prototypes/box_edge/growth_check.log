@@ -1,0 +1,4 @@
+FiniteDifference(4)  depth 1  dense 0.8890   power iteration 0.8880
+FiniteDifference(4)  depth 3  dense 2.4088   power iteration 2.3963
+Spectral()           depth 1  dense 0.6059   power iteration 0.5981
+Spectral()           depth 3  dense 2.3569   power iteration 2.3565

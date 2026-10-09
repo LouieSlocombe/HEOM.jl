@@ -432,6 +432,25 @@ There are `binomial(length(bath.rates) + depth, depth)` members. Upward terms be
 `depth` are set to zero (hard cutoff); `depth = 0` omits all explicit bath memory.
 Converge the depth, bath decomposition, box and resolution independently.
 
+The hard cutoff is not stable over long times on a finite box. The upward coupling
+`2imag(cₖ)q/ħ` grows linearly with `|q|`. A truncated hierarchy represents the bath
+faithfully only where `|q|` times the momentum wavenumber is small compared with the
+depth and the bath rates. Beyond that radius it has growing modes, which concentrate
+near the box edges `|q| ≈ L`. Rounding and the tails of the physical state seed them,
+even when the state itself stays well inside the box. Their growth rate rises with
+coupling strength, depth and box half-width. They occur with both discretisations and
+both scalings, and depend only weakly on the momentum resolution. A deeper hierarchy
+moves the radius outward but grows faster at the edge. Warm, cold weak and cold
+strong Drude baths and an underdamped Brownian bath are all affected. For example,
+take `drude_lorentz_pade_bath(; reorganization = 0.8, cutoff = 0.5, kT = 0.1, pade = 2)`
+with a unit harmonic oscillator on a ±8, 64-point grid. At depth 2 the second moments
+are wrong by 10⁻² at t = 5. The hierarchy exceeds 10³ times its initial amplitude at
+t ≈ 12.5, 7.6 and 5.9 for depth 2, 4 and 6. With a warm bath (λ = 0.2, γ = kT = 1,
+Padé 1), the error reaches 10⁻³ by t ≈ 10, and the run diverges near t = 40.
+Before a long propagation, call [`hierarchy_stability`](@ref) to estimate the growth
+rate and radius. Confirm long-time results with a different box and depth, and pass
+`unstable_check` to `solve` to stop a diverging run.
+
 `scaled = true` propagates `W̃ₙ = Wₙ / sqrt(∏ₖ nₖ! aₖ^nₖ)`, where `aₖ = abs(cₖ)`
 for nonzero coefficients and `aₖ = 1` for zero coefficients. The physical root is
 unchanged. This is the amplitude/factorial scaling of Shi et al., J. Chem. Phys. 130,
@@ -652,7 +671,9 @@ Use [`equilibrate`](@ref) to prepare a correlated state by relaxation and test
 stationarity of the entire hierarchy before restarting with `heom_problem(result, tspan)`.
 
 Use `physical_wigner(sol)` to extract the final root. Explicit solvers such as `Vern7()`
-work; high bath rates and large depth can make the hierarchy stiff. The default
+work; high bath rates and large depth can make the hierarchy stiff. Long propagations
+eventually diverge through growing modes near the box edge. See the stability notes
+in [`heom_operator`](@ref) and [`hierarchy_stability`](@ref). The default
 `jacobian = :matrixfree` supplies the exact Jacobian-vector product and time derivative,
 including for spectral operators. For example, `Rodas5P(autodiff = AutoFiniteDiff(), linsolve = KrylovJL_GMRES(), concrete_jac = false)` integrates without constructing a
 dense Jacobian or differentiating FFTW buffers. These solver types are supplied by

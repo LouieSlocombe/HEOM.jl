@@ -1,0 +1,105 @@
+== sweep: spacing (harmonic m=ω=ħ=1; Spectral, scaled, ±8/64 unless stated) ==
+cold_strong depth 4 L=8 n=32 (dp=0.5)        members   35  growth   5.2169  local bound   6.0827 (q= -8.00)  [   47s]
+cold_strong depth 4 L=8 n=48 (dp=0.3333333333333333) members   35  growth   4.8825  local bound   6.0827 (q= -8.00)  [   93s]
+cold_strong depth 4 L=8 n=64 (dp=0.25)       members   35  growth   4.8452  local bound   6.0827 (q= -8.00)  [  197s]
+cold_strong depth 4 L=8 n=96 (dp=0.16666666666666666) members   35  growth   4.6593  local bound   6.0827 (q= -8.00)  [  907s]
+
+[256558] signal 15: Terminated
+in expression starting at /home/louie/skunkworks/HEOM.jl/prototypes/box_edge/characterise.jl:20
+unknown function (ip: 0x767229aac800) at /usr/lib/x86_64-linux-gnu/libc.so.6
+unknown function (ip: 0x767229aa030b) at /usr/lib/x86_64-linux-gnu/libc.so.6
+unknown function (ip: 0x767229aa06e6) at /usr/lib/x86_64-linux-gnu/libc.so.6
+pthread_cond_wait at /usr/lib/x86_64-linux-gnu/libc.so.6 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+jl_parallel_gc_threadfun at /cache/build/builder-amdci4-8/julialang/julia-ci/src/gc-stock.c:3729
+unknown function (ip: 0x767229aa3df9) at /usr/lib/x86_64-linux-gnu/libc.so.6
+unknown function (ip: 0x767229b375cb) at /usr/lib/x86_64-linux-gnu/libc.so.6
+unknown function (ip: (nil)) at (unknown file)
+unknown function (ip: 0x767229aac800) at /usr/lib/x86_64-linux-gnu/libc.so.6
+unknown function (ip: 0x767229aa030b) at /usr/lib/x86_64-linux-gnu/libc.so.6
+unknown function (ip: 0x767229aa06e6) at /usr/lib/x86_64-linux-gnu/libc.so.6
+pthread_cond_wait at /usr/lib/x86_64-linux-gnu/libc.so.6 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+ijl_task_get_next at /cache/build/builder-amdci4-8/julialang/julia-ci/src/scheduler.c:599
+wait at ./task.jl:1297
+#wait#392 at ./condition.jl:141
+wait at ./condition.jl:136 [inlined]
+_trywait at ./asyncevent.jl:186
+profile_printing_listener at ./Base.jl:335
+#start_profile_listener##0 at ./Base.jl:355
+jfptr_YY.start_profile_listenerYY.YY.0_16783.1 at /home/louie/.julia/juliaup/julia-1.13.1+0.x64.linux.gnu/lib/julia/sys.so (unknown line)
+jl_apply at /cache/build/builder-amdci4-8/julialang/julia-ci/src/julia.h:2318 [inlined]
+start_task at /cache/build/builder-amdci4-8/julialang/julia-ci/src/task.c:1285
+unknown function (ip: (nil)) at (unknown file)
+unknown function (ip: 0x767229aac800) at /usr/lib/x86_64-linux-gnu/libc.so.6
+unknown function (ip: 0x767229aa030b) at /usr/lib/x86_64-linux-gnu/libc.so.6
+unknown function (ip: 0x767229aa06e6) at /usr/lib/x86_64-linux-gnu/libc.so.6
+pthread_cond_wait at /usr/lib/x86_64-linux-gnu/libc.so.6 (unknown line)
+uv_cond_wait at /workspace/srcdir/libuv/src/unix/thread.c:822
+ijl_task_get_next at /cache/build/builder-amdci4-8/julialang/julia-ci/src/scheduler.c:599
+wait at ./task.jl:1297
+wait_forever at ./task.jl:1196
+jfptr_wait_forever_70523.1 at /home/louie/.julia/juliaup/julia-1.13.1+0.x64.linux.gnu/lib/julia/sys.so (unknown line)
+jl_apply at /cache/build/builder-amdci4-8/julialang/julia-ci/src/julia.h:2318 [inlined]
+start_task at /cache/build/builder-amdci4-8/julialang/julia-ci/src/task.c:1285
+unknown function (ip: (nil)) at (unknown file)
+_setindex! at ./array.jl:1025 [inlined]
+setindex! at ./array.jl:1020 [inlined]
+setindex! at ./subarray.jl:387 [inlined]
+_setindex! at ./abstractarray.jl:1487 [inlined]
+setindex! at ./abstractarray.jl:1464 [inlined]
+macro expansion at ./broadcast.jl:1000 [inlined]
+macro expansion at ./simdloop.jl:77 [inlined]
+copyto! at ./broadcast.jl:999 [inlined]
+copyto! at ./broadcast.jl:952 [inlined]
+materialize! at ./broadcast.jl:910 [inlined]
+materialize! at ./broadcast.jl:907 [inlined]
+heom! at /home/louie/skunkworks/HEOM.jl/src/heom.jl:634
+Void at /home/louie/.julia/packages/SciMLBase/MotTR/src/utils.jl:703 [inlined]
+CallWrapper at /home/louie/.julia/packages/FunctionWrappers/Q5cBx/src/FunctionWrappers.jl:65
+unknown function (ip: 0x767204b8963b) at (unknown file)
+macro expansion at /home/louie/.julia/packages/FunctionWrappers/Q5cBx/src/FunctionWrappers.jl:137 [inlined]
+do_ccall at /home/louie/.julia/packages/FunctionWrappers/Q5cBx/src/FunctionWrappers.jl:125 [inlined]
+FunctionWrapper at /home/louie/.julia/packages/FunctionWrappers/Q5cBx/src/FunctionWrappers.jl:144 [inlined]
+_call at /home/louie/.julia/packages/FunctionWrappersWrappers/7CPBX/src/FunctionWrappersWrappers.jl:392 [inlined]
+FunctionWrappersWrapper at /home/louie/.julia/packages/FunctionWrappersWrappers/7CPBX/src/FunctionWrappersWrappers.jl:384 [inlined]
+ODEFunction at /home/louie/.julia/packages/SciMLBase/MotTR/src/scimlfunctions.jl:2968 [inlined]
+perform_step! at /home/louie/.julia/packages/OrdinaryDiffEqVerner/UEVOU/src/verner_rk_perform_step.jl:419
+perform_step! at /home/louie/.julia/packages/OrdinaryDiffEqVerner/UEVOU/src/verner_rk_perform_step.jl:413 [inlined]
+solve! at /home/louie/.julia/packages/OrdinaryDiffEqCore/niPe0/src/solve.jl:1075
+#__solve#130 at /home/louie/.julia/packages/OrdinaryDiffEqCore/niPe0/src/solve.jl:10 [inlined]
+__solve at /home/louie/.julia/packages/OrdinaryDiffEqCore/niPe0/src/solve.jl:1 [inlined]
+#solve_call#29 at /home/louie/.julia/packages/DiffEqBase/2YsuI/src/solve.jl:234 [inlined]
+solve_call at /home/louie/.julia/packages/DiffEqBase/2YsuI/src/solve.jl:199 [inlined]
+#solve_up#36 at /home/louie/.julia/packages/DiffEqBase/2YsuI/src/solve.jl:711 [inlined]
+solve_up at /home/louie/.julia/packages/DiffEqBase/2YsuI/src/solve.jl:681 [inlined]
+#solve#35 at /home/louie/.julia/packages/DiffEqBase/2YsuI/src/solve.jl:665 [inlined]
+solve at /home/louie/.julia/packages/DiffEqBase/2YsuI/src/solve.jl:653
+unknown function (ip: 0x767204b73d46) at (unknown file)
+#growth_rate#13 at /home/louie/skunkworks/HEOM.jl/prototypes/box_edge/common.jl:125
+growth_rate at /home/louie/skunkworks/HEOM.jl/prototypes/box_edge/common.jl:117 [inlined]
+macro expansion at ./timing.jl:463 [inlined]
+#report#19 at /home/louie/skunkworks/HEOM.jl/prototypes/box_edge/characterise.jl:7
+report at /home/louie/skunkworks/HEOM.jl/prototypes/box_edge/characterise.jl:6 [inlined]
+top-level scope at /home/louie/skunkworks/HEOM.jl/prototypes/box_edge/characterise.jl:31
+jl_toplevel_eval_flex at /cache/build/builder-amdci4-8/julialang/julia-ci/src/toplevel.c:731
+jl_eval_toplevel_stmts at /cache/build/builder-amdci4-8/julialang/julia-ci/src/toplevel.c:585
+jl_toplevel_eval_flex at /cache/build/builder-amdci4-8/julialang/julia-ci/src/toplevel.c:683
+ijl_toplevel_eval at /cache/build/builder-amdci4-8/julialang/julia-ci/src/toplevel.c:754
+ijl_toplevel_eval_in at /cache/build/builder-amdci4-8/julialang/julia-ci/src/toplevel.c:799
+eval at ./boot.jl:489
+include_string at ./loading.jl:3033
+_include at ./loading.jl:3093
+include at ./Base.jl:309
+exec_options at ./client.jl:344
+_start at ./client.jl:577
+jfptr__start_58396.1 at /home/louie/.julia/juliaup/julia-1.13.1+0.x64.linux.gnu/lib/julia/sys.so (unknown line)
+jl_apply at /cache/build/builder-amdci4-8/julialang/julia-ci/src/julia.h:2318 [inlined]
+true_main at /cache/build/builder-amdci4-8/julialang/julia-ci/src/jlapi.c:985
+jl_repl_entrypoint at /cache/build/builder-amdci4-8/julialang/julia-ci/src/jlapi.c:1152
+main at /cache/build/builder-amdci4-8/julialang/julia-ci/cli/loader_exe.c:58
+unknown function (ip: 0x767229a2a600) at /usr/lib/x86_64-linux-gnu/libc.so.6
+__libc_start_main at /usr/lib/x86_64-linux-gnu/libc.so.6 (unknown line)
+unknown function (ip: 0x4010b8) at /workspace/srcdir/glibc-2.17/csu/../sysdeps/x86_64/start.S
+unknown function (ip: (nil)) at (unknown file)
+Allocations: 32352622 (Pool: 32351857; Big: 765); GC: 221

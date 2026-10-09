@@ -1,0 +1,6 @@
+warm         depth 4  hard cutoff                  growth   1.1896  [ 201s]
+warm         depth 4  absorb q0=4 σ0=20            growth  -0.0065  [  22s]
+warm         depth 4  absorb q0=3 σ0=20            growth  -0.0038  [  17s]
+warm         depth 4  taper q0=4                   growth  -0.0076  [  24s]
+warm         depth 4  markov_full                  growth  -0.0210  [ 113s]
+warm         depth 4  markov_full + absorb q0=4    growth  -0.0061  [  27s]

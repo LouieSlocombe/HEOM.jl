@@ -112,7 +112,9 @@ Return an [`EquilibriumResult`](@ref), including on time exhaustion or solver fa
 No stationary state is guaranteed for an arbitrary potential, bath or truncation.
 Stationarity tests the discretised, truncated equations; converge the bath expansion,
 hierarchy depth and grid separately. The reduced equilibrium of a coupled harmonic
-system generally differs from its isolated Gibbs state.
+system generally differs from its isolated Gibbs state. Long relaxations are exposed to
+the growing box-edge modes of the hard cutoff (see [`heom_operator`](@ref)). Check
+[`hierarchy_stability`](@ref) first, and confirm the result with a different box and depth.
 
 Extra keywords go to `solve`, including integration tolerances and `maxiters`. Saving
 defaults to the final state only. `save_end = false`, `save_on = false`, and any

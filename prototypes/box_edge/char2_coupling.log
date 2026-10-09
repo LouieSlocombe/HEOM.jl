@@ -1,0 +1,4 @@
+== sweep: coupling (harmonic m=ω=ħ=1; Spectral, scaled, ±8/64 unless stated) ==
+γ=0.5 kT=1 λ=0.05 Padé 2 depth 4             members   35  growth  -0.0211  indicator   0.2899 (radius 6.75)  [  146s]
+γ=0.5 kT=1 λ=0.2 Padé 2 depth 4              members   35  growth   0.6036  indicator   1.7784 (radius 3.50)  [  269s]
+γ=0.5 kT=1 λ=0.8 Padé 2 depth 4              members   35  growth   3.3601  indicator   4.5889 (radius 1.75)  [  108s]

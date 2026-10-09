@@ -1,0 +1,24 @@
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+┌ Warning: Verbosity toggle: instability 
+│  Instability detected. Aborting.
+└ @ DiffEqBase ~/.julia/packages/DiffEqBase/2YsuI/src/check_error.jl:37
+cold strong Padé 2       ±6/48 depth 2: blow-up at t=13.99  [13.9s]
+cold strong Matsubara 1  ±6/48 depth 2: blow-up at t=23.93  [6.0s]
+cold strong Padé 2       ±6/32 depth 2: blow-up at t=11.07  [1.3s]
+cold strong Matsubara 1  ±6/32 depth 2: blow-up at t=17.40  [1.0s]
+cold strong Padé 2       ±5/32 depth 2: blow-up at t=13.89  [1.5s]
+cold strong Matsubara 1  ±5/32 depth 2: blow-up at t=25.61  [1.3s]
