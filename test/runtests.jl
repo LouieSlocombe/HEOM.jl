@@ -1,6 +1,8 @@
 using Aqua
 using ADTypes
 using HEOM
+using JLArrays
+using KernelAbstractions
 using LinearAlgebra
 using LinearSolve
 using OrdinaryDiffEqRosenbrock
@@ -71,6 +73,8 @@ end
     include("tunnelling.jl")
     include("plotting.jl")
     include("animation.jl")
+    include("float32.jl")
+    include("device_backend.jl")
 
     @testset "Package quality" begin
         Aqua.test_all(HEOM)

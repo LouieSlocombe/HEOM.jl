@@ -96,6 +96,7 @@ with_drive(op::FiniteDifferenceWignerMoyal, drive) = FiniteDifferenceWignerMoyal
     op.moyal_terms,
     op.order,
     op.matrix,
+    op.coefficients,
     drive,
 )
 
@@ -135,17 +136,32 @@ function build_operator(
     )
 end
 
-function checked_drive_value(value)
+function checked_drive_value(value, ::Type{T} = Float64) where {T<:AbstractFloat}
     value isa Real && isfinite(value) || throw(
         ArgumentError(
             "drive and its time derivative must return finite real values, got $value",
         ),
     )
-    converted = Float64(value)
-    isfinite(converted) ||
-        throw(ArgumentError("drive coefficient must be finite in Float64"))
+    converted = T(value)
+    isfinite(converted) || throw(ArgumentError("drive coefficient must be finite in $T"))
     return converted
 end
+
+# User drives and potentials are written in Float64 time, whatever the state precision.
+user_time(t::Float32) = Float64(t)
+user_time(t) = t
+
+# Only host arrays are scanned: a device reduction would synchronise on every RHS call.
+check_finite_host(values::Array) = check_finite(values)
+check_finite_host(values) = nothing
+
+move_drive(::Nothing, device, ::Type{T}) where {T} = nothing
+move_drive(drive::GeneralMoyalDrive, device, ::Type{T}) where {T} = drive
+move_drive(drive::SeparableMoyalDrive, device, ::Type{T}) where {T} = SeparableMoyalDrive(
+    drive.potential,
+    to_device(device, T, drive.baseline),
+    to_device(device, T, drive.coupling),
+)
 
 function fd_kinetic_matrix(op::FiniteDifferenceWignerMoyal)
     nq, np = size(op.grid)
@@ -170,39 +186,45 @@ end
 update_generator!(op::AbstractWignerMoyal, t) = update_generator!(op, op.drive, t)
 update_generator!(op, ::Nothing, t) = nothing
 function update_generator!(op::SpectralWignerMoyal, drive::SeparableMoyalDrive, t)
-    E = checked_drive_value(drive.potential.field(t))
+    E = checked_drive_value(
+        drive.potential.field(user_time(t)),
+        real(eltype(op.potential_symbol)),
+    )
     @. op.potential_symbol = drive.baseline - E * drive.coupling
-    check_finite(op.potential_symbol)
+    check_finite_host(op.potential_symbol)
     return nothing
 end
 function update_generator!(op::FiniteDifferenceWignerMoyal, drive::SeparableMoyalDrive, t)
-    E = checked_drive_value(drive.potential.field(t))
+    E = checked_drive_value(drive.potential.field(user_time(t)))
     copyto!(op.matrix, drive.baseline - E * drive.coupling)
     all(isfinite, op.matrix.nzval) ||
         throw(ArgumentError("driven generator must be finite"))
     return nothing
 end
 function update_generator!(op::SpectralWignerMoyal, drive::GeneralMoyalDrive, t)
-    op.potential_symbol .=
+    symbol =
         moyal_symbol(
-            potential_at(drive.potential, t),
+            potential_at(drive.potential, user_time(t)),
             op.grid.q,
             wavenumbers(length(op.grid.p), op.grid.dp),
             op.hbar,
             op.moyal_terms,
         ) ./ length(op.grid.p)
-    check_finite(op.potential_symbol)
+    check_finite(symbol)
+    copyto!(op.potential_symbol, array_like(op.potential_symbol, symbol))
     return nothing
 end
 function update_generator!(op::FiniteDifferenceWignerMoyal, drive::GeneralMoyalDrive, t)
     copyto!(
         op.matrix,
-        fd_kinetic_matrix(op) + fd_potential_matrix(op, potential_at(drive.potential, t)),
+        fd_kinetic_matrix(op) +
+        fd_potential_matrix(op, potential_at(drive.potential, user_time(t))),
     )
     return nothing
 end
 
 function potential_time_derivative(V::TimeDependentPotential, q, t)
+    t = user_time(t)
     value =
         V.derivative === nothing ? ForwardDiff.derivative(s -> V.potential(q, s), t) :
         V.derivative(q, t)
@@ -210,11 +232,12 @@ function potential_time_derivative(V::TimeDependentPotential, q, t)
         throw(ArgumentError("potential time derivative must be finite and real"))
     return value
 end
-function field_time_derivative(V::DrivenPotential, t)
+function field_time_derivative(V::DrivenPotential, t, ::Type{T} = Float64) where {T}
+    t = user_time(t)
     value =
         V.field_derivative === nothing ? ForwardDiff.derivative(V.field, t) :
         V.field_derivative(t)
-    return checked_drive_value(value)
+    return checked_drive_value(value, T)
 end
 
 # Apply just the potential commutator, useful for impulsive linear response.
@@ -228,7 +251,9 @@ function apply_potential_symbol!(out, W, op::SpectralWignerMoyal, symbol)
     op.W .= W
     mul!(op.Wp, op.forward_p, op.W)
     op.Wp .*= symbol
-    mul!(out, op.backward_p, op.Wp)
+    # `out` may be a view of a hierarchy, which plans on device arrays do not accept.
+    mul!(op.Tp, op.backward_p, op.Wp)
+    out .= op.Tp
     return nothing
 end
 function potential_action!(out, W, op::FiniteDifferenceWignerMoyal, t = 0.0)
@@ -243,7 +268,7 @@ wigner_tgrad!(out, W, op::AbstractWignerMoyal, t) = wigner_tgrad!(out, W, op, op
 wigner_tgrad!(out, W, op, ::Nothing, t) = (fill!(out, 0); nothing)
 function wigner_tgrad!(out, W, op::SpectralWignerMoyal, drive::SeparableMoyalDrive, t)
     apply_potential_symbol!(out, W, op, drive.coupling)
-    out .*= -field_time_derivative(drive.potential, t)
+    out .*= -field_time_derivative(drive.potential, t, eltype(out))
     return nothing
 end
 function wigner_tgrad!(
@@ -267,7 +292,7 @@ function wigner_tgrad!(out, W, op::SpectralWignerMoyal, drive::GeneralMoyalDrive
             op.moyal_terms,
         ) ./ length(op.grid.p)
     check_finite(symbol)
-    return apply_potential_symbol!(out, W, op, symbol)
+    return apply_potential_symbol!(out, W, op, array_like(op.potential_symbol, symbol))
 end
 function wigner_tgrad!(out, W, op::FiniteDifferenceWignerMoyal, drive::GeneralMoyalDrive, t)
     matrix = fd_potential_matrix(op, q -> potential_time_derivative(drive.potential, q, t))

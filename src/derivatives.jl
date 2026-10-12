@@ -13,7 +13,8 @@ struct Spectral end
 Central finite-difference discretisation on a periodic [`PhaseSpaceGrid`](@ref), with the
 given even accuracy `order` for every derivative. The semi-discrete Wigner–Moyal operator is
 then a sparse matrix, available as `sparse(op)`. It needs a truncated Moyal series
-(`moyal_terms`), because the exact operator is nonlocal in momentum.
+(`moyal_terms`), because the exact operator is nonlocal in momentum. On a device, or in
+`Float32`, the same operator is applied as matrix-free stencils and has no sparse matrix.
 """
 struct FiniteDifference
     order::Int

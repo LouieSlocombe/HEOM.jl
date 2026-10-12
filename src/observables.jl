@@ -7,7 +7,7 @@ integral of a Wigner function is the norm of its state.
 """
 function phase_space_integral(W::AbstractMatrix, grid::PhaseSpaceGrid)
     check_size(W, grid)
-    return sum(W) * grid.dq * grid.dp
+    return sum(to_host(W)) * grid.dq * grid.dp
 end
 
 """
@@ -20,7 +20,7 @@ expectation value of the operator whose Weyl symbol is `f`. For example,
 """
 function expectation(f, W::AbstractMatrix, grid::PhaseSpaceGrid)
     check_size(W, grid)
-    return phase_space_integral(on_grid(f, grid) .* W, grid)
+    return phase_space_integral(on_grid(f, grid) .* to_host(W), grid)
 end
 
 """
@@ -42,7 +42,7 @@ vector. No normalisation is applied.
 """
 function position_density(W::AbstractMatrix, grid::PhaseSpaceGrid)
     check_size(W, grid)
-    return vec(sum(W; dims = 2)) * grid.dp
+    return vec(sum(to_host(W); dims = 2)) * grid.dp
 end
 
 """
@@ -53,7 +53,7 @@ vector. No normalisation is applied.
 """
 function momentum_density(W::AbstractMatrix, grid::PhaseSpaceGrid)
     check_size(W, grid)
-    return vec(sum(W; dims = 1)) * grid.dq
+    return vec(sum(to_host(W); dims = 1)) * grid.dq
 end
 
 """
@@ -64,6 +64,7 @@ of `W`.
 """
 function phase_space_mean(W::AbstractMatrix, grid::PhaseSpaceGrid)
     check_size(W, grid)
+    W = to_host(W)
     q = dot(grid.q, position_density(W, grid)) * grid.dq
     p = dot(grid.p, momentum_density(W, grid)) * grid.dp
     return [q, p]
@@ -78,6 +79,7 @@ integrals against `W`, without renormalisation.
 """
 function phase_space_covariance(W::AbstractMatrix, grid::PhaseSpaceGrid)
     check_size(W, grid)
+    W = to_host(W)
     q, p = phase_space_mean(W, grid)
     δq, δp = grid.q .- q, grid.p .- p
     var_q = dot(δq .^ 2, position_density(W, grid)) * grid.dq
@@ -102,6 +104,7 @@ function energy(
     t::Union{Nothing,Real} = nothing,
 )
     check_size(W, grid)
+    W = to_host(W)
     isnothing(t) &&
         is_time_dependent(potential) &&
         throw(ArgumentError("supply t to evaluate energy with a time-dependent potential"))
@@ -127,7 +130,7 @@ function overlap(
 )
     check_size(W1, grid)
     check_size(W2, grid)
-    return 2π * hbar * phase_space_integral(W1 .* W2, grid)
+    return 2π * hbar * phase_space_integral(to_host(W1) .* to_host(W2), grid)
 end
 
 """
@@ -140,5 +143,5 @@ accurate. No normalisation is applied.
 """
 function wigner_negativity(W::AbstractMatrix, grid::PhaseSpaceGrid)
     check_size(W, grid)
-    return sum(w -> abs(w) - w, W) * grid.dq * grid.dp
+    return sum(w -> abs(w) - w, to_host(W)) * grid.dq * grid.dp
 end

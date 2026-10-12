@@ -54,6 +54,7 @@ jobs:
             Pkg.develop(path=repository)
             using HEOM
             @assert isnothing(Base.get_extension(HEOM, :HEOMPlotsExt))
+            @assert isnothing(Base.get_extension(HEOM, :HEOMKernelAbstractionsExt))
             grid = PhaseSpaceGrid((-8.0, 8.0), 64, (-8.0, 8.0), 64)
             W0 = on_grid((q, p) -> fock_wigner(0, q, p; mass=1.0, omega=1.0), grid)
             V = harmonic_potential(; mass=1.0, omega=1.0)
@@ -62,6 +63,8 @@ jobs:
             prob.f(dW, prob.u0, prob.p, 0.0)
             @assert maximum(abs, dW) < 1e-10
             @assert isapprox(phase_space_integral(prob.u0, grid), 1; atol=1e-10)
+            single = wigner_moyal_operator(grid; mass=1.0, potential=V, float_type=Float32)
+            @assert eltype(single.W) == Float32
             println(prob.p)
           '
 

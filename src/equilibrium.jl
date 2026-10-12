@@ -21,8 +21,8 @@ Result of [`equilibrate`](@ref). Fields:
 Use `physical_wigner(result)` to view the root and `heom_problem(result, tspan)` to
 restart with all correlations. Inspect `converged` before treating a result as equilibrium.
 """
-struct EquilibriumResult{R,M}
-    hierarchy::Array{Float64,3}
+struct EquilibriumResult{A<:AbstractArray{<:Real,3},R,M}
+    hierarchy::A
     residuals::R
     converged::Bool
     status::Symbol
@@ -32,11 +32,13 @@ end
 
 function equilibrium_residuals!(dU, U, op, t, abstol, reltol)
     heom!(dU, U, op, t)
+    # One reduction per array and a single copy to the host, however many members.
+    amplitudes = Float64.(vec(Array(maximum(abs, U; dims = (1, 2)))))
+    residuals = Float64.(vec(Array(maximum(abs, dU; dims = (1, 2)))))
     absolute = Vector{Float64}(undef, size(U, 3))
     relative, scaled = similar(absolute), similar(absolute)
     for a in eachindex(absolute)
-        amplitude = maximum(abs, @view U[:, :, a])
-        residual = maximum(abs, @view dU[:, :, a])
+        amplitude, residual = amplitudes[a], residuals[a]
         if !isfinite(amplitude) || !isfinite(residual)
             absolute[a] = relative[a] = scaled[a] = Inf
         else
@@ -49,7 +51,17 @@ function equilibrium_residuals!(dU, U, op, t, abstol, reltol)
     return (; absolute, relative, scaled)
 end
 
-function equilibrium_result(U, residuals, op, t, tspan, jacobian, initial_norm, retcode)
+function equilibrium_result(
+    U,
+    residuals,
+    op,
+    t,
+    tspan,
+    tend,
+    jacobian,
+    initial_norm,
+    retcode,
+)
     integral = phase_space_integral(physical_wigner(U), op.grid)
     converged =
         successful_retcode(retcode) &&
@@ -61,7 +73,7 @@ function equilibrium_result(U, residuals, op, t, tspan, jacobian, initial_norm, 
         :solver_failure
     elseif converged
         :stationary
-    elseif t >= last(tspan)
+    elseif t >= tend
         :time_limit
     else
         :terminated
@@ -180,8 +192,9 @@ function equilibrate(
             prob.u0,
             residuals,
             op,
-            times[1],
+            first(prob.tspan),
             times,
+            last(prob.tspan),
             jacobian,
             initial_norm,
             ReturnCode.Success,
@@ -214,6 +227,7 @@ function equilibrate(
         op,
         t,
         times,
+        last(prob.tspan),
         jacobian,
         initial_norm,
         sol.retcode,

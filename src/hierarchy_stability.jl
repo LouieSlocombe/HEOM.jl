@@ -6,7 +6,14 @@ using LinearAlgebra: eigvals!
 function momentum_multipliers(op::WignerHEOM)
     np = length(op.grid.p)
     if op.hamiltonian isa SpectralWignerMoyal
-        return vec(op.momentum.first) .* np, vec(op.momentum.second) .* np
+        # Copies are taken from the operator's device and precision, as Float64 multipliers.
+        first = ComplexF64.(Array(vec(op.momentum.first)))
+        second = Float64.(Array(vec(op.momentum.second)))
+        return first .* np, second .* np
+    end
+    if op.hamiltonian isa StencilWignerMoyal
+        return stencil_multipliers(op.momentum.first, np),
+        stencil_multipliers(op.momentum.second, np)
     end
     # A periodic difference matrix is circulant: its multipliers are the DFT of a row.
     function multipliers(D)
@@ -17,6 +24,14 @@ function momentum_multipliers(op::WignerHEOM)
         ]
     end
     return multipliers(op.momentum.first), multipliers(op.momentum.second)
+end
+
+# The same multipliers from the offsets and weights of a circulant stencil.
+function stencil_multipliers(table, np)
+    offsets, weights = Array(table.offsets), Float64.(Array(table.weights))
+    return [
+        sum(w * cis(2π * o * j / np) for (o, w) in zip(offsets, weights)) for j in 0:(np÷2)
+    ]
 end
 
 # Hierarchy block of the generator at a fixed position q and momentum wavenumber, where

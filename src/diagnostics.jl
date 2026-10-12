@@ -9,6 +9,7 @@ for an identically zero matrix.
 """
 function boundary_weight(W::AbstractMatrix, grid::PhaseSpaceGrid; width::Real = 0.05)
     check_size(W, grid)
+    W = to_host(W)
     0 < width < 0.5 || throw(ArgumentError("width must lie between 0 and 0.5, got $width"))
     nq, np = size(grid)
     # The cap also prevents overlap if floating-point multiplication rounds width*n up.
@@ -32,6 +33,7 @@ undefined (`NaN`) for an identically zero matrix.
 """
 function spectral_tail(W::AbstractMatrix, grid::PhaseSpaceGrid; fraction::Real = 1 / 3)
     check_size(W, grid)
+    W = to_host(W)
     0 < fraction < 1 ||
         throw(ArgumentError("fraction must lie between 0 and 1, got $fraction"))
     return (q = axis_spectral_tail(W, 1, fraction), p = axis_spectral_tail(W, 2, fraction))
@@ -78,6 +80,7 @@ function diagnostics(
     t::Union{Nothing,Real} = nothing,
 )
     check_size(W, grid)
+    W = to_host(W)
     mean = phase_space_mean(W, grid)
     covariance = phase_space_covariance(W, grid)
     var_q, var_p, cov_qp = covariance[1, 1], covariance[2, 2], covariance[1, 2]

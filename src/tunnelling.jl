@@ -174,7 +174,7 @@ function tunnelling_rates(
     weights = interval_weights(op.grid.q, op.grid.dq, window)
     populations = Float64[]
     for state in states
-        op isa WignerHEOM && check_hierarchy_size(state, op)
+        op isa WignerHEOM && ndims(state) == 3 && check_hierarchy_size(state, op)
         eltype(state) <: Real || throw(ArgumentError("Wigner samples must be real"))
         W = physical_state(state, op)
         W isa AbstractMatrix || throw(ArgumentError("physical states must be matrices"))

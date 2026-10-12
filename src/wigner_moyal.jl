@@ -16,20 +16,30 @@ abstract type AbstractWignerMoyal <: AbstractPhaseSpaceOperator end
 
 # Pseudo-spectral operator. The FFTs are planned on the stored buffers, and only those
 # buffers are ever passed to them. The backward transforms are unnormalised, so the symbols
-# carry the 1/n factors.
-struct SpectralWignerMoyal{FQ,BQ,FP,BP,D} <: AbstractWignerMoyal
+# carry the 1/n factors. The arrays live on the host or on a device (`R` real matrices,
+# `CV` complex vectors, `C` complex matrices) in one floating-point type.
+struct SpectralWignerMoyal{
+    R<:AbstractMatrix,
+    CV<:AbstractVector,
+    C<:AbstractMatrix,
+    FQ,
+    BQ,
+    FP,
+    BP,
+    D,
+} <: AbstractWignerMoyal
     grid::PhaseSpaceGrid
     mass::Float64
     hbar::Float64
     moyal_terms::Union{Nothing,Int}
-    velocity::Matrix{Float64}            # 1 × np row of -p/m
-    kinetic_symbol::Vector{ComplexF64}   # iκ_q / nq
-    potential_symbol::Matrix{ComplexF64} # Moyal symbol M(q, κ_p) / np
-    W::Matrix{Float64}
-    Wq::Matrix{ComplexF64}
-    Wp::Matrix{ComplexF64}
-    Tq::Matrix{Float64}
-    Tp::Matrix{Float64}
+    velocity::R                          # 1 × np row of -p/m
+    kinetic_symbol::CV                   # iκ_q / nq
+    potential_symbol::C                  # Moyal symbol M(q, κ_p) / np
+    W::R
+    Wq::C
+    Wp::C
+    Tq::R
+    Tp::R
     forward_q::FQ
     backward_q::BQ
     forward_p::FP
@@ -37,7 +47,9 @@ struct SpectralWignerMoyal{FQ,BQ,FP,BP,D} <: AbstractWignerMoyal
     drive::D
 end
 
-# Finite-difference operator, stored as a sparse matrix acting on vec(W).
+# Finite-difference operator, stored as a sparse matrix acting on vec(W). The coefficients
+# cₛ V⁽²ˢ⁺¹⁾(qᵢ) of the momentum derivatives (`length(q) × moyal_terms`) are kept so that
+# the same operator can be rebuilt as matrix-free stencils on a device.
 struct FiniteDifferenceWignerMoyal{D} <: AbstractWignerMoyal
     grid::PhaseSpaceGrid
     mass::Float64
@@ -45,12 +57,13 @@ struct FiniteDifferenceWignerMoyal{D} <: AbstractWignerMoyal
     moyal_terms::Int
     order::Int
     matrix::SparseMatrixCSC{Float64,Int}
+    coefficients::Matrix{Float64}
     drive::D
 end
 
 """
     wigner_moyal_operator(grid; mass, potential, hbar = 1.0, discretization = Spectral(),
-                          moyal_terms = nothing)
+                          moyal_terms = nothing, device = Array, float_type = Float64)
 
 Semi-discretise the Wigner–Moyal right-hand side on `grid` for a particle of `mass` in the
 `potential` `V(q)`, and return the operator used by [`wigner_moyal!`](@ref).
@@ -74,6 +87,13 @@ potential must accept dual numbers.
 latter needs an integer `moyal_terms`. Strongly anharmonic potentials make the system stiff
 because the symbol grows like `ħ² V‴ κ³`.
 
+`device` is the array type that holds the operator and its states (`Array`, or for example
+`CuArray` once a GPU package and KernelAbstractions are loaded) and `float_type` is
+`Float64` or `Float32`. The symbols are evaluated on the host in `Float64` and rounded once,
+so `Float32` loses no accuracy to the setup. A `FiniteDifference` operator that leaves the
+host `Float64` case is applied as matrix-free stencils instead of a sparse matrix, which
+needs KernelAbstractions (see [`stencil_operator`](@ref)); `sparse(op)` is then unavailable.
+
 The operator holds work buffers, so give each parallel task its own operator.
 """
 function wigner_moyal_operator(
@@ -83,6 +103,8 @@ function wigner_moyal_operator(
     hbar::Real = 1.0,
     discretization::Union{Spectral,FiniteDifference} = Spectral(),
     moyal_terms::Union{Nothing,Integer} = nothing,
+    device = Array,
+    float_type = Float64,
 )
     mass, hbar = Float64(mass), Float64(hbar)
     isfinite(mass) && mass > 0 ||
@@ -97,7 +119,7 @@ function wigner_moyal_operator(
                 "exact operator, got $moyal_terms",
             ),
         )
-    return build_operator(
+    op = build_operator(
         discretization,
         grid,
         Float64(mass),
@@ -105,6 +127,7 @@ function wigner_moyal_operator(
         normalize_potential(potential),
         moyal_terms,
     )
+    return move_operator(op, check_device(device), check_float_type(float_type))
 end
 
 function build_operator(::Spectral, grid, mass, hbar, potential, moyal_terms)
@@ -150,18 +173,67 @@ function build_operator(fd::FiniteDifference, grid, mass, hbar, potential, moyal
     nq, np = size(grid)
     derivatives = moyal_derivatives(potential, grid.q, moyal_terms)
     # vec(A * W * transpose(B)) == kron(B, A) * vec(W): A acts along q and B along p.
+    coefficients = moyal_coefficients(derivatives, hbar)
     L = kron(spdiagm(-grid.p ./ mass), periodic_difference_matrix(1, fd.order, nq, grid.dq))
     for s in 0:(moyal_terms-1)
         Dp = periodic_difference_matrix(2s + 1, fd.order, np, grid.dp)
-        L += kron(Dp, spdiagm(moyal_coefficient(s, hbar) .* derivatives[:, s+1]))
+        L += kron(Dp, spdiagm(coefficients[:, s+1]))
     end
     all(isfinite, L.nzval) || throw(
         ArgumentError(
             "finite-difference coefficients must be finite; rescale parameters or grid",
         ),
     )
-    return FiniteDifferenceWignerMoyal(grid, mass, hbar, moyal_terms, fd.order, L, nothing)
+    return FiniteDifferenceWignerMoyal(
+        grid,
+        mass,
+        hbar,
+        moyal_terms,
+        fd.order,
+        L,
+        coefficients,
+        nothing,
+    )
 end
+
+# Operators are built on the host in Float64; `move_operator` converts one to the requested
+# array type and precision, with fresh buffers and FFT plans on the target arrays.
+move_operator(op::SpectralWignerMoyal, ::Type{Array}, ::Type{Float64}) = op
+move_operator(op::FiniteDifferenceWignerMoyal, ::Type{Array}, ::Type{Float64}) = op
+
+function move_operator(op::SpectralWignerMoyal, device, ::Type{T}) where {T<:AbstractFloat}
+    nq, np = size(op.grid)
+    velocity = to_device(device, T, op.velocity)
+    kinetic_symbol = to_device(device, T, op.kinetic_symbol)
+    potential_symbol = to_device(device, T, op.potential_symbol)
+    W = fill!(similar(velocity, T, nq, np), 0)
+    Wq = fill!(similar(potential_symbol, Complex{T}, nq ÷ 2 + 1, np), 0)
+    Wp = fill!(similar(potential_symbol, Complex{T}, nq, np ÷ 2 + 1), 0)
+    return SpectralWignerMoyal(
+        op.grid,
+        op.mass,
+        op.hbar,
+        op.moyal_terms,
+        velocity,
+        kinetic_symbol,
+        potential_symbol,
+        W,
+        Wq,
+        Wp,
+        fill!(similar(W), 0),
+        fill!(similar(W), 0),
+        plan_rfft(W, 1),
+        plan_brfft(Wq, nq, 1),
+        plan_rfft(W, 2),
+        plan_brfft(Wp, np, 2),
+        move_drive(op.drive, device, T),
+    )
+end
+
+element_type(op::SpectralWignerMoyal) = eltype(op.velocity)
+element_type(op::FiniteDifferenceWignerMoyal) = Float64
+state_prototype(op::SpectralWignerMoyal) = op.velocity
+state_prototype(op::FiniteDifferenceWignerMoyal) = Matrix{Float64}(undef, 0, 0)
 
 # Fourier symbol of the Moyal potential term: M[i, j] multiplies the mode exp(iκⱼp) of
 # W(qᵢ, ⋅).
@@ -194,6 +266,13 @@ end
 
 # Coefficient cₛ = (-1)ˢ (ħ/2)²ˢ / (2s + 1)! of V⁽²ˢ⁺¹⁾ ∂²ˢ⁺¹W/∂p²ˢ⁺¹ in the Moyal series.
 moyal_coefficient(s::Integer, hbar::Real) = (-1)^s * (hbar / 2)^(2s) / factorial(2s + 1)
+
+# The coefficients cₛ V⁽²ˢ⁺¹⁾(qᵢ) of the odd momentum derivatives, as a `length(q) × terms`
+# matrix, from the derivatives of the potential.
+function moyal_coefficients(derivatives, hbar)
+    return derivatives .*
+           transpose([moyal_coefficient(s, hbar) for s in axes(derivatives, 2) .- 1])
+end
 
 # Odd derivatives V⁽²ˢ⁺¹⁾(qᵢ) for s = 0, …, terms - 1, as a `length(q) × terms` matrix.
 function moyal_derivatives(V, q, terms)
@@ -294,9 +373,10 @@ function wigner_moyal_problem(W0::AbstractMatrix, tspan, op::AbstractWignerMoyal
             "$(size(op.grid))",
         ),
     )
-    initial = Matrix{Float64}(W0)
+    T = element_type(op)
+    initial = state_like(state_prototype(op), T, W0)
     all(isfinite, initial) || throw(ArgumentError("initial Wigner function must be finite"))
-    return ODEProblem(wigner_moyal!, initial, tspan, op)
+    return ODEProblem(wigner_moyal!, initial, convert_tspan(T, tspan), op)
 end
 
 """

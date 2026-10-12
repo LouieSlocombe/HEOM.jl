@@ -3,6 +3,7 @@
 
 function plotting_state(W::AbstractMatrix, grid::PhaseSpaceGrid)
     check_size(W, grid)
+    W = to_host(W)
     eltype(W) <: Real || throw(ArgumentError("Wigner samples must be real"))
     all(isfinite, W) || throw(ArgumentError("Wigner samples must be finite"))
     return W, grid

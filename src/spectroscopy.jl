@@ -81,19 +81,38 @@ function linear_response_problem(
         potential = dipole,
         discretization,
         moyal_terms = h.moyal_terms,
+        device = array_wrapper(state_prototype(op)),
+        float_type = element_type(op),
     )
     is_time_dependent(kick) &&
         throw(ArgumentError("dipole must be a time-independent function of position"))
     seed = similar(prob.u0)
     if op isa WignerHEOM
-        for a in axes(seed, 3)
-            potential_action!(@view(seed[:, :, a]), @view(prob.u0[:, :, a]), kick)
-        end
+        response_seed!(op.batch, seed, prob.u0, kick)
     else
         potential_action!(seed, prob.u0, kick)
     end
     prob.u0 .= .-seed
     return prob
+end
+
+function response_seed!(::Nothing, seed, U, kick)
+    for a in axes(seed, 3)
+        potential_action!(@view(seed[:, :, a]), @view(U[:, :, a]), kick)
+    end
+    return nothing
+end
+
+# One batched transform for the whole hierarchy, with the dipole's Moyal symbol.
+function response_seed!(batch::BatchedHierarchy, seed, U, kick)
+    batched_symbol_action!(seed, U, batch, permutedims(kick.potential_symbol))
+    return nothing
+end
+
+# Only the physical member is measured, so a device hierarchy saves just that member.
+reduced_saves(op) = (;)
+function reduced_saves(op::WignerHEOM)
+    return state_prototype(op) isa Array ? (;) : (; save_idxs = physical_save_idxs(op))
 end
 
 function linear_response_problem(eq::EquilibriumResult, tspan; kwargs...)
@@ -141,7 +160,8 @@ function linear_response(
     values = Float64[potential_value(observable, q) for q in op.grid.q]
     all(isfinite, values) || throw(ArgumentError("observable must be finite in Float64"))
     prob = linear_response_problem(Ueq, tspan, op; dipole, jacobian)
-    options = merge((; save_start = true, save_end = true), (; kwargs...))
+    options =
+        merge((; save_start = true, save_end = true), reduced_saves(op), (; kwargs...))
     sol = solve(prob, alg; options...)
     successful_retcode(sol) && !isempty(sol.t) && last(sol.t) == last(prob.tspan) || throw(
         ErrorException(

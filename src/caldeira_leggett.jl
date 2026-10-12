@@ -1,16 +1,20 @@
 abstract type AbstractCaldeiraLeggett <: AbstractPhaseSpaceOperator end
 
-struct SpectralCaldeiraLeggett{H<:SpectralWignerMoyal} <: AbstractCaldeiraLeggett
+struct SpectralCaldeiraLeggett{
+    H<:SpectralWignerMoyal,
+    R<:AbstractMatrix,
+    C<:AbstractMatrix,
+} <: AbstractCaldeiraLeggett
     grid::PhaseSpaceGrid
     mass::Float64
     hbar::Float64
     friction::Float64
     kT::Float64
     hamiltonian::H
-    momentum::Matrix{Float64}
-    friction_symbol::Matrix{ComplexF64}
-    diffusion_symbol::Matrix{Float64}
-    bath::Matrix{ComplexF64}
+    momentum::R
+    friction_symbol::C
+    diffusion_symbol::R
+    bath::C
 end
 
 struct FiniteDifferenceCaldeiraLeggett{H<:FiniteDifferenceWignerMoyal} <:
@@ -29,7 +33,8 @@ end
 
 """
     caldeira_leggett_operator(grid; mass, potential, friction, kT, hbar = 1.0,
-                             discretization = Spectral(), moyal_terms = nothing)
+                             discretization = Spectral(), moyal_terms = nothing,
+                             device = Array, float_type = Float64)
 
 Semi-discretise the high-temperature, Markovian Caldeira–Leggett equation,
 
@@ -46,7 +51,7 @@ model. For a harmonic well it approaches the classical thermal Gaussian with mea
 `kT`, centred at the well minimum. Setting `kT = 0` gives formal friction-only evolution,
 which need not preserve a physical quantum state. No extra Lindblad diffusion is added.
 
-`discretization` and `moyal_terms` have the same meaning as in
+`discretization`, `moyal_terms`, `device` and `float_type` have the same meaning as in
 [`wigner_moyal_operator`](@ref). Friction is discretised in conservative flux form so that
 the discrete integral of `W` is conserved. The periodic box must contain the evolving
 distribution with negligible boundary weight. Diffusion can make fine grids stiff.
@@ -61,6 +66,8 @@ function caldeira_leggett_operator(
     hbar::Real = 1.0,
     discretization::Union{Spectral,FiniteDifference} = Spectral(),
     moyal_terms::Union{Nothing,Integer} = nothing,
+    device = Array,
+    float_type = Float64,
 )
     m, ħ, γ, θ = Float64(mass), Float64(hbar), Float64(friction), Float64(kT)
     isfinite(m) && m > 0 || throw(ArgumentError("mass must be finite and positive"))
@@ -78,8 +85,34 @@ function caldeira_leggett_operator(
         discretization,
         moyal_terms,
     )
-    return build_caldeira_leggett(hamiltonian, γ, θ, diffusion)
+    op = build_caldeira_leggett(hamiltonian, γ, θ, diffusion)
+    return move_operator(op, check_device(device), check_float_type(float_type))
 end
+
+move_operator(op::SpectralCaldeiraLeggett, ::Type{Array}, ::Type{Float64}) = op
+move_operator(op::FiniteDifferenceCaldeiraLeggett, ::Type{Array}, ::Type{Float64}) = op
+function move_operator(
+    op::SpectralCaldeiraLeggett,
+    device,
+    ::Type{T},
+) where {T<:AbstractFloat}
+    hamiltonian = move_operator(op.hamiltonian, device, T)
+    return SpectralCaldeiraLeggett(
+        op.grid,
+        op.mass,
+        op.hbar,
+        op.friction,
+        op.kT,
+        hamiltonian,
+        to_device(device, T, op.momentum),
+        to_device(device, T, op.friction_symbol),
+        to_device(device, T, op.diffusion_symbol),
+        similar(hamiltonian.Wp),
+    )
+end
+
+element_type(op::AbstractCaldeiraLeggett) = element_type(op.hamiltonian)
+state_prototype(op::AbstractCaldeiraLeggett) = state_prototype(op.hamiltonian)
 
 function build_caldeira_leggett(op::SpectralWignerMoyal, friction, kT, diffusion)
     np = length(op.grid.p)
@@ -162,8 +195,8 @@ phase_space_rhs!(dW, W, op::AbstractCaldeiraLeggett, t) = caldeira_leggett!(dW, 
 
 Method-of-lines `ODEProblem` for Caldeira–Leggett evolution of the `nq × np` initial
 Wigner matrix `W0`. The grid form passes keywords to [`caldeira_leggett_operator`](@ref);
-the operator form reuses an existing operator. The problem owns a real, finite `Float64`
-copy of `W0`.
+the operator form reuses an existing operator. The problem owns a real, finite copy of `W0`
+in the operator's array type and precision.
 
 As with [`wigner_moyal_problem`](@ref), use an explicit solver such as `Vern9()`.
 The spectral buffers do not accept dual numbers and no sparse Jacobian is supplied for
@@ -181,10 +214,10 @@ end
 function caldeira_leggett_problem(W0::AbstractMatrix, tspan, op::AbstractCaldeiraLeggett)
     check_size(W0, op.grid)
     eltype(W0) <: Real || throw(ArgumentError("initial Wigner function must be real"))
-    W = Matrix{Float64}(W0)
-    all(isfinite, W) ||
-        throw(ArgumentError("initial Wigner function must be finite in Float64"))
-    return ODEProblem(caldeira_leggett!, W, tspan, op)
+    T = element_type(op)
+    W = state_like(state_prototype(op), T, W0)
+    all(isfinite, W) || throw(ArgumentError("initial Wigner function must be finite in $T"))
+    return ODEProblem(caldeira_leggett!, W, convert_tspan(T, tspan), op)
 end
 
 function update_caldeira_leggett!(op::FiniteDifferenceCaldeiraLeggett, t)

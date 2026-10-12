@@ -38,7 +38,7 @@ function probability(
     check_size(W, grid)
     wq = interval_weights(grid.q, grid.dq, q)
     wp = interval_weights(grid.p, grid.dp, p)
-    return dot(wq, W, wp)
+    return dot(wq, to_host(W), wp)
 end
 
 """
@@ -49,19 +49,19 @@ The momentum integral uses the periodic rectangle rule.
 """
 function probability_current(W::AbstractMatrix, grid::PhaseSpaceGrid; mass::Real)
     check_size(W, grid)
-    return (W * grid.p) .* (grid.dp / mass)
+    return (to_host(W) * grid.p) .* (grid.dp / mass)
 end
 
 # Use the same right-hand side as the integrator, including the selected discretisation.
 function time_derivative(W::AbstractMatrix, op::AbstractPhaseSpaceOperator, t)
     check_size(W, op.grid)
-    dW = similar(W, Float64)
+    dW = similar(W, promote_type(eltype(W), element_type(op)))
     phase_space_rhs!(dW, W, op, t)
     return dW
 end
 
 function time_derivative(U::AbstractArray{<:Real,3}, op::WignerHEOM, t)
-    dU = similar(U, Float64)
+    dU = similar(U, promote_type(eltype(U), element_type(op)))
     heom!(dU, U, op, t)
     return physical_wigner(dU)
 end

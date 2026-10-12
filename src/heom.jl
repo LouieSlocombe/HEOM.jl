@@ -242,7 +242,8 @@ struct HEOMMomentum{D1,D2}
     second::D2
 end
 
-struct WignerHEOM{H<:AbstractWignerMoyal,D} <: AbstractPhaseSpaceOperator
+struct WignerHEOM{H<:AbstractWignerMoyal,D,R<:AbstractMatrix,Q<:AbstractVector,B} <:
+       AbstractPhaseSpaceOperator
     grid::PhaseSpaceGrid
     mass::Float64
     hbar::Float64
@@ -261,7 +262,9 @@ struct WignerHEOM{H<:AbstractWignerMoyal,D} <: AbstractPhaseSpaceOperator
     transfer::SparseMatrixCSC{Float64,Int}
     hamiltonian::H
     momentum::D
-    scratch::Matrix{Float64}
+    scratch::R
+    qcol::Q                  # the grid's q axis on the operator's device, in its precision
+    batch::B                 # `nothing` for the per-member loop
 end
 
 """
@@ -270,8 +273,8 @@ end
 Exact number of auxiliary members, including the physical root, for `modes` bath
 exponentials and total occupation at most `depth`. Returns a `BigInt` so resource
 estimates do not overflow before a hierarchy is built. One Float64 state requires
-`8 * prod(size(grid)) * hierarchy_size(modes, depth)` bytes; integration needs several
-state-sized work arrays, and saved trajectories need additional storage.
+`8 * prod(size(grid)) * hierarchy_size(modes, depth)` bytes (4 for Float32); integration
+needs several state-sized work arrays, and saved trajectories need additional storage.
 """
 function hierarchy_size(modes::Integer, depth::Integer)
     modes >= 0 || throw(ArgumentError("modes must be nonnegative"))
@@ -409,7 +412,8 @@ end
 
 """
     heom_operator(grid; mass, potential, bath, depth, discretization = Spectral(),
-                  moyal_terms = nothing, scaled = false, max_ados = nothing)
+                  moyal_terms = nothing, scaled = false, max_ados = nothing,
+                  device = Array, float_type = Float64, batched = nothing)
 
 Wigner–Moyal hierarchical equations of motion for linear coordinate coupling to an
 [`ExponentialBath`](@ref). The unscaled, real auxiliary Wigner functions obey
@@ -460,6 +464,16 @@ guarantee the accuracy or stability of a finite truncation. No factorials or pow
 are formed during construction. Use [`rescale_hierarchy`](@ref) to convert an existing
 3D initial state or restart between conventions.
 
+`device` is the array type that holds the operator and its states (`Array`, or for example
+`CuArray`) and `float_type` is `Float64` or `Float32`; see [`wigner_moyal_operator`](@ref).
+Everything is built on the host in `Float64` and converted once. `Float32` needs
+`scaled = true` for deep hierarchies, since unscaled auxiliaries can leave its range.
+Off the host (`device !== Array`), or with `batched = true`, the right-hand side evaluates
+the whole hierarchy with batched transforms and two kernels (four FFTs per call, against
+about eight per member), which needs `using KernelAbstractions` (GPU packages load it).
+A spectral batched hierarchy keeps about five extra state-sized work arrays; finite
+differences run as stencils in one kernel. The default `batched = false` on the host is the
+per-member reference loop.
 `max_ados` optionally limits the number of members before allocating the hierarchy.
 Use [`hierarchy_size`](@ref) to estimate storage beforehand. No positivity correction
 is applied. The operator owns mutable work buffers; give each concurrent solve its
@@ -475,7 +489,11 @@ function heom_operator(
     moyal_terms::Union{Nothing,Integer} = nothing,
     scaled::Bool = false,
     max_ados::Union{Nothing,Integer} = nothing,
+    device = Array,
+    float_type = Float64,
+    batched::Union{Nothing,Bool} = nothing,
 )
+    device, T = check_device(device), check_float_type(float_type)
     m = Float64(mass)
     isfinite(m) && m > 0 || throw(ArgumentError("mass must be finite and positive"))
     depth >= 0 || throw(ArgumentError("depth must be nonnegative"))
@@ -484,7 +502,7 @@ function heom_operator(
     members = hierarchy_size(length(bath.rates), depth)
     members <= typemax(Int) ||
         throw(ArgumentError("hierarchy size exceeds the integer range"))
-    prod(big.(size(grid))) * members <= typemax(Int) ÷ sizeof(Float64) ||
+    prod(big.(size(grid))) * members <= typemax(Int) ÷ sizeof(T) ||
         throw(ArgumentError("one hierarchy state exceeds the addressable array size"))
     if max_ados !== nothing
         max_ados > 0 || throw(ArgumentError("max_ados must be positive"))
@@ -519,7 +537,7 @@ function heom_operator(
     coordinate_coupling, lowering, raising_derivative, raising_coordinate, log_scales =
         hierarchy_couplings(b, indices, upper, lower, scaled)
     transfer = hierarchy_transfer(b, indices, upper, lower, scaled)
-    return WignerHEOM(
+    op = WignerHEOM(
         grid,
         m,
         b.hbar,
@@ -539,8 +557,87 @@ function heom_operator(
         h,
         heom_momentum(h),
         zeros(size(grid)),
+        copy(grid.q),
+        nothing,
+    )
+    return move_operator(op, device, T; batched = something(batched, device !== Array))
+end
+
+function move_operator(
+    op::WignerHEOM,
+    device,
+    ::Type{T};
+    batched::Bool = false,
+) where {T<:AbstractFloat}
+    device === Array && T === Float64 && !batched && return op
+    T === Float64 || check_representable(T, op)
+    h = move_hamiltonian(op.hamiltonian, device, T, batched)
+    batch = batched ? build_batched(op, h, device, T) : nothing
+    momentum = move_momentum(h, op, device, T)
+    return WignerHEOM(
+        op.grid,
+        op.mass,
+        op.hbar,
+        op.bath,
+        op.depth,
+        op.scaled,
+        op.indices,
+        op.upper,
+        op.lower,
+        op.damping,
+        op.coordinate_coupling,
+        op.lowering,
+        op.raising_derivative,
+        op.raising_coordinate,
+        op.log_scales,
+        op.transfer,
+        h,
+        momentum,
+        fill!(similar(state_prototype(h), T, size(op.grid)...), 0),
+        to_device(device, T, op.grid.q),
+        batch,
     )
 end
+
+# A batched hierarchy evaluates finite differences with stencils, also on the host.
+move_hamiltonian(h::SpectralWignerMoyal, device, ::Type{T}, batched) where {T} =
+    move_operator(h, device, T)
+function move_hamiltonian(
+    h::FiniteDifferenceWignerMoyal,
+    device,
+    ::Type{T},
+    batched,
+) where {T}
+    return batched ? stencil_operator(h, device, T) : move_operator(h, device, T)
+end
+
+function move_momentum(h::SpectralWignerMoyal, op::WignerHEOM, device, ::Type{T}) where {T}
+    return HEOMMomentum(
+        to_device(device, T, op.momentum.first),
+        to_device(device, T, op.momentum.second),
+    )
+end
+
+# Coefficients beyond the range of the narrower type would silently become infinite.
+function check_representable(::Type{T}, op::WignerHEOM) where {T}
+    tables = (
+        op.damping,
+        op.lowering,
+        op.raising_derivative,
+        op.raising_coordinate,
+        op.transfer.nzval,
+    )
+    all(table -> all(isfinite, T.(table)), tables) && isfinite(T(op.bath.diffusion)) ||
+        throw(
+            ArgumentError(
+                "hierarchy coefficients exceed the range of $T; use scaled = true",
+            ),
+        )
+    return nothing
+end
+
+element_type(op::WignerHEOM) = element_type(op.hamiltonian)
+state_prototype(op::WignerHEOM) = state_prototype(op.hamiltonian)
 
 """
     hierarchy_indices(op)
@@ -567,9 +664,9 @@ function rescale_hierarchy(U::AbstractArray, op::WignerHEOM; scaled::Bool)
     check_hierarchy_size(U, op)
     eltype(U) <: Real || throw(ArgumentError("hierarchy must be real"))
     all(isfinite, U) || throw(ArgumentError("hierarchy must be finite"))
-    out = Array{Float64,3}(U)
+    out = Array{Float64,3}(to_host(U))
     all(isfinite, out) || throw(ArgumentError("hierarchy must be finite in Float64"))
-    scaled == op.scaled && return out
+    scaled == op.scaled && return convert_like(U, out)
     for a in 2:length(op.indices)
         exponent = (scaled ? -1 : 1) * op.log_scales[a]
         factor = exp(exponent)
@@ -585,7 +682,7 @@ function rescale_hierarchy(U::AbstractArray, op::WignerHEOM; scaled::Bool)
             W[i] = y
         end
     end
-    return out
+    return convert_like(U, out)
 end
 
 function heom_derivative!(out, W, h::SpectralWignerMoyal, symbol)
@@ -619,15 +716,25 @@ auxiliaries encode bath correlations and may have nonzero integrals.
 function heom!(dU, U, op::WignerHEOM, t)
     check_hierarchy_size(U, op)
     check_hierarchy_size(dU, op)
+    update_generator!(op.hamiltonian, t)
+    heom_rhs!(op.batch, dU, U, op)
+    return nothing
+end
+
+# The per-member reference. Scalars are converted once to the state's precision so a
+# Float32 state is never promoted through Float64 coefficients.
+function heom_rhs!(::Nothing, dU, U, op::WignerHEOM)
     h, b = op.hamiltonian, op.bath
-    update_generator!(h, t)
+    T = element_type(op)
+    D = T(b.diffusion)
     for a in eachindex(op.indices)
         W, dW = @view(U[:, :, a]), @view(dU[:, :, a])
         apply_wigner_moyal!(dW, W, h)
-        @. dW -= op.damping[a] * W
+        γ = T(op.damping[a])
+        @. dW -= γ * W
         if !iszero(b.diffusion)
             heom_derivative!(op.scratch, W, h, op.momentum.second)
-            @. dW += b.diffusion * op.scratch
+            @. dW += D * op.scratch
         end
     end
     # Differentiate each source once, then scatter its upward/downward contributions.
@@ -635,7 +742,7 @@ function heom!(dU, U, op::WignerHEOM, t)
         W = @view U[:, :, a]
         for pointer in SparseArrays.nzrange(op.transfer, a)
             target = op.transfer.rowval[pointer]
-            factor = op.transfer.nzval[pointer]
+            factor = T(op.transfer.nzval[pointer])
             dW = @view dU[:, :, target]
             @. dW += factor * W
         end
@@ -644,13 +751,13 @@ function heom!(dU, U, op::WignerHEOM, t)
             below, above = op.lower[k, a], op.upper[k, a]
             if below != 0
                 dW = @view dU[:, :, below]
-                factor = op.lowering[k, a]
+                factor = T(op.lowering[k, a])
                 @. dW += factor * op.scratch
             end
             if above != 0
                 dW = @view dU[:, :, above]
-                cr, ci = op.raising_derivative[k, a], op.raising_coordinate[k, a]
-                @. dW += cr * op.scratch + ci * op.grid.q * W
+                cr, ci = T(op.raising_derivative[k, a]), T(op.raising_coordinate[k, a])
+                @. dW += cr * op.scratch + ci * op.qcol * W
             end
         end
     end
@@ -666,7 +773,7 @@ Wigner matrix initialises the physical root and sets every auxiliary to zero: a
 factorized initial system and bare bath state. With a counterterm this includes the
 physical initial-slip transient. An entire 3D hierarchy may instead be supplied to
 restart a calculation or initialise a correlated state. The input is copied to a
-real, finite `Float64` array, without renormalisation.
+real, finite array in the operator's array type and precision, without renormalisation.
 Use [`equilibrate`](@ref) to prepare a correlated state by relaxation and test
 stationarity of the entire hierarchy before restarting with `heom_problem(result, tspan)`.
 
@@ -702,16 +809,22 @@ function heom_problem(
 )
     eltype(U0) <: Real || throw(ArgumentError("initial hierarchy must be real"))
     all(isfinite, U0) || throw(ArgumentError("initial hierarchy must be finite"))
+    T, prototype = element_type(op), state_prototype(op)
     if ndims(U0) == 2
         check_size(U0, op.grid)
-        U = zeros(size(op.grid)..., length(op.indices))
-        U[:, :, 1] .= U0
+        U = fill!(similar(prototype, T, size(op.grid)..., length(op.indices)), 0)
+        U[:, :, 1] .= state_like(prototype, T, U0)
     else
         check_hierarchy_size(U0, op)
-        U = Array{Float64,3}(U0)
+        U = state_like(prototype, T, U0)
     end
-    all(isfinite, U) || throw(ArgumentError("initial hierarchy must be finite in Float64"))
-    return ODEProblem(heom_ode_function(op, jacobian, first(tspan)), U, tspan, op)
+    all(isfinite, U) || throw(ArgumentError("initial hierarchy must be finite in $T"))
+    return ODEProblem(
+        heom_ode_function(op, jacobian, first(tspan)),
+        U,
+        convert_tspan(T, tspan),
+        op,
+    )
 end
 
 """
@@ -721,6 +834,9 @@ end
 View of the physical (first) hierarchy member, usable with all matrix-and-grid
 observables and plotting functions. For a HEOM solution, select a saved state with
 `index` (the final state by default). Mutating the view changes the underlying state.
+On a device the view stays there; the analysis functions copy it to the host. A solution
+saved with `save_idxs = physical_save_idxs(op)` holds flat vectors of the physical member,
+which `physical_wigner(sol)` reshapes into a matrix.
 """
 function physical_wigner(U::AbstractArray{<:Real,3})
     size(U, 3) > 0 || throw(ArgumentError("hierarchy needs a physical member"))
@@ -730,14 +846,19 @@ end
 function physical_wigner(sol::AbstractODESolution, index::Integer = lastindex(sol.u))
     sol.prob.p isa WignerHEOM ||
         throw(ArgumentError("solution must come from heom_problem"))
-    return physical_wigner(sol.u[index])
+    return root_state(sol.u[index], sol.prob.p)
 end
+
+# A saved state is a full hierarchy, or only its physical member when `solve` was given
+# `save_idxs = physical_save_idxs(op)`.
+root_state(U::AbstractArray{<:Real,3}, ::WignerHEOM) = physical_wigner(U)
+root_state(U::AbstractVector{<:Real}, op::WignerHEOM) = reshape(U, size(op.grid))
 
 # The existing solution diagnostics/plots consume physical states only.
 physical_states(states, ::AbstractPhaseSpaceOperator) = states
-physical_states(states, ::WignerHEOM) = physical_wigner.(states)
+physical_states(states, op::WignerHEOM) = [physical_state(U, op) for U in states]
 physical_state(W, ::AbstractPhaseSpaceOperator) = W
-physical_state(U, ::WignerHEOM) = physical_wigner(U)
+physical_state(U, op::WignerHEOM) = to_host(root_state(U, op))
 
 function Base.show(io::IO, op::WignerHEOM)
     print(

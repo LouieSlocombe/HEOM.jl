@@ -72,6 +72,11 @@ function heom_tgrad!(dT, u, op, t)
     end
     dimensions = (size(op.grid)..., length(op.indices))
     out, U = reshape(dT, dimensions), reshape(u, dimensions)
+    heom_tgrad_rhs!(op.batch, out, U, op, t)
+    return nothing
+end
+
+function heom_tgrad_rhs!(::Nothing, out, U, op, t)
     for a in eachindex(op.indices)
         wigner_tgrad!(@view(out[:, :, a]), @view(U[:, :, a]), op.hamiltonian, t)
     end

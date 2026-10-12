@@ -33,6 +33,7 @@ ecosystem integrates it in time.
 - [Analysis](#analysis), including tunnelling rates
 - [Plotting](#plotting) and [Animations](#animations)
 - [Numerical method](#numerical-method)
+- [GPU and single precision](#gpu-and-single-precision)
 - [Scope and limitations](#scope-and-limitations)
 - [Troubleshooting](#troubleshooting)
 - [References and background notes](#references-and-background-notes)
@@ -46,10 +47,13 @@ ecosystem integrates it in time.
 - An ODE solver package in your environment, for example `OrdinaryDiffEqVerner`,
   `OrdinaryDiffEqTsit5`, or the full `OrdinaryDiffEq`.
 - Optional: `Plots` for Wigner heatmaps, marginal densities, diagnostic plots and animations.
+- Optional: `CUDA` (or another [KernelAbstractions.jl](https://github.com/JuliaGPU/KernelAbstractions.jl)
+  backend) to run on a GPU; see [GPU and single precision](#gpu-and-single-precision).
 - Optional: [pre-commit](https://pre-commit.com/#installation) for Git hooks.
 
-CI runs the test suite on Julia 1.13 on Linux only. The declared lower bound of
-Julia 1.10 in `Project.toml` is not exercised in CI.
+CI runs the test suite on Julia 1.13 on Linux only, on the CPU. The declared lower bound
+of Julia 1.10 in `Project.toml` is not exercised in CI, and the CUDA test suite is run by
+hand (see [Development](#development)).
 
 ## Installation
 
@@ -385,7 +389,7 @@ Estimate the size and memory of a hierarchy before building it:
 
 ```julia
 members = hierarchy_size(length(bath.rates), depth)   # BigInt, root included
-bytes_per_state = 8 * prod(size(grid)) * members      # one Float64 hierarchy state
+bytes_per_state = 8 * prod(size(grid)) * members      # one Float64 hierarchy state (4 for Float32)
 op = heom_operator(grid; mass, potential = V, bath, depth, max_ados = 20_000)
 ```
 
@@ -770,6 +774,7 @@ headless machines.
 | [`low_temperature_strong_coupling.jl`](examples/low_temperature_strong_coupling.jl) | Cold, strongly coupled anharmonic dynamics with separate depth, Padé, spacing and box sweeps; solves seven hierarchies | OrdinaryDiffEqVerner |
 | [`bath_compression.jl`](examples/bath_compression.jl) | Balanced compression of an eight-mode Padé bath, with spectral, covariance and depth checks; several minutes | OrdinaryDiffEqVerner |
 | [`tunnelling_rates.jl`](examples/tunnelling_rates.jl) | Low-temperature double-well tunnelling rates from a near-equilibrium HEOM preparation; about 2 GB and a few minutes | OrdinaryDiffEqVerner, LinearSolve, SciMLBase, Plots |
+| [`gpu_benchmark.jl`](examples/gpu_benchmark.jl) | Time of one hierarchy right-hand-side evaluation on the CPU loop, the batched kernels, and a CUDA device in `Float64` and `Float32`; sized by `HEOM_N`, `HEOM_PADE` and `HEOM_DEPTH` | KernelAbstractions, CUDA |
 
 Two files are helpers included by the scripts above rather than examples in their own
 right. [`heom_gaussian_reference.jl`](examples/heom_gaussian_reference.jl) is the
@@ -785,6 +790,8 @@ trace-constrained stationary solver used by the tunnelling example.
 | `PhaseSpaceGrid(qlims, nq, plims, np)` | Uniform periodic grid on `[qmin, qmax) × [pmin, pmax)` |
 | `on_grid(f, grid)` | Sample `f(q, p)` on the grid |
 | `Spectral()`, `FiniteDifference(order = 4)` | Discretisation options for every operator; finite differences need an integer `moyal_terms` |
+| `device = CuArray`, `float_type = Float32` | Keywords of every `*_operator` and `*_problem(…, grid; …)` constructor that select the array type and precision; see [GPU and single precision](#gpu-and-single-precision) |
+| `physical_save_idxs(op)` | Linear indices of the physical member, for `solve(…; save_idxs)`, which keeps device trajectories small |
 | `wigner_moyal_problem(W0, tspan, grid; mass, potential, ...)` | `ODEProblem` for the Wigner–Moyal equation |
 | `wigner_moyal_operator(grid; mass, potential, hbar, discretization, moyal_terms)` | Reusable semi-discrete operator; `wigner_moyal_problem(W0, tspan, op)` takes it |
 | `wigner_moyal!(dW, W, op, t)` | In-place right-hand side |
@@ -1191,6 +1198,93 @@ The [Wigner–HEOM audit](references/wigner_heom_audit.md) records the literatur
 conventions, repaired defects, analytical references, measured errors, and remaining
 convergence limits.
 
+## GPU and single precision
+
+Every operator can live on a GPU, in `Float32` or `Float64`. Add a GPU package next to
+HEOM and name the array type with the `device` keyword; loading it also loads
+[KernelAbstractions.jl](https://github.com/JuliaGPU/KernelAbstractions.jl), which activates
+the extension that provides the kernels.
+
+```julia
+using HEOM, CUDA, OrdinaryDiffEqVerner
+
+grid = PhaseSpaceGrid((-8.0, 8.0), 64, (-8.0, 8.0), 64)
+bath = drude_lorentz_pade_bath(; reorganization = 0.3, cutoff = 1.0, kT = 0.5, pade = 3)
+op = heom_operator(grid; mass = 1.0, potential = V, bath, depth = 8, scaled = true,
+                   device = CuArray, float_type = Float32)
+prob = heom_problem(W0, (0.0f0, 6.0f0), op)      # a host W0 is converted and uploaded
+sol = solve(prob, Vern7(); saveat = 0.5f0, abstol = 1.0f-5, reltol = 1.0f-5)
+physical_wigner(sol)                              # a device view of the physical member
+```
+
+`device = Array, float_type = Float64`, the default, reproduces the host operators
+exactly. Both keywords are accepted by `wigner_moyal_operator`, `caldeira_leggett_operator`,
+`heom_operator` and the `*_problem(W0, tspan, grid; …)` forms that build them.
+Everything is built on the host in `Float64` and converted once, so `Float32` operators lose
+no accuracy to their setup.
+
+**What runs on the device.** All propagation: the Wigner–Moyal, Caldeira–Leggett and HEOM
+right-hand sides with either discretisation, time-dependent and driven potentials,
+`equilibrate`, and `linear_response`. Explicit solvers such as `Vern7()` work, as does
+the stiff `Rodas5P(autodiff = AutoFiniteDiff(), linsolve = KrylovJL_GMRES(), concrete_jac = false)`.
+Analysis functions (`diagnostics`, `energy`, `probability`, `tunnelling_rates`, the plotting
+and animation helpers, …) copy the physical member to the host and return host `Float64`
+results, so they accept device states unchanged. Setup that is host work by nature stays on
+the host: bath construction, fitting and compression, `eigenstates` and `thermal_wigner`,
+`hierarchy_stability`, `sparse(op)` and `jacobian = :sparse`, and `absorption_spectrum`.
+
+**How it is fast.** On a device, and with `batched = true` on the host, the hierarchy
+right-hand side acts on all members at once instead of looping over them. The members mix
+only through real matrices on the third axis, which commute with the momentum transform, so
+the Moyal potential term and both momentum derivatives share one forward and one backward
+FFT. The whole hierarchy needs four batched FFTs and two kernels per evaluation, against
+about eight FFTs and a dozen small kernels for every member in the reference loop.
+`FiniteDifference` operators run as matrix-free stencils outside the host `Float64` case,
+in one fused kernel; there is no sparse matrix on a device.
+The batched evaluation holds about five extra state-sized work arrays, on top of the solver
+stages, so it uses more memory than the loop.
+
+`examples/gpu_benchmark.jl` times one right-hand-side evaluation. The CPU rows use one
+thread. On an NVIDIA RTX 4080 SUPER, with a Drude–Lorentz Padé bath and `scaled = true`:
+
+| Grid | Members | CPU loop | GPU `Float64` | GPU `Float32` |
+|---|---|---|---|---|
+| 64×64 | 495 | 22.8 ms | 0.69 ms (33×) | 0.24 ms (93×) |
+| 64×64 | 1820 | 86.8 ms | 3.2 ms (27×) | 0.94 ms (93×) |
+| 128×128 | 495 | 151.6 ms | 4.6 ms (33×) | 1.1 ms (143×) |
+| 96×96 | 1287 | 196.4 ms | 7.2 ms (27×) | 2.1 ms (92×) |
+
+Consumer GPUs run `Float64` arithmetic far slower than `Float32`, but the right-hand side is
+limited by memory bandwidth, so `Float64` stays within a factor of three to four of `Float32` here.
+
+**Single precision.** Keep these in mind when using `float_type = Float32`:
+
+- Pass `scaled = true` for deep hierarchies. Unscaled auxiliaries grow like a factorial
+  and can leave the `Float32` range; `heom_operator` throws if its coefficients overflow, and
+  `rescale_hierarchy` throws if a converted state does.
+- Solver tolerances near `1e-5` are the practical floor. The default stationarity
+  tolerances of `equilibrate` (`1e-8`) and the norm and population tolerances of
+  `tunnelling_rates` (`1e-6`, `1e-8`) are below the rounding noise of a `Float32`
+  right-hand side, so loosen them.
+- Give `tspan` and `saveat` in the same precision (`0.0f0`); a `Float64` step size would
+  promote every device kernel to `Float64`. The `*_problem` constructors convert `tspan`.
+- Potentials and drive fields are always called with a `Float64` time and position.
+
+**Memory and trajectories.** A saved device state is a full hierarchy, 330 MB at
+64×64 with 10⁴ members in `Float64`. Save only what you need, for example
+`solve(prob, alg; save_idxs = physical_save_idxs(op))` keeps the physical member as a flat
+vector, and `physical_wigner(sol)`, `diagnostics(sol; potential)` and the plotting helpers
+reshape it. `linear_response` does this for device hierarchies automatically.
+
+**Drives.** `DrivenPotential` refreshes one coefficient per call and is the efficient choice
+on a device. A general `TimeDependentPotential` rebuilds its Moyal symbol on the host at every
+right-hand-side call and uploads it, which is much slower.
+
+**Testing.** CI has no GPU. It runs the batched kernels on the KernelAbstractions CPU
+backend and on `JLArray`, GPUArrays' reference array type, with scalar indexing disabled,
+which catches host/device mixing. The CUDA suite in `test/gpu` runs the same cases on a
+real device; see [Development](#development).
+
 ## Scope and limitations
 
 - **One dimension.** The phase space is a single position `q` and momentum `p`. There
@@ -1214,14 +1308,17 @@ convergence limits.
 - **Finite expansions.** Bath decompositions, hierarchy depth, grid, box and ODE
   tolerances are separate approximations and must be converged independently. A small
   spectral residual of a fitted or compressed bath does not establish thermalization.
-- **Differentiation.** The spectral right-hand side runs on FFTW and does not accept dual
-  numbers, so the ODE right-hand side cannot be differentiated by ForwardDiff. With
+- **Differentiation.** The spectral right-hand side runs on FFTW, or the device's FFT, and
+  does not accept dual numbers, so the ODE right-hand side cannot be differentiated by ForwardDiff. With
   `moyal_terms = N`, the potential itself must accept dual numbers.
 - **Dense eigenstates.** `eigenstates` and `thermal_wigner` diagonalise a dense `nq × nq`
   Hamiltonian; they are meant for moderate position grids and localised states.
 - **Operators are stateful.** Every operator owns FFT or scratch buffers. Construct a
   separate operator for each concurrent solve, for example in an `EnsembleProblem`, and
   do not mutate an operator retained by an `EquilibriumResult`.
+- **Devices.** The device paths need KernelAbstractions.jl, are one operator per solve like
+  the host, and are verified on CUDA only. Other KernelAbstractions backends (AMDGPU,
+  oneAPI) should work but are untested, and Apple's Metal has no `Float64`.
 
 ## Troubleshooting
 
@@ -1330,6 +1427,13 @@ Apply formatting changes with:
 julia --project=build_tools build_tools/format.jl --fix
 ```
 
+The CUDA tests need a GPU, so CI does not run them. On a machine with one:
+
+```bash
+julia --project=test/gpu -e 'using Pkg; Pkg.instantiate()'
+julia --project=test/gpu test/gpu/runtests.jl
+```
+
 Run the coverage gate used by CI:
 
 ```bash
@@ -1396,7 +1500,9 @@ environment that develops the package from the repository root, so run a script 
 │   └── workflows/ci.yml           # tests, consumer smoke test, formatting, coverage
 ├── build_tools/                   # separate JuliaFormatter and Coverage environment
 ├── examples/                      # runnable scripts, listed under Examples
-├── ext/HEOMPlotsExt.jl            # Plots-only animation implementation
+├── ext/
+│   ├── HEOMKernelAbstractionsExt.jl  # batched and stencil kernels for GPUs and the CPU backend
+│   └── HEOMPlotsExt.jl            # Plots-only animation implementation
 ├── prototypes/                    # exploratory studies, not part of the package
 │   ├── box_edge/                  # box-edge instability characterisation and remedies
 │   └── nz_terminator/             # final-tier closure benchmarks
@@ -1404,6 +1510,7 @@ environment that develops the package from the repository root, so run a script 
 ├── src/
 │   ├── HEOM.jl                    # package module and public exports
 │   ├── grid.jl                    # periodic phase-space grid
+│   ├── device.jl                  # array-type and precision helpers
 │   ├── derivatives.jl             # spectral and finite-difference discretisations
 │   ├── wigner_moyal.jl            # Wigner–Moyal operators and ODEProblem
 │   ├── driven.jl                  # time-dependent and separable driven potentials
@@ -1416,6 +1523,8 @@ environment that develops the package from the repository root, so run a script 
 │   ├── bath_compression.jl        # balanced reduction of exponential baths
 │   ├── aaa_bath.jl                # AAA rational fits of general spectral densities
 │   ├── bath_diagnostics.jl        # correlations, spectra and harmonic equilibrium
+│   ├── batched_heom.jl            # batched hierarchy right-hand side for devices
+│   ├── stencil.jl                 # matrix-free finite differences for devices
 │   ├── heom_solvers.jl            # sparse generator, Jacobian products, ODEFunction
 │   ├── equilibrium.jl             # equilibrate and EquilibriumResult
 │   ├── observables.jl             # marginals, moments, energy, overlaps, negativity
@@ -1429,6 +1538,7 @@ environment that develops the package from the repository root, so run a script 
 │   ├── plotting.jl                # optional Plots interface through RecipesBase
 │   └── animation.jl               # public animation API and documentation
 ├── test/                          # one file per source area, plus Aqua
+│   └── gpu/                       # CUDA equivalence tests, run by hand
 ├── .JuliaFormatter.toml           # formatting rules
 ├── .pre-commit-config.yaml        # file hygiene and formatting hooks
 └── Project.toml                   # package metadata, compatibility, test dependencies
