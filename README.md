@@ -557,8 +557,8 @@ correlated state or restart. Passing a matrix still sets higher auxiliaries to z
 
 The [cold, strongly coupled anharmonic example](examples/low_temperature_strong_coupling.jl)
 separately varies depth, Padé count, grid spacing and box size. The
-[support and validation notes](references/low_temperature_strong_coupling.md)
-give the equations, exact quantum Brownian-motion comparisons and convergence limits.
+[cold, strong benchmarks](test/cold_strong_benchmarks.jl) compare the coupled
+equilibrium and full transients with exact quantum Brownian-motion references.
 
 ### Long propagations and the box-edge instability
 
@@ -1194,10 +1194,6 @@ checked against closed forms instead:
 - A damped Fock state tests the decay of non-Gaussian structure, and the Drude
   fluctuation–dissipation spectrum independently tests Matsubara convergence.
 
-The [Wigner–HEOM audit](references/wigner_heom_audit.md) records the literature
-conventions, repaired defects, analytical references, measured errors, and remaining
-convergence limits.
-
 ## GPU and single precision
 
 Every operator can live on a GPU, in `Float32` or `Float64`. Add a GPU package next to
@@ -1365,12 +1361,6 @@ The [`references/`](references) directory holds implementation notes written for
 package. They record conventions, derivations, measured errors and open problems, and
 they separate what each paper states from what the implementation derives.
 
-- [`wigner_heom_audit.md`](references/wigner_heom_audit.md): the audit of the
-  Wigner–Moyal, hierarchy and Caldeira–Leggett conventions, the repaired defects and the
-  analytical validations behind the test suite.
-- [`low_temperature_strong_coupling.md`](references/low_temperature_strong_coupling.md):
-  scaled auxiliaries, Padé baths, repeated poles, stiff integration and the cold,
-  strong-coupling benchmarks.
 - [`cabrera_2015_wigner_implementation.md`](references/cabrera_2015_wigner_implementation.md):
   notes on Cabrera, Bondar, Jacobs and Rabitz, *Phys. Rev. A* **92**, 042122 (2015), the
   spectral Wigner propagation scheme and Caldeira–Leggett terms that the Hamiltonian
@@ -1506,7 +1496,7 @@ environment that develops the package from the repository root, so run a script 
 ├── prototypes/                    # exploratory studies, not part of the package
 │   ├── box_edge/                  # box-edge instability characterisation and remedies
 │   └── nz_terminator/             # final-tier closure benchmarks
-├── references/                    # implementation notes and audits
+├── references/                    # paper implementation notes
 ├── src/
 │   ├── HEOM.jl                    # package module and public exports
 │   ├── grid.jl                    # periodic phase-space grid
