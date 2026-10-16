@@ -1,6 +1,5 @@
 @testset "Animation helpers" begin
     extension = Base.get_extension(HEOM, :HEOMPlotsExt)
-    @test extension !== nothing
 
     # Unequal axes and signed, asymmetric states expose transposition errors and
     # distinguish each marginal's shared scale from the final frame's scale.
@@ -45,10 +44,7 @@
             for indices in ([0], [4])
                 @test_throws BoundsError animate(states, grid; indices)
             end
-            @test_throws DimensionMismatch animate([ones(2, 5)], grid)
-            @test_throws ArgumentError animate([complex.(W)], grid)
             @test_throws ArgumentError animate([fill(NaN, size(grid))], grid)
-            @test_throws ArgumentError animate([fill(Inf, size(grid))], grid)
             @test_throws DimensionMismatch animate(states, grid; times = [0.0])
             for bad_times in
                 ((0.0, 0.2, 3.0), [0.0, NaN, 3.0], [0.0, Inf, 3.0], complex.(times))

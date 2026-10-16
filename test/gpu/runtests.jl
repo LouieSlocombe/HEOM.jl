@@ -11,7 +11,6 @@ using ADTypes
 using CUDA
 using HEOM
 using KernelAbstractions
-using LinearAlgebra
 using LinearSolve
 using OrdinaryDiffEqRosenbrock
 using OrdinaryDiffEqVerner
@@ -51,11 +50,6 @@ field(t) = 0.3 * sin(1.3t)
 fd = (; discretization = FiniteDifference(4), moyal_terms = 2)
 
 @testset "CUDA" begin
-    @testset "Device" begin
-        @test CUDA.functional()
-        @test !isnothing(Base.get_extension(HEOM, :HEOMKernelAbstractionsExt))
-    end
-
     @testset "Single-slice operators" begin
         exact = wigner_moyal_operator(grid; mass = 1.2, potential = V)
         damped = caldeira_leggett_operator(

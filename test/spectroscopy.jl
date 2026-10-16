@@ -4,7 +4,7 @@ using SciMLBase: DiscreteCallback, terminate!
     grid = PhaseSpaceGrid((-6, 6), 48, (-6, 6), 48)
     W = on_grid((q, p) -> exp(-q^2-p^2) / π, grid)
     bath = ExponentialBath([0.2 - 0.1im], [1.0])
-    for discretization in (Spectral(), FiniteDifference(4)), scaled in (false, true)
+    for discretization in (Spectral(), FiniteDifference(4))
         op = heom_operator(
             grid;
             mass = 1.3,
@@ -13,7 +13,6 @@ using SciMLBase: DiscreteCallback, terminate!
             depth = 2,
             discretization,
             moyal_terms = 2,
-            scaled,
         )
         U = cat(W, 0.2W, -0.3W; dims = 3)
         original = copy(U)

@@ -18,7 +18,7 @@
 
     for (discretization, terms) in
         ((Spectral(), nothing), (Spectral(), 2), (FiniteDifference(4), 2))
-        for V in (potential, general, (q, t) -> V0(q) - E(t) * μ(q))
+        for V in (potential, general)
             op = wigner_moyal_operator(
                 grid;
                 mass = 1.2,

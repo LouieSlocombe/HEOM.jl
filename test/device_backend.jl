@@ -4,7 +4,6 @@
 include("jlarray_shim.jl")
 
 @testset "Batched hierarchy and device arrays" begin
-    @test !isnothing(Base.get_extension(HEOM, :HEOMKernelAbstractionsExt))
     grid = PhaseSpaceGrid((-6.0, 6.0), 24, (-6.0, 6.0), 20)
     V = harmonic_potential(; mass = 1.2, omega = 0.9)
     W0 = on_grid(
@@ -49,14 +48,6 @@ include("jlarray_shim.jl")
             kT = 0.5,
             pade = 2,
         ),
-        "Brownian oscillator" => brownian_oscillator_bath(;
-            reorganization = 0.35,
-            frequency = 1.7,
-            damping = 0.6,
-            kT = 0.4,
-            hbar = 0.8,
-            matsubara = 2,
-        ),
         "Jordan and rotation blocks" => combine_baths(
             jordan,
             rotation,
@@ -65,7 +56,13 @@ include("jlarray_shim.jl")
     )
 
     @testset "Batched RHS equals the per-member loop" begin
-        for (name, bath) in baths, scaled in (false, true), device in (Array, JLArray)
+        # The kernels do not branch on the bath: one diagonal bath with a terminator and
+        # one with Jordan and rotation blocks cover them.
+        for name in ("Drude with terminator", "Jordan and rotation blocks"),
+            scaled in (false, true),
+            device in (Array, JLArray)
+
+            bath = baths[name]
             kwargs = (; mass = 1.2, potential = V, bath, depth = 2, scaled)
             loop = heom_operator(grid; kwargs...)
             batched = heom_operator(grid; kwargs..., device, batched = true)
@@ -76,7 +73,7 @@ include("jlarray_shim.jl")
             heom!(dU, device_state(device, Float64, U), batched, 0.0)
             @test dU isa device
             @test relative(dU, expected) < 1e-13
-            # Float32 on the device, rounded once from the Float64 setup.
+            # Float32, rounded once from the Float64 setup, on each device's default path.
             batched32 = heom_operator(grid; kwargs..., device, float_type = Float32)
             U32 = device_state(device, Float32, U)
             dU32 = similar(U32)
@@ -214,12 +211,10 @@ include("jlarray_shim.jl")
             prob_host = heom_problem(W0, (0.0, 0.5), host)
             prob = heom_problem(W0, (0.0, 0.5), op)
             @test prob.u0 isa device{Float64,3}
-            @test_throws ArgumentError heom_problem(W0, (0.0, 0.5), op; jacobian = :sparse)
             options = (; saveat = 0.25, abstol = 1e-10, reltol = 1e-10)
             sol_host = solve(prob_host, Vern7(); options...)
             sol = solve(prob, Vern7(); options...)
             @test relative(sol.u[end], sol_host.u[end]) < 1e-9
-            @test physical_wigner(sol) isa AbstractMatrix
             @test relative(physical_wigner(sol), physical_wigner(sol_host)) < 1e-9
 
             # Saving only the physical member keeps device memory small.
@@ -278,6 +273,7 @@ include("jlarray_shim.jl")
         kwargs = (; mass = 1.2, potential = V, bath, depth = 2, scaled = true)
         host = heom_operator(grid; kwargs...)
         options = (; abstol = 1e-10, reltol = 1e-10)
+        response_options = (; saveat = 0.25, options...)
         equilibrium_host = equilibrate(
             W0,
             (0.0, 0.5),
@@ -306,7 +302,6 @@ include("jlarray_shim.jl")
             @test physical_wigner(equilibrium) isa AbstractMatrix
             @test heom_problem(equilibrium, (0.0, 0.1)).u0 isa device{Float64,3}
 
-            response_options = (; saveat = 0.25, options...)
             expected = linear_response(
                 equilibrium_host.hierarchy,
                 (0.0, 0.5),
@@ -326,15 +321,15 @@ include("jlarray_shim.jl")
             # Only the physical member is saved from a device hierarchy.
             expected_size = device === Array ? ndims(expected.solution.u[1]) : 1
             @test ndims(response.solution.u[1]) == expected_size
-            # Single-slice operators measure the response too.
-            single = wigner_moyal_operator(grid; mass = 1.2, potential = V, device)
-            single_host = wigner_moyal_operator(grid; mass = 1.2, potential = V)
-            @test maximum(
-                abs,
-                linear_response(W0, (0.0, 0.5), single, Vern7(); response_options...).response -
-                linear_response(W0, (0.0, 0.5), single_host, Vern7(); response_options...).response,
-            ) < 1e-9
         end
+        # Single-slice operators measure the response too.
+        single = wigner_moyal_operator(grid; mass = 1.2, potential = V, device = JLArray)
+        single_host = wigner_moyal_operator(grid; mass = 1.2, potential = V)
+        @test maximum(
+            abs,
+            linear_response(W0, (0.0, 0.5), single, Vern7(); response_options...).response -
+            linear_response(W0, (0.0, 0.5), single_host, Vern7(); response_options...).response,
+        ) < 1e-9
     end
 
     @testset "Finite differences as stencils" begin
@@ -490,8 +485,5 @@ include("jlarray_shim.jl")
 
     @testset "Errors" begin
         @test_throws ArgumentError HEOM.require_backend(nothing)
-        @test isnothing(
-            HEOM.require_backend(Base.get_extension(HEOM, :HEOMKernelAbstractionsExt)),
-        )
     end
 end

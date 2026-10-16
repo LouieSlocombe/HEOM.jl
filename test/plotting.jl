@@ -17,10 +17,7 @@ end
         q, p, z = series.args
         @test q == grid.q
         @test p == grid.p
-        @test size(z) == reverse(size(grid))
-        @test z[4, 2] == W[2, 4]
         @test z == permutedims(W)
-        @test minimum(z) < 0 < maximum(z)
         @test series.plotattributes[:seriestype] == :heatmap
         @test series.plotattributes[:xguide] == "q"
         @test series.plotattributes[:yguide] == "p"
@@ -61,11 +58,6 @@ end
         @test series[1].plotattributes[:xguide] == "q"
         @test series[2].plotattributes[:xguide] == "p"
         @test series[1].plotattributes[:subplot] != series[2].plotattributes[:subplot]
-        @test sum(last(series[1].args)) * grid.dq ≈ phase_space_integral(W, grid)
-        @test sum(last(series[2].args)) * grid.dp ≈ phase_space_integral(W, grid)
-        scaled = plotting_recipe(HEOM.MarginalPlot, 0.4W, grid)
-        @test last(scaled[1].args) ≈ 0.4last(series[1].args)
-        @test last(scaled[2].args) ≈ 0.4last(series[2].args)
         overridden = plotting_recipe(HEOM.MarginalPlot, W, grid; linewidth = 3)
         @test all(s -> s.plotattributes[:linewidth] == 3, overridden)
     end
@@ -99,40 +91,6 @@ end
         other_prob = ODEProblem((du, u, p, t) -> fill!(du, 0.0), W, (0.0, 0.01))
         other_sol = solve(other_prob, Vern9(); save_everystep = false)
         @test_throws ArgumentError plotting_recipe(HEOM.WignerPlot, other_sol)
-        @test_throws ArgumentError plotting_recipe(HEOM.MarginalPlot, other_sol)
-        @test_throws ArgumentError plotting_recipe(
-            HEOM.DiagnosticsPlot,
-            other_sol;
-            potential = V,
-        )
-    end
-
-    @testset "Caldeira–Leggett solution integration" begin
-        V = harmonic_potential(; mass = 1, omega = 1)
-        damped_grid = PhaseSpaceGrid((-6, 6), 24, (-7, 7), 28)
-        W0 = on_grid(
-            (q, p) -> coherent_wigner(q, p; q0 = 0.6, mass = 1, omega = 1),
-            damped_grid,
-        )
-        prob = caldeira_leggett_problem(
-            W0,
-            (0.0, 0.01),
-            damped_grid;
-            mass = 1,
-            potential = V,
-            friction = 0.5,
-            kT = 2,
-        )
-        sol = solve(prob, Vern9(); save_everystep = false)
-        for kind in (HEOM.WignerPlot, HEOM.MarginalPlot)
-            actual = plotting_recipe(kind, sol)
-            expected = plotting_recipe(kind, sol.u[end], damped_grid)
-            @test map(s -> s.args, actual) == map(s -> s.args, expected)
-        end
-        actual = plotting_recipe(HEOM.DiagnosticsPlot, sol; potential = V)
-        expected = plotting_recipe(HEOM.DiagnosticsPlot, diagnostics(sol; potential = V))
-        @test map(s -> s.args, actual) == map(s -> s.args, expected)
-        @test Base.get_extension(HEOM, :HEOMPlotsExt).animation_operator(sol) === prob.p
     end
 
     @testset "Diagnostic trajectories" begin

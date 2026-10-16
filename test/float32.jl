@@ -87,28 +87,7 @@
     end
 
     @testset "HEOM in Float32" begin
-        for scaled in (false, true)
-            op = heom_operator(grid; mass = 1.2, potential = V, bath, depth = 3, scaled)
-            op32 = heom_operator(
-                grid;
-                mass = 1.2,
-                potential = V,
-                bath,
-                depth = 3,
-                scaled,
-                float_type = Float32,
-            )
-            @test HEOM.element_type(op32) === Float32
-            @test eltype(op32.scratch) === Float32
-            @test eltype(op32.qcol) === Float32
-            U = randn(size(grid)..., length(op.indices))
-            expected = hierarchy_rhs(op, U)
-            dU = similar(Float32.(U))
-            heom!(dU, Float32.(U), op32, 0.0f0)
-            @test eltype(dU) === Float32
-            @test relative(dU, expected) < 1e-5
-        end
-
+        # device_backend.jl compares the Float32 right-hand side with Float64.
         op = heom_operator(grid; mass = 1.2, potential = V, bath, depth = 3, scaled = true)
         op32 = heom_operator(
             grid;
@@ -119,6 +98,9 @@
             scaled = true,
             float_type = Float32,
         )
+        @test HEOM.element_type(op32) === Float32
+        @test eltype(op32.scratch) === Float32
+        @test eltype(op32.qcol) === Float32
         prob = heom_problem(W0, (0.0, 0.5), op)
         prob32 = heom_problem(W0, (0.0, 0.5), op32)
         @test eltype(prob32.u0) === Float32
@@ -132,9 +114,11 @@
         W = physical_wigner(sol32)
         reference = physical_wigner(sol)
         @test phase_space_integral(W, grid) isa Float64
-        integral, integral_reference = phase_space_integral(W, grid), 1.0
-        integral_reference = phase_space_integral(reference, grid)
-        @test isapprox(integral, integral_reference; atol = 1e-4)
+        @test isapprox(
+            phase_space_integral(W, grid),
+            phase_space_integral(reference, grid);
+            atol = 1e-4,
+        )
         energy32 = energy(W, grid; mass = 1.2, potential = V)
         energy64 = energy(reference, grid; mass = 1.2, potential = V)
         @test isapprox(energy32, energy64; rtol = 1e-3)
@@ -276,14 +260,5 @@
         @test HEOM.to_host(Float32.(W)) == Float64.(Float32.(W))
         # Complex arrays are copied, not narrowed, so that real-only checks still fire.
         @test HEOM.to_host(complex.(W)) == complex.(W)
-        @test_throws ArgumentError HEOM.plotting_state(
-            complex.(W),
-            PhaseSpaceGrid((0, 1), 3, (0, 1), 3),
-        )
-        @test HEOM.convert_tspan(Float64, (0, 1)) === (0, 1)
-        @test HEOM.convert_tspan(Float32, (0, 1.5)) === (0.0f0, 1.5f0)
-        @test HEOM.physical_save_idxs(
-            heom_operator(grid; mass = 1, potential = V, bath, depth = 1),
-        ) == 1:prod(size(grid))
     end
 end

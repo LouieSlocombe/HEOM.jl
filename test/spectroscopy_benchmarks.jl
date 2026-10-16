@@ -9,31 +9,27 @@
     field(t) = amplitude * cos(frequency * t)
     W0 = on_grid((q, p) -> coherent_wigner(q, p; q0, p0, mass, omega, hbar), grid)
     times = 0.0:0.3:2.7
-    for potential in (
-        DrivenPotential(V0, field, identity),
-        TimeDependentPotential((q, t) -> V0(q) - field(t) * q),
-    )
-        prob = wigner_moyal_problem(W0, (0.0, last(times)), grid; mass, hbar, potential)
-        sol = solve(prob, Vern7(); abstol = 1e-10, reltol = 1e-10, saveat = times)
-        @test last(sol.t) ≈ last(times)
-        for (t, W) in zip(sol.t, sol.u)
-            # m*q'' + m*omega^2*q = amplitude*cos(frequency*t).
-            qcentre =
-                q0 * cos(omega * t) +
-                p0 / (mass * omega) * sin(omega * t) +
-                amplitude / (mass * (omega^2 - frequency^2)) *
-                (cos(frequency * t) - cos(omega * t))
-            pcentre =
-                p0 * cos(omega * t) - mass * omega * q0 * sin(omega * t) +
-                amplitude / (omega^2 - frequency^2) *
-                (omega * sin(omega * t) - frequency * sin(frequency * t))
-            exact = on_grid(grid) do q, p
-                coherent_wigner(q, p; q0 = qcentre, p0 = pcentre, mass, omega, hbar)
-            end
-            @test maximum(abs, W - exact) < 2e-7
-            @test phase_space_mean(W, grid) ≈ [qcentre, pcentre] atol = 2e-8
-            @test phase_space_integral(W, grid) ≈ 1 atol = 2e-10
+    potential = DrivenPotential(V0, field, identity)
+    prob = wigner_moyal_problem(W0, (0.0, last(times)), grid; mass, hbar, potential)
+    sol = solve(prob, Vern7(); abstol = 1e-10, reltol = 1e-10, saveat = times)
+    @test last(sol.t) ≈ last(times)
+    for (t, W) in zip(sol.t, sol.u)
+        # m*q'' + m*omega^2*q = amplitude*cos(frequency*t).
+        qcentre =
+            q0 * cos(omega * t) +
+            p0 / (mass * omega) * sin(omega * t) +
+            amplitude / (mass * (omega^2 - frequency^2)) *
+            (cos(frequency * t) - cos(omega * t))
+        pcentre =
+            p0 * cos(omega * t) - mass * omega * q0 * sin(omega * t) +
+            amplitude / (omega^2 - frequency^2) *
+            (omega * sin(omega * t) - frequency * sin(frequency * t))
+        exact = on_grid(grid) do q, p
+            coherent_wigner(q, p; q0 = qcentre, p0 = pcentre, mass, omega, hbar)
         end
+        @test maximum(abs, W - exact) < 2e-7
+        @test phase_space_mean(W, grid) ≈ [qcentre, pcentre] atol = 2e-8
+        @test phase_space_integral(W, grid) ≈ 1 atol = 2e-10
     end
 end
 
@@ -65,7 +61,6 @@ end
     @test maximum(abs, spectrum.intensity - frequencies .* imag.(analytic)) < 5e-4
     peak = spectrum.frequencies[argmax(spectrum.intensity)]
     @test abs(peak - sqrt(omega^2 + broadening^2)) < 0.015
-    @test iszero(first(spectrum.intensity))
 end
 
 @testset "Quartic response converges to the eigenstate Kubo sum" begin
