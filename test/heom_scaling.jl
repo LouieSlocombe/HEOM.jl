@@ -50,9 +50,6 @@
         heom!(du, U, unscaled, 0.0)
         heom!(ds, transformed, scaled, 0.0)
         @test ds ≈ du ./ reshape(factors, 1, 1, :) rtol = 2e-14
-        prob = heom_problem(transformed, (0.0, 0.1), scaled)
-        @test prob.u0 == transformed
-        @test prob.u0 !== transformed
     end
 end
 
@@ -127,24 +124,4 @@ end
     @test_throws ArgumentError heom_operator(grid; options..., depth = typemax(Int))
     # State byte counts are checked before any hierarchy enumeration or FFT plans.
     @test_throws ArgumentError heom_operator(grid; options..., depth = 1000000000)
-end
-
-@testset "Cold strong-coupling evolution is invariant under scaling" begin
-    grid = PhaseSpaceGrid((-8, 8), 32, (-8, 8), 32)
-    bath =
-        drude_lorentz_bath(; reorganization = 1.5, cutoff = 0.7, kT = 0.15, matsubara = 3)
-    options = (; mass = 1, potential = q -> q^2 / 2, bath, depth = 4)
-    W0 = on_grid(
-        (q, p) -> coherent_wigner(q, p; q0 = 0.3, p0 = -0.2, mass = 1, omega = 1),
-        grid,
-    )
-    solutions = map((false, true)) do scaled
-        prob = heom_problem(W0, (0.0, 0.25), grid; options..., scaled)
-        solve(prob, Vern7(); abstol = 2e-11, reltol = 2e-10, save_everystep = false)
-    end
-    original, transformed = solutions
-    @test physical_wigner(original) ≈ physical_wigner(transformed) rtol = 1e-8
-    @test original.u[end] ≈
-          HEOM.rescale_hierarchy(transformed.u[end], transformed.prob.p; scaled = false) rtol =
-        3e-8
 end

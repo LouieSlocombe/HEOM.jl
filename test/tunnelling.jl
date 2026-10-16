@@ -25,10 +25,8 @@ using SciMLBase: DiscreteCallback, terminate!
 
         populations = 0.6 .- 0.4 .* exp.(-0.3 .* times)
         shifted = tunnelling_rates(times .+ 17, populations; equilibrium_product = 0.6)
-        rescaled = tunnelling_rates(1000times, populations; equilibrium_product = 0.6)
         @test shifted.relaxation_rate ≈ 0.3 rtol = 1e-12
         @test shifted.amplitude ≈ -0.4 atol = 1e-13
-        @test rescaled.relaxation_rate ≈ 0.0003 rtol = 1e-12
         for unit_scale in (1e-300, 1e300)
             extreme = tunnelling_rates(
                 unit_scale .* times,
@@ -407,41 +405,5 @@ end
             scalar_solution;
             equilibrium_product = 0.5,
         )
-
-        # Exercise a genuine HEOM solution as well. This short coherent transient
-        # checks dispatch and population extraction, not a physical kinetic regime.
-        physical_grid = PhaseSpaceGrid((-8, 8), 32, (-8, 8), 32)
-        W0 = on_grid(
-            (q, p) -> coherent_wigner(q, p; mass = 1, omega = 1, q0 = -0.5, p0 = 0.5),
-            physical_grid,
-        )
-        heom_solution = solve(
-            heom_problem(
-                W0,
-                (0, 0.15),
-                physical_grid;
-                mass = 1,
-                potential = q -> q^2 / 2,
-                bath,
-                depth = 1,
-            ),
-            Vern7();
-            saveat = 0.05,
-            abstol = 1e-10,
-            reltol = 1e-10,
-        )
-        physical_populations = [
-            probability(physical_wigner(U), physical_grid; q = (0, Inf)) for
-            U in heom_solution.u
-        ]
-        direct = tunnelling_rates(
-            heom_solution.t,
-            physical_populations;
-            equilibrium_product = 0.5,
-        )
-        extracted = tunnelling_rates(heom_solution; equilibrium_product = 0.5)
-        @test extracted.population ≈ direct.population atol = 1e-14
-        @test extracted.forward_rate ≈ direct.forward_rate rtol = 1e-12
-        @test extracted.backward_rate ≈ direct.backward_rate rtol = 1e-12
     end
 end

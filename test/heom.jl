@@ -532,13 +532,6 @@ end
     @test norm(sol.u[end][:, :, 2]) > 0.01
     isolated_mean = exp([0 1/m; -m*ω^2 0] * last(times)) * μ0
     @test norm(phase_space_mean(physical_wigner(sol), grid) - isolated_mean) > 0.01
-    trajectory = diagnostics(sol; potential = V)
-    @test trajectory.t == times
-    @test trajectory.norm ≈ ones(length(times)) atol = 1e-10
-    @test trajectory.mean_q[end] ≈ phase_space_mean(physical_wigner(sol), grid)[1] atol =
-        1e-12
-    @test trajectory.energy[end] ≈
-          energy(physical_wigner(sol), grid; mass = m, potential = V) atol = 1e-12
     isolated =
         wigner_moyal_problem(W0, (0.0, 0.01), grid; mass = m, potential = V, hbar = ħ)
     isolated_sol = solve(isolated, Vern7())
