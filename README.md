@@ -600,8 +600,7 @@ For scale, the cold Padé bath above (`λ = 0.8`, `γ = 0.5`, `kT = 0.1`, `pade 
 unit harmonic oscillator on a ±8, 64-point grid has second moments wrong by `1e-2` at
 `t = 5` at depth 2, and exceeds `10³` times its initial amplitude at `t ≈ 12.5`, `7.6`
 and `5.9` for depths 2, 4 and 6. A warm bath (`λ = 0.2`, `γ = kT = 1`, `pade = 1`)
-reaches an error of `1e-3` near `t = 10` and diverges near `t = 40`. The test suite
-records the cold case as a known defect with `@test_broken`.
+reaches an error of `1e-3` near `t = 10` and diverges near `t = 40`.
 
 No remedy evaluated so far repairs the cold, strong regime, where the truncated
 hierarchy is locally unstable from `|q| ≈ 1`, inside the physical state. Absorbing or
