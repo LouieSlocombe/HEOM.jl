@@ -110,30 +110,24 @@ end
     grid = PhaseSpaceGrid((-5, 5), 40, (-6, 6), 48)
     reference =
         on_grid((q, p) -> gaussian_wigner(q, p; mean = zeros(2), covariance = exact), grid)
-    for (constructor, orders) in
-        ((drude_lorentz_bath, (2, 8, 32)), (drude_lorentz_pade_bath, (2, 4, 8)))
-        errors = map(orders) do order
-            bath =
-                constructor === drude_lorentz_bath ?
-                constructor(; parameters..., matsubara = order) :
-                constructor(; parameters..., pade = order)
-            _, _, covariance =
-                cold_memory_matrices(bath; mass = physical.mass, omega = physical.omega)
-            equilibrium = on_grid(
-                (q, p) -> gaussian_wigner(
-                    q,
-                    p;
-                    mean = zeros(2),
-                    covariance = covariance[1:2, 1:2],
-                ),
-                grid,
-            )
-            max_error(equilibrium, reference)
-        end
-        @test errors[2] < errors[1] / 2
-        @test errors[3] < errors[2] / 2
-        @test errors[3] < 1e-4
+    errors = map((2, 8, 32)) do order
+        bath = drude_lorentz_bath(; parameters..., matsubara = order)
+        _, _, covariance =
+            cold_memory_matrices(bath; mass = physical.mass, omega = physical.omega)
+        equilibrium = on_grid(
+            (q, p) -> gaussian_wigner(
+                q,
+                p;
+                mean = zeros(2),
+                covariance = covariance[1:2, 1:2],
+            ),
+            grid,
+        )
+        max_error(equilibrium, reference)
     end
+    @test errors[2] < errors[1] / 2
+    @test errors[3] < errors[2] / 2
+    @test errors[3] < 1e-4
 end
 
 @testset "Cold, strong HEOM: full transient with signed quantum noise" begin

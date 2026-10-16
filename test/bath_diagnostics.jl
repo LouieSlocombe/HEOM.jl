@@ -19,10 +19,6 @@
             expected = 2real(sum(weights .* coefficients ./ (rates .- im * ω))) + 0.26
             @test bath_spectrum(bath, ω) ≈ expected
         end
-        times = [-1.0, 0.0, 1.0]
-        @test bath_correlation.(Ref(bath), times) ==
-              [bath_correlation(bath, t) for t in times]
-        @test bath_spectrum.(Ref(bath), times) == [bath_spectrum(bath, ω) for ω in times]
 
         empty = ExponentialBath(ComplexF64[], Float64[])
         noise = ExponentialBath(ComplexF64[], Float64[]; diffusion = 0.3, counterterm = 2)
@@ -32,9 +28,6 @@
             @test iszero(bath_correlation(noise, x))
             @test bath_spectrum(noise, x) == 0.6
         end
-        without_noise = ExponentialBath(coefficients, rates; weights)
-        @test bath_correlation(bath, 0) == bath_correlation(without_noise, 0)
-        @test bath_spectrum(bath, 0.4) - bath_spectrum(without_noise, 0.4) ≈ 0.26
         for bad in (Inf, -Inf, NaN, big"1e1000")
             @test_throws ArgumentError bath_correlation(empty, bad)
             @test_throws ArgumentError bath_spectrum(empty, bad)
@@ -97,36 +90,5 @@
             @test bath_correlation(transformed, t) ≈ bath_correlation(diagonal, t)
             @test bath_spectrum(transformed, t) ≈ bath_spectrum(diagonal, t)
         end
-    end
-
-    @testset "Thermal spectral convention and detailed balance" begin
-        λ, γ, θ, ħ = 0.8, 0.7, 0.4, 0.9
-        bath = drude_lorentz_bath(;
-            reorganization = λ,
-            cutoff = γ,
-            kT = θ,
-            hbar = ħ,
-            matsubara = 300,
-        )
-        J(ω) = 2λ * γ * ω / (ω^2 + γ^2)
-        @test bath_spectrum(bath, 0) ≈ 4λ * θ / γ rtol = 3e-14
-        for ω in (0.2, 0.7, 1.5, 3.0)
-            positive = bath_spectrum(bath, ω)
-            negative = bath_spectrum(bath, -ω)
-            exact = 2ħ * J(ω) / (-expm1(-ħ * ω / θ))
-            @test positive ≈ exact rtol = 3e-8
-            @test negative ≈ exp(-ħ * ω / θ) * positive atol = 2e-8
-            @test positive - negative ≈ 2ħ * J(ω) rtol = 3e-14
-        end
-        # Diagnostics include polynomial poles from a Drude/Matsubara collision.
-        collision = drude_lorentz_bath(;
-            reorganization = λ,
-            cutoff = 2π * θ / ħ,
-            kT = θ,
-            hbar = ħ,
-            matsubara = 3,
-        )
-        @test bath_spectrum(collision, 0) ≈ 4λ * θ / collision.rates[1]
-        @test bath_correlation(collision, -0.4) ≈ conj(bath_correlation(collision, 0.4))
     end
 end

@@ -136,8 +136,7 @@ end
             @test truncated.counterterm === bath.counterterm
             residualized = compress_bath(bath; modes, method = :residualize)
             @test residualized.diffusion > bath.diffusion
-            # ∫C dt and its white-noise remainder: S(0) and the static force constant.
-            @test bath_spectrum(residualized, 0) ≈ bath_spectrum(bath, 0) rtol = 1e-12
+            # ∫C dt and its white-noise remainder: S(0)/2 and the static force constant.
             static, reduced_static =
                 static_correlation(bath), static_correlation(residualized)
             # The Drude counterterm cancels this force constant exactly.

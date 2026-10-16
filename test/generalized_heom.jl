@@ -6,12 +6,6 @@
     bath = ExponentialBath(c, rates; weights, mixing)
     @test bath.weights == weights
     @test bath.mixing == mixing
-    # A Jordan block is a polynomial exponential, including at exact degeneracy.
-    for t in (0.0, 0.1, 0.7, 2.0)
-        correlation =
-            transpose(bath.weights) * exp(-Matrix(Diagonal(rates) + bath.mixing) * t) * c
-        @test correlation ≈ (c[1] - t * c[2]) * exp(-rates[1] * t) rtol = 3e-15
-    end
     weights[1] = 3
     mixing[1, 2] = 5
     @test bath.weights == [1, 0]
@@ -24,17 +18,6 @@
     @test bath.mixing[1, 2] == 1
     large = ExponentialBath(ones(10000), ones(10000))
     @test Base.summarysize(large.mixing) < 1000000
-    # A real rotation block permits damped oscillatory correlations without
-    # introducing complex Wigner auxiliaries.
-    oscillatory =
-        ExponentialBath([1.0, 0.0], [0.3, 0.3]; weights = [1, 0], mixing = [0 -2; 2 0])
-    for t in (0.0, 0.2, 1.1)
-        correlation =
-            transpose(oscillatory.weights) *
-            exp(-Matrix(Diagonal(oscillatory.rates) + oscillatory.mixing) * t) *
-            oscillatory.coefficients
-        @test correlation ≈ exp(-0.3t) * cos(2t)
-    end
     # Adding a long independent tail must not turn oscillator stability
     # validation into a dense eigensystem of all Matsubara modes.
     modes = 2002

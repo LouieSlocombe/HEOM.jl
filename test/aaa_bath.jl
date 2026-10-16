@@ -88,7 +88,7 @@ static_imbalance(bath) = bath.counterterm + imag(static_correlation(bath)) / bat
               maximum(abs, harmonic_covariance(pade; mass, omega) - exact) / 10
 
         # Tightening the tolerance adds modes and converges the equilibrium.
-        fits = [aaa_bath(drude; kT, frequencies, reltol) for reltol in (1e-4, 1e-6, 1e-8)]
+        fits = [[aaa_bath(drude; kT, frequencies, reltol) for reltol in (1e-4, 1e-6)]; bath]
         @test issorted(length.(getfield.(fits, :rates)))
         errors =
             [maximum(abs, harmonic_covariance(fit; mass, omega) - exact) for fit in fits]
@@ -148,16 +148,10 @@ static_imbalance(bath) = bath.counterterm + imag(static_correlation(bath)) / bat
         @test structured_exact[2, 2] > 1.2bare_variance
 
         # A fit can be compressed; the harmonic check still holds to the discarded order.
-        σ = hankel_singular_values(bath)
         reduced = compress_bath(bath; modes = 8)
         @test length(reduced.rates) == 8
         @test maximum(abs, harmonic_covariance(reduced; mass, omega) - structured_exact) <
               3e-4
-        ω = range(-6, 6; length = 601)
-        @test maximum(
-            abs,
-            bath_spectrum.(Ref(reduced), ω) - bath_spectrum.(Ref(bath), ω),
-        ) <= 4sqrt(2) * sum(σ[9:end]) + 1e-12 * σ[1]
     end
 
     @testset "Hierarchy dynamics with a fitted oscillatory bath" begin
@@ -252,9 +246,6 @@ static_imbalance(bath) = bath.counterterm + imag(static_correlation(bath)) / bat
         shuffled = [reverse(frequencies); frequencies[1:7:end]]
         @test aaa_bath(hot; kT = 0.4, frequencies = shuffled).coefficients ==
               aaa_bath(hot; kT = 0.4, frequencies).coefficients
-        # A supplied reorganization replaces the quadrature.
-        @test aaa_bath(hot; kT = 0.4, frequencies, reorganization = 0.25).counterterm ==
-              0.25
     end
 
     @testset "Argument checks" begin

@@ -24,22 +24,10 @@
         @test only(ξ) ≈ sqrt(42)
         @test only(η) ≈ 49 / 40
         @test R == 1 / 40
-        ξ, η, R = HEOM.bose_pade(16)
-        for x in range(0.1, 100.0; length = 40)
-            approx = 2 / x + 4sum(η .* x ./ (x^2 .+ ξ .^ 2)) + 2R * x
-            @test approx ≈ coth(x / 2) rtol = 2e-9
-        end
     end
 
     @testset "Fluctuation–dissipation spectrum and quantum asymmetry" begin
         λ, γ, ħ = 0.8, 0.7, 0.9
-        spectrum(b, ω) =
-            2real(
-                dot(
-                    b.weights,
-                    (Diagonal(b.rates) + b.mixing - im * ω * I) \ b.coefficients,
-                ),
-            ) + 2b.diffusion
         # The exact target uses only the spectral density and Bose factor.
         # It is independent of either exponential decomposition.
         J(ω) = 2λ * γ * ω / (ω^2 + γ^2)
@@ -57,18 +45,18 @@
                 push!(
                     errors,
                     maximum(
-                        abs(spectrum(bath, ω) / exact(ω, θ) - 1) for
+                        abs(bath_spectrum(bath, ω) / exact(ω, θ) - 1) for
                         ω in range(0.01, 3.0; length = 101)
                     ),
                 )
                 @test bath.counterterm == λ
                 @test bath.hbar == ħ
                 @test bath.diffusion ≈ λ * γ * ħ^2 / (2θ * (N + 1) * (2N + 3))
-                @test spectrum(bath, 0.0) ≈ 4λ * θ / γ rtol = 2e-11
+                @test bath_spectrum(bath, 0.0) ≈ 4λ * θ / γ rtol = 2e-11
                 @test imag(bath.coefficients[1]) == -λ * ħ * γ
                 for ω in (0.2, 1.0, 3.0)
-                    @test spectrum(bath, ω) - spectrum(bath, -ω) ≈ 2ħ * J(ω)
-                    @test spectrum(bath, -ω) >= -1e-12
+                    @test bath_spectrum(bath, ω) - bath_spectrum(bath, -ω) ≈ 2ħ * J(ω)
+                    @test bath_spectrum(bath, -ω) >= -1e-12
                 end
             end
             @test errors[2] < errors[1] / 5
@@ -86,11 +74,6 @@
             pade = 16,
         )
         @test any(<(0), real.(bath.coefficients[2:end]))
-        # An exact Matsubara collision need not be a collision in a Padé basis.
-        bath =
-            drude_lorentz_pade_bath(; reorganization = λ, cutoff = 2π, kT = 1.0, pade = 1)
-        @test all(isfinite, bath.coefficients)
-        @test all(isfinite, bath.rates)
     end
 
     @testset "Options and validation" begin

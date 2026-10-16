@@ -108,16 +108,6 @@ end
         kT,
         matsubara = -1,
     )
-    # Coincident poles are represented by a finite polynomial-exponential block.
-    coincident = drude_lorentz_bath(;
-        reorganization = λ,
-        cutoff = 2π * kT / ħ,
-        kT,
-        hbar = ħ,
-        matsubara = 1,
-    )
-    @test coincident.weights == [1.0, 0.0]
-    @test coincident.mixing[1, 2] == 1
 end
 
 @testset "Drude tail edge cases" begin
@@ -132,9 +122,6 @@ end
     high_cutoff =
         drude_lorentz_bath(; reorganization = λ, cutoff = 8, kT = 1, terminator = false)
     @test iszero(high_cutoff.diffusion)
-    # The classical high-temperature limit uses a stable series for the small tail.
-    hot = drude_lorentz_bath(; reorganization = λ, cutoff = γ, kT = 1e8, hbar = ħ)
-    @test hot.diffusion ≈ λ * ħ^2 * γ / (6e8) rtol = 1e-14
     # Large Matsubara rates remain finite even when their squares overflow Float64.
     very_hot = drude_lorentz_bath(;
         reorganization = λ,

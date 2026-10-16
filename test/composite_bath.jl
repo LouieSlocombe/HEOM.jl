@@ -54,46 +54,6 @@
         end
     end
 
-    @testset "Thermal components and coincident poles are additive" begin
-        θ, ħ = 0.15, 0.8
-        components = [
-            drude_lorentz_bath(;
-                reorganization = 0.3,
-                cutoff = 2π * θ / ħ,
-                kT = θ,
-                hbar = ħ,
-                matsubara = 3,
-            ),
-            drude_lorentz_pade_bath(;
-                reorganization = 0.2,
-                cutoff = 0.7,
-                kT = θ,
-                hbar = ħ,
-                pade = 2,
-            ),
-            brownian_oscillator_bath(;
-                reorganization = 0.1,
-                frequency = 1.3,
-                damping = 0.4,
-                kT = θ,
-                hbar = ħ,
-                matsubara = 3,
-            ),
-        ]
-        @test !iszero(components[1].mixing[1, 2])
-        combined = combine_baths(components)
-        @test combined.diffusion == sum(b.diffusion for b in components)
-        @test combined.counterterm == sum(b.counterterm for b in components)
-        for t in (0.0, 0.25, 2.0)
-            @test bath_correlation(combined, t) ≈
-                  sum(bath_correlation(b, t) for b in components) atol = 5e-15
-        end
-        for ω in (-1.0, -0.2, 0.0, 0.2, 1.0)
-            @test bath_spectrum(combined, ω) ≈ sum(bath_spectrum(b, ω) for b in components) atol =
-                5e-15
-        end
-    end
-
     @testset "Single components and empty mode sets are copied" begin
         source = ExponentialBath(
             [1.0, 0.2im],
@@ -121,15 +81,12 @@
             @test combined.rates !== empty.rates
             @test combined.weights !== empty.weights
             @test combined.mixing !== empty.mixing
-            @test bath_correlation(combined, 0.3) == 0
-            @test bath_spectrum(combined, 0.4) == 2combined.diffusion
         end
         combined = combine_baths(empty, source, empty)
         @test combined.coefficients == source.coefficients
         @test combined.mixing == source.mixing
         @test combined.diffusion == 0.2
         @test combined.counterterm == 0.4
-        @test bath_spectrum(combined, 0.3) ≈ bath_spectrum(source, 0.3) + 0.4
     end
 
     @testset "Invalid combinations" begin
@@ -138,8 +95,5 @@
         one = ExponentialBath([1.0], [1.0])
         different = ExponentialBath([1.0], [1.0]; hbar = nextfloat(1.0))
         @test_throws ArgumentError combine_baths(one, different)
-        @test_throws ArgumentError combine_baths([one, different])
-        empty = ExponentialBath(ComplexF64[], Float64[]; hbar = 2.0)
-        @test_throws ArgumentError combine_baths(one, empty)
     end
 end

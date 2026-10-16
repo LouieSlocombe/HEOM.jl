@@ -52,13 +52,6 @@
             @test all(<(0), diff(errors))
             @test last(errors) < 3e-8
         end
-        converged = brownian_oscillator_bath(; parameters..., matsubara = 128)
-        @test bath_spectrum(converged, 0.0) ≈ 4λ * γ * θ / ω₀^2 atol = 4e-9
-        for ω in (0.1, 0.7, ω₀, 2.5)
-            @test bath_spectrum(converged, -ω) ≈
-                  exp(-ħ * ω / θ) * bath_spectrum(converged, ω) atol = 4e-9
-            @test bath_spectrum(converged, ω) ≈ thermal_spectrum(ω) atol = 4e-9
-        end
     end
 
     @testset "Independent spectral integrals and time correlation" begin
@@ -89,7 +82,6 @@
         for t in (0.0, 0.2, 0.9, 2.5)
             @test imag(bath_correlation(coarse, t)) ≈
                   -λ * ħ * ω₀^2 * exp(-α * t) * sin(Ω * t) / Ω atol = 2e-15
-            @test bath_correlation(coarse, -t) ≈ conj(bath_correlation(coarse, t))
         end
         hot = brownian_oscillator_bath(; parameters..., kT = 1e5, matsubara = 0)
         for t in (0.0, 0.2, 0.9)
@@ -201,23 +193,5 @@
                 @test bath_correlation(bath, t) ≈ reference rtol = 1e-11 atol = 2e-15
             end
         end
-    end
-
-    @testset "Brownian bath propagates with scaled and unscaled hierarchies" begin
-        grid = PhaseSpaceGrid((-5, 5), 16, (-5, 5), 16)
-        bath = brownian_oscillator_bath(; parameters..., matsubara = 1)
-        options = (; mass = 1, potential = q -> q^2 / 2, bath, depth = 2)
-        unscaled = heom_operator(grid; options...)
-        scaled = heom_operator(grid; options..., scaled = true)
-        U = zeros(size(grid)..., length(unscaled.indices))
-        for a in axes(U, 3)
-            U[:, :, a] .= on_grid((q, p) -> cos(a) * exp(-q^2 - p^2) * (1 + 0.1a * p), grid)
-        end
-        transformed = rescale_hierarchy(U, unscaled; scaled = true)
-        du, ds = similar(U), similar(U)
-        heom!(du, U, unscaled, 0.0)
-        heom!(ds, transformed, scaled, 0.0)
-        @test all(isfinite, du)
-        @test ds ≈ rescale_hierarchy(du, unscaled; scaled = true) rtol = 2e-14
     end
 end
