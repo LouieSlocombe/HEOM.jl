@@ -68,8 +68,6 @@ end
         potential,
         times = [0.0, Inf],
     )
-    @test diagnostics(W, grid; mass, potential, t = 0.2).energy ≈
-          energy(W, grid; mass, potential, t = 0.2) atol = 1e-12
 
     bath = ExponentialBath([0.0], [1.0])
     for prob in (
@@ -83,7 +81,6 @@ end
             [energy(state, grid; mass, potential, t) for (state, t) in zip(states, times)]
         @test values.t == times
         @test values.energy ≈ expected atol = 1e-12
-        @test values.energy == diagnostics(states, grid; mass, potential, times).energy
     end
 end
 

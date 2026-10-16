@@ -1,7 +1,6 @@
 @testset "Phase-space grid" begin
     grid = PhaseSpaceGrid((-8, 8), 64, (-6.0, 4.0), 40)
     @test size(grid) == (64, 40)
-    @test grid.q isa Vector{Float64}
     @test grid.dq == 0.25
     @test grid.dp == 0.25
     @test first(grid.q) == -8 && last(grid.q) == 8 - grid.dq

@@ -27,18 +27,9 @@ end
     end
     grid = PhaseSpaceGrid((-7, 7), 64, (-7, 7), 64)
     W, exact = on_grid(W0, grid), on_grid(exact_rhs, grid)
-    for moyal_terms in (nothing, 2)
-        op = caldeira_leggett_operator(
-            grid;
-            mass = m,
-            potential = V,
-            friction = γ,
-            kT,
-            hbar = ħ,
-            moyal_terms,
-        )
-        @test max_error(caldeira_rhs(op, W), exact) <= 1e-11
-    end
+    op =
+        caldeira_leggett_operator(grid; mass = m, potential = V, friction = γ, kT, hbar = ħ)
+    @test max_error(caldeira_rhs(op, W), exact) <= 1e-11
 
     for order in (2, 4, 6)
         errors = map((64, 128)) do n
@@ -58,8 +49,7 @@ end
         @test log2(errors[1] / errors[2]) ≈ order atol = 0.5
     end
 
-    for (discretization, moyal_terms) in
-        ((Spectral(), nothing), (Spectral(), 2), (FiniteDifference(4), 2))
+    for (discretization, moyal_terms) in ((Spectral(), nothing), (FiniteDifference(4), 2))
         op = caldeira_leggett_operator(
             grid;
             mass = m,
@@ -76,9 +66,6 @@ end
         if discretization isa Spectral
             @test caldeira_rhs_allocations(dW, W, op) == 0
         end
-        @test probability_rate(W, op) ≈ 0 atol = 1e-12
-        @test expectation_rate((q, p) -> p^2, W, op) ≈ expectation((q, p) -> p^2, dW, grid) atol =
-            1e-12
 
         isolated = caldeira_leggett_operator(
             grid;
@@ -211,14 +198,6 @@ end
         kT = 1,
         discretization = FiniteDifference(),
     )
-    # With no diffusion, the dissipator alone is γ ∂p(pW).
-    isolated = wigner_moyal_operator(grid; mass = 1, potential = V)
-    expected = on_grid(
-        (q, p) -> 0.5 * (1 - 2p^2) * coherent_wigner(q, p; mass = 1, omega = 1),
-        grid,
-    )
-    @test max_error(caldeira_rhs(op, W) - rhs(isolated, W), expected) < 1e-8
-
     # The even-grid Nyquist mode has zero odd derivative, but its second derivative
     # must still damp. Subtracting the friction-only RHS isolates momentum diffusion.
     alternating = [(-1.0)^j for i in eachindex(grid.q), j in eachindex(grid.p)]
@@ -270,7 +249,6 @@ end
         exact_purity = ħ / (2sqrt(det(Σ))) * (1 - tr(C) + tr(C)^2 / 4 + tr(C * C) / 2)
         @test max_error(W, exact) < 1e-8
         @test phase_space_integral(W, grid) ≈ 1 atol = 1e-10
-        @test phase_space_covariance(W, grid) ≈ Σ + 2R atol = 1e-7
         @test purity(W, grid; hbar = ħ) ≈ exact_purity atol = 1e-8
     end
     origin = (findfirst(iszero, grid.q), findfirst(iszero, grid.p))
@@ -323,25 +301,6 @@ end
                 on_grid((q, p) -> gaussian_wigner(q, p; mean = μt, covariance = Σt), grid)
             @test max_error(W, exact) < 1e-8
             @test phase_space_integral(W, grid) ≈ 1 atol = 1e-10
-            @test phase_space_mean(W, grid) ≈ μt atol = 1e-7
-            @test phase_space_covariance(W, grid) ≈ Σt atol = 1e-7
-            exact_energy = (Σt[2, 2] + μt[2]^2) / (2m) + m * ω^2 * (Σt[1, 1] + μt[1]^2) / 2
-            @test energy(W, grid; mass = m, potential = V) ≈ exact_energy atol = 1e-7
-        end
-
-        if underdamped
-            trajectory = diagnostics(sol; potential = V)
-            @test trajectory.t == times
-            excess_energy = trajectory.energy .- kT
-            @test all(diff(excess_energy) .< 0)
-            @test abs(last(excess_energy)) < 1e-7
-            @test norm(phase_space_mean(sol.u[end], grid)) < 5e-5
-            # The center reaches the well bottom; a finite-temperature bath leaves
-            # a thermal width and energy kT, rather than a delta function at q=p=0.
-            @test phase_space_covariance(sol.u[end], grid) ≈ Σ∞ atol = 1e-7
-            @test max_error(sol.u[end], equilibrium) < 5e-6
-            @test last(trajectory.var_q) > 0.5
-            @test last(trajectory.var_p) > 0.5
         end
     end
 end

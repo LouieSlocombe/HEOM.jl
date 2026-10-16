@@ -1194,7 +1194,7 @@ checked against closed forms instead:
 - Damped harmonic Gaussians test Caldeira–Leggett evolution against the exact
   time-dependent mean, covariance and full state, including relaxation to thermal
   equilibrium at the bottom of the well.
-- Free and uniformly accelerated wavepackets test exact spreading and force signs.
+- A uniformly accelerated wavepacket tests exact spreading and the force sign.
 - An analytical sextic eigenstate, transformed directly from its wavefunction,
   tests stationarity through the ħ⁴ Moyal term.
 - A non-Markovian Gaussian Langevin solution tests the full Drude HEOM distribution

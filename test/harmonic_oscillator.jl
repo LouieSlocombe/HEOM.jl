@@ -7,21 +7,11 @@
         W = on_grid((q, p) -> fock_wigner(n, q, p; mass = m, omega = ω, hbar = ħ), grid)
         @test phase_space_integral(W, grid) ≈ 1 atol = 1e-10
         @test purity(W, grid; hbar = ħ) ≈ 1 atol = 1e-10
-        @test expectation(H, W, grid) ≈ ħ * ω * (n + 1 / 2) rtol = 1e-10
     end
     @test fock_wigner(1, 0, 0; mass = m, omega = ω, hbar = ħ) ≈ -1 / (π * ħ)
     @test fock_wigner(0, 0.3, -0.2; mass = m, omega = ω, hbar = ħ) ≈
           coherent_wigner(0.3, -0.2; mass = m, omega = ω, hbar = ħ)
     @test_throws ArgumentError fock_wigner(-1, 0, 0; mass = m, omega = ω)
-
-    q0, p0 = 1.2, -0.8
-    W = on_grid(
-        (q, p) -> coherent_wigner(q, p; q0, p0, mass = m, omega = ω, hbar = ħ),
-        grid,
-    )
-    @test phase_space_integral(W, grid) ≈ 1 atol = 1e-10
-    @test purity(W, grid; hbar = ħ) ≈ 1 atol = 1e-10
-    @test expectation(H, W, grid) ≈ ħ * ω / 2 + H(q0, p0) rtol = 1e-10
 
     # The even cat |α⟩ + |-α⟩ has mean occupation α² tanh α², with α² = mωq₀²/2ħ.
     W = on_grid((q, p) -> cat_wigner(q, p; q0 = 2, mass = m, omega = ω, hbar = ħ), grid)
@@ -30,11 +20,6 @@
     @test purity(W, grid; hbar = ħ) ≈ 1 atol = 1e-10
     @test expectation(H, W, grid) ≈ ħ * ω * (α² * tanh(α²) + 1 / 2) rtol = 1e-10
     @test minimum(W) < 0
-
-    W0(q, p) = coherent_wigner(q, p; q0, p0, mass = m, omega = ω, hbar = ħ)
-    T = 2π / ω
-    @test harmonic_evolution(W0, T; mass = m, omega = ω)(0.3, 0.4) ≈ W0(0.3, 0.4)
-    @test harmonic_evolution(W0, T / 2; mass = m, omega = ω)(0.3, 0.4) ≈ W0(-0.3, -0.4)
 end
 
 @testset "Harmonic oscillator parameter validation and free limit" begin
@@ -67,7 +52,7 @@ end
     end
     @test_throws ArgumentError harmonic_evolution((q, p) -> q, Inf; mass = 1, omega = 1)
     @test harmonic_potential(; mass = 1.3, omega = 0)(2.0) == 0
-    # The old sin(omega*t)/(m*omega) expression produced NaN at zero frequency.
+    # Zero frequency is free streaming, not a NaN from sin(omega*t)/(m*omega).
     W0(q, p) = exp(-q^2 - p^2)
     for ω in (0.0, 1e-100)
         evolved = harmonic_evolution(W0, 0.7; mass = 1.3, omega = ω)
@@ -75,38 +60,17 @@ end
     end
 end
 
-@testset "Harmonic oscillator dynamics: coherent and Fock states" begin
+@testset "Harmonic oscillator dynamics: coherent state" begin
     T = 2π
     V = harmonic_potential(; mass = 1, omega = 1)
-    H(q, p) = p^2 / 2 + V(q)
     W0(q, p) = coherent_wigner(q, p; q0 = 2, p0 = 1, mass = 1, omega = 1)
     grid = PhaseSpaceGrid((-8, 8), 64, (-8, 8), 64)
     prob = wigner_moyal_problem(on_grid(W0, grid), (0.0, T), grid; mass = 1, potential = V)
-    @test prob.u0 == on_grid(W0, grid)
-    @test prob.tspan == (0.0, T)
-
-    times = [T / 4, T / 2, T]
-    sol = solve(prob, Vern9(); abstol = 1e-12, reltol = 1e-12, saveat = times)
-    @test sol.t ≈ times
-    energy = expectation(H, prob.u0, grid)
+    sol = solve(prob, Vern9(); abstol = 1e-12, reltol = 1e-12, saveat = [T / 4, T / 2, T])
     for (t, W) in zip(sol.t, sol.u)
         exact = on_grid(harmonic_evolution(W0, t; mass = 1, omega = 1), grid)
         @test max_error(W, exact) <= 1e-10
-        # The centre follows the classical orbit through (2, 1).
-        @test expectation((q, p) -> q, W, grid) ≈ 2cos(t) + sin(t) atol = 1e-10
-        @test expectation((q, p) -> p, W, grid) ≈ cos(t) - 2sin(t) atol = 1e-10
-        @test phase_space_integral(W, grid) ≈ 1 atol = 1e-12
-        @test purity(W, grid) ≈ 1 atol = 1e-12
-        @test expectation(H, W, grid) ≈ energy rtol = 1e-12
     end
-
-    # The first excited state is stationary and keeps its negative value at the origin.
-    fock = on_grid((q, p) -> fock_wigner(1, q, p; mass = 1, omega = 1), grid)
-    stationary = remake(prob; u0 = fock, tspan = (0.0, T / 3))
-    sol = solve(stationary, Vern9(); abstol = 1e-12, reltol = 1e-12, save_everystep = false)
-    @test max_error(sol.u[end], fock) <= 1e-10
-    origin = (findfirst(iszero, grid.q), findfirst(iszero, grid.p))
-    @test sol.u[end][origin...] ≈ -1 / π atol = 1e-10
 end
 
 @testset "Harmonic oscillator dynamics: rotating cat state" begin

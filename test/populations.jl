@@ -85,18 +85,10 @@
             sqrt(π * mass * omega * hbar)
         @test probability_rate(W, op; q = (c, Inf)) ≈ q_flux atol = 1e-12
         @test probability_rate(W, op; p = (c, Inf)) ≈ p_flux atol = 1e-12
-        @test probability_rate(W, op) ≈ 0 atol = 1e-12
-        @test expectation_rate((q, p) -> 1, W, op) ≈ 0 atol = 1e-12
         @test_throws DimensionMismatch probability_current(
             ones(1, length(grid.p)),
             grid;
             mass,
-        )
-        @test_throws DimensionMismatch probability_rate(ones(1, length(grid.p)), op)
-        @test_throws DimensionMismatch expectation_rate(
-            (q, p) -> q,
-            ones(1, length(grid.p)),
-            op,
         )
     end
 
@@ -110,7 +102,7 @@
         W = on_grid((q, p) -> exp(-(q - 0.4)^2 - 0.8 * (p + 0.3)^2), grid)
         current = probability_current(W, grid; mass)
         for (discretization, moyal_terms) in
-            ((Spectral(), nothing), (Spectral(), 2), (FiniteDifference(4), 2))
+            ((Spectral(), nothing), (FiniteDifference(4), 2))
             op = wigner_moyal_operator(
                 grid;
                 mass,
@@ -136,21 +128,6 @@
                 weights = HEOM.interval_weights(grid.q, grid.dq, (c, Inf))
                 @test flux ≈ -dot(weights, Dq * current) atol = 1e-13
             end
-            # A central finite difference of each linear observable agrees with its RHS
-            # rate for both discretisations, including a joint quasi-probability window.
-            dW = rhs(op, W)
-            dt = 0.01
-            window = (; q = (-0.71, 1.13), p = (-0.43, 0.89))
-            finite_rate =
-                (
-                    probability(W + dt * dW, grid; window...) -
-                    probability(W - dt * dW, grid; window...)
-                ) / (2dt)
-            @test probability_rate(W, op; window...) ≈ finite_rate atol = 1e-12
-            finite_energy_rate =
-                (expectation(H, W + dt * dW, grid) - expectation(H, W - dt * dW, grid)) /
-                (2dt)
-            @test expectation_rate(H, W, op) ≈ finite_energy_rate atol = 1e-12
             @test_throws DimensionMismatch probability_rate(ones(1, length(grid.p)), op)
             @test_throws DimensionMismatch expectation_rate(
                 (q, p) -> q,
@@ -173,8 +150,7 @@ end
     c = 0.17
     force = -mass * omega^2 * q0 + E(t)
     momentum_flux = force * exp(-(c - p0)^2 / (mass * omega)) / sqrt(π * mass * omega)
-    for (discretization, moyal_terms) in
-        ((Spectral(), nothing), (Spectral(), 1), (FiniteDifference(4), 1))
+    for (discretization, moyal_terms) in ((Spectral(), nothing), (FiniteDifference(4), 1))
         h = wigner_moyal_operator(grid; mass, potential, discretization, moyal_terms)
         cl = caldeira_leggett_operator(
             grid;

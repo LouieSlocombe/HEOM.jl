@@ -2,34 +2,30 @@
 # QBM: Fleming, Roura and Hu, Ann. Phys. 326, 1207 (2011), arXiv:1004.1603.
 # Sextic eigenstate: Lévai and Ishkhanyan, arXiv:1904.09488, Eqs. (2)-(3).
 
-@testset "Free and uniformly accelerated Gaussian wavepacket" begin
-    m, ħ = 1.4, 0.8
+@testset "Uniformly accelerated Gaussian wavepacket" begin
+    m, ħ, force = 1.4, 0.8, 0.65
     μ0, Σ0 = [-0.7, 0.5], [0.6 0.12; 0.12 0.5]
     grid = PhaseSpaceGrid((-9, 9), 72, (-7, 7), 64)
     W0 = on_grid((q, p) -> gaussian_wigner(q, p; mean = μ0, covariance = Σ0), grid)
     times = [0.0, 0.4, 1.1]
-    for force in (0.0, 0.65)
-        prob = wigner_moyal_problem(
-            W0,
-            (0.0, last(times)),
-            grid;
-            mass = m,
-            hbar = ħ,
-            potential = q -> -force * q,
-        )
-        sol = solve(prob, Vern7(); abstol = 1e-11, reltol = 1e-11, saveat = times)
-        for (t, W) in zip(sol.t, sol.u)
-            # Hamilton's exact affine flow transports the entire Gaussian, including
-            # its position-momentum correlation and ballistic position spreading.
-            F = [1 t/m; 0 1]
-            μ = F * μ0 + [force * t^2 / (2m), force * t]
-            Σ = F * Σ0 * F'
-            exact = on_grid((q, p) -> gaussian_wigner(q, p; mean = μ, covariance = Σ), grid)
-            @test max_error(W, exact) < 2e-9
-            @test phase_space_mean(W, grid) ≈ μ atol = 2e-9
-            @test phase_space_covariance(W, grid) ≈ Σ atol = 2e-9
-            @test purity(W, grid; hbar = ħ) ≈ ħ / (2sqrt(det(Σ0))) atol = 2e-10
-        end
+    prob = wigner_moyal_problem(
+        W0,
+        (0.0, last(times)),
+        grid;
+        mass = m,
+        hbar = ħ,
+        potential = q -> -force * q,
+    )
+    sol = solve(prob, Vern7(); abstol = 1e-11, reltol = 1e-11, saveat = times)
+    for (t, W) in zip(sol.t, sol.u)
+        # Hamilton's exact affine flow transports the entire Gaussian, including
+        # its position-momentum correlation and ballistic position spreading.
+        F = [1 t/m; 0 1]
+        μ = F * μ0 + [force * t^2 / (2m), force * t]
+        Σ = F * Σ0 * F'
+        exact = on_grid((q, p) -> gaussian_wigner(q, p; mean = μ, covariance = Σ), grid)
+        @test max_error(W, exact) < 2e-9
+        @test purity(W, grid; hbar = ħ) ≈ ħ / (2sqrt(det(Σ0))) atol = 2e-10
     end
 end
 

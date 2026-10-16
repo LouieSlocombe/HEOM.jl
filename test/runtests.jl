@@ -7,7 +7,7 @@ using LinearAlgebra
 using LinearSolve
 using OrdinaryDiffEqRosenbrock
 using OrdinaryDiffEqVerner
-using SciMLBase: ODEProblem, remake
+using SciMLBase: ODEProblem
 using SparseArrays
 using Test
 

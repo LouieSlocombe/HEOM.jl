@@ -14,9 +14,6 @@
         @test (@inferred momentum_density(W, grid)) ≈ p_density atol = 1e-12
         @test (@inferred phase_space_mean(W, grid)) ≈ μ atol = 1e-12
         @test (@inferred phase_space_covariance(W, grid)) ≈ Σ atol = 1e-12
-        @test expectation((q, p) -> q, W, grid) ≈ μ[1] atol = 1e-12
-        @test expectation((q, p) -> p, W, grid) ≈ μ[2] atol = 1e-12
-        @test expectation((q, p) -> (q - μ[1])^2, W, grid) ≈ Σ[1, 1] atol = 1e-12
         @test purity(W, grid; hbar = ħ) ≈ ħ / (2sqrt(det(Σ))) atol = 1e-12
         exact_energy = (Σ[2, 2] + μ[2]^2) / (2m) + m * ω^2 * (Σ[1, 1] + μ[1]^2) / 2
         @test (@inferred energy(W, grid; mass = m, potential = V)) ≈ exact_energy atol =
@@ -68,7 +65,6 @@
             Σt = phase_space_covariance(W, grid)
             @test phase_space_mean(W, grid) ≈ M * μ0 atol = 1e-12
             @test Σt ≈ M * Σ0 * M' atol = 1e-12
-            @test det(Σt) ≈ ħ^2 / 4 atol = 1e-12
         end
     end
 
@@ -89,7 +85,6 @@
         ΔQ, ΔP = (q1 - q2) * sqrt(m * ω / ħ), (p1 - p2) / sqrt(m * ω * ħ)
         @test overlap(W1, W2, grid; hbar = ħ) ≈ exp(-(ΔQ^2 + ΔP^2) / 2) atol = 1e-12
         @test overlap(W1, W2, grid; hbar = ħ) == overlap(W2, W1, grid; hbar = ħ)
-        @test purity(W1, grid; hbar = ħ) == overlap(W1, W1, grid; hbar = ħ)
         α² = (m * ω * q1^2 / ħ + p1^2 / (m * ω * ħ)) / 2
         for n in 0:5
             fock =

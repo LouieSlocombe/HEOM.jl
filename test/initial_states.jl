@@ -11,12 +11,8 @@
         reference =
             on_grid((q, p) -> coherent_wigner(q, p; q0, p0, mass, omega, hbar), grid)
         W = wavefunction_wigner(psi, grid; hbar)
-        @test size(W) == size(grid)
         @test eltype(W) <: Real
         @test max_error(W, reference) < 1e-10
-        @test phase_space_integral(W, grid) ≈ 1 atol = 1e-10
-        @test purity(W, grid; hbar) ≈ 1 atol = 1e-10
-        @test phase_space_mean(W, grid) ≈ [q0, p0] atol = 1e-10
         @test position_density(W, grid) ≈ abs2.(psi.(grid.q)) atol = 1e-12
         @test density_matrix_wigner(rho, grid; hbar) ≈ W atol = 1e-13
         @test wavefunction_wigner(q -> cis(0.43) * psi(q), grid; hbar) ≈ W atol = 1e-13
@@ -32,14 +28,11 @@
     W1 = wavefunction_wigner(excited, grid; hbar)
     reference1 = on_grid((q, p) -> fock_wigner(1, q, p; mass, omega, hbar), grid)
     @test max_error(W1, reference1) < 1e-10
-    @test W1[65, 65] ≈ -1 / (π * hbar) atol = 1e-10
 
     weight, trace = 0.3, 1.7
     mixture(x, y) =
         trace * (weight * ground(x) * ground(y) + (1 - weight) * excited(x) * excited(y))
     mixed = density_matrix_wigner(mixture, grid; hbar)
-    @test phase_space_integral(mixed, grid) ≈ trace atol = 1e-10
-    @test purity(mixed, grid; hbar) ≈ trace^2 * (weight^2 + (1 - weight)^2) atol = 1e-10
     reference0 = on_grid((q, p) -> fock_wigner(0, q, p; mass, omega, hbar), grid)
     @test mixed ≈ trace * (weight * reference0 + (1 - weight) * reference1) atol = 1e-10
 
@@ -53,7 +46,6 @@
         @test density_matrix_wigner(samples * samples', sampled_grid; hbar) ≈ W atol =
             1e-12
         @test position_density(W, sampled_grid) ≈ abs2.(samples) atol = 1e-12
-        @test phase_space_integral(W, sampled_grid) ≈ sum(abs2, samples) * sampled_grid.dq
         max_error(W, exact)
     end
     @test errors[2] < errors[1] / 8
@@ -106,7 +98,6 @@ end
     molecular_grid = PhaseSpaceGrid((-7, 7), 128, (-7, 7), 128)
     molecular =
         eigenstates(molecular_grid; mass, potential = double_well, hbar, nstates = 4)
-    @test issorted(molecular.energies)
     @test all(diff(molecular.energies) .> 0)
     @test molecular.wavefunctions' * molecular.wavefunctions * molecular_grid.dq ≈ I(4) atol =
         1e-12

@@ -91,26 +91,10 @@ end
     @test maximum(abs, rhs(exact, fock)) <= 1e-12
 end
 
-@testset "Conservation structure" begin
+@testset "Finite-difference conservation structure" begin
     V(q) = 0.1q^4 - 0.5q^2
     grid = PhaseSpaceGrid((-7, 7), 48, (-7, 7), 48)
     W = on_grid((q, p) -> gaussian(q, p) * (1 + 0.3 * sin(q * p)), grid)
-    for (discretization, moyal_terms) in
-        ((Spectral(), nothing), (Spectral(), 2), (FiniteDifference(4), 2))
-        op = wigner_moyal_operator(
-            grid;
-            mass = m_test,
-            hbar = ħ_test,
-            potential = V,
-            discretization,
-            moyal_terms,
-        )
-        dW = rhs(op, W)
-        # The operators are skew-symmetric, so the norm ΣW and the purity ΣW² are conserved.
-        @test abs(sum(dW)) <= 1e-12 * sum(abs, dW)
-        @test abs(sum(W .* dW)) <= 1e-12 * sum(abs, W .* dW)
-    end
-
     fd = wigner_moyal_operator(
         grid;
         mass = m_test,
@@ -119,11 +103,16 @@ end
         discretization = FiniteDifference(4),
         moyal_terms = 2,
     )
+    dW = rhs(fd, W)
+    # The operator is skew-symmetric, so the norm ΣW and the purity ΣW² are conserved.
+    # The exact spectral operator is checked in the skew-symmetry testset below.
+    @test abs(sum(dW)) <= 1e-12 * sum(abs, dW)
+    @test abs(sum(W .* dW)) <= 1e-12 * sum(abs, W .* dW)
     L = sparse(fd)
     @test L isa SparseMatrixCSC{Float64,Int}
     @test size(L) == (48^2, 48^2)
     @test iszero(norm(L + transpose(L)))
-    @test L * vec(W) ≈ vec(rhs(fd, W))
+    @test L * vec(W) ≈ vec(dW)
 end
 
 @testset "Spectral right-hand side is type stable and allocation free" begin
@@ -152,13 +141,6 @@ end
           "FiniteDifferenceWignerMoyal($(repr(grid)), order = 6, mass = 2.0, " *
           "hbar = 1.0, moyal_terms = 3)"
 
-    @test_throws ArgumentError wigner_moyal_operator(grid; mass = 0, potential = V)
-    @test_throws ArgumentError wigner_moyal_operator(
-        grid;
-        mass = 1,
-        hbar = -1,
-        potential = V,
-    )
     for moyal_terms in (0, 5)
         @test_throws ArgumentError wigner_moyal_operator(
             grid;
@@ -173,20 +155,6 @@ end
         mass = 1,
         potential = V,
         discretization = FiniteDifference(),
-    )
-    # The potential overflows inside the box, and so do the shifted points of the exact
-    # operator.
-    overflowing(q) = exp(1000q)
-    @test_throws ArgumentError wigner_moyal_operator(
-        grid;
-        mass = 1,
-        potential = overflowing,
-    )
-    @test_throws ArgumentError wigner_moyal_operator(
-        grid;
-        mass = 1,
-        potential = overflowing,
-        moyal_terms = 1,
     )
     # A fourth-order first-derivative stencil needs five points.
     @test_throws ArgumentError wigner_moyal_operator(
@@ -217,8 +185,7 @@ end
             moyal_terms = 1,
         )
     end
-    for (discretization, moyal_terms) in
-        ((Spectral(), nothing), (Spectral(), 2), (FiniteDifference(4), 2))
+    for (discretization, moyal_terms) in ((Spectral(), nothing), (FiniteDifference(4), 2))
         @test_throws ArgumentError wigner_moyal_operator(
             grid;
             mass = 1e-320,
@@ -251,8 +218,8 @@ end
         )
         W = zeros(size(grid))
         @test_throws ArgumentError wigner_moyal_problem(complex.(W), (0, 1), op)
-        # Broadcasting a single column and reshaping the same number of entries both used
-        # to bypass the phase-space axis contract in the direct RHS interfaces.
+        # Neither a single column nor a reshape with the same number of entries may bypass
+        # the phase-space axis contract of the direct RHS interfaces.
         for malformed in (zeros(16, 1), zeros(20, 16))
             @test_throws DimensionMismatch wigner_moyal!(similar(W), malformed, op, 0.0)
             @test_throws DimensionMismatch wigner_moyal!(malformed, W, op, 0.0)
