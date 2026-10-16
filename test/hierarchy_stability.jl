@@ -1,6 +1,5 @@
 # The hard depth cutoff is unstable on a finite box: the upward coordinate coupling
 # grows with |q|, and the truncated hierarchy has growing modes near the box edge.
-# See prototypes/box_edge for the full study.
 
 # Dense generator of either discretisation, built column by column from heom!.
 function dense_heom_generator(op)

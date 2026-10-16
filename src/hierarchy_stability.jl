@@ -79,8 +79,8 @@ box these modes concentrate near the edges `|q| ≈ L`. Rounding and the tails o
 physical state seed them, and they eventually overwhelm the state even when it never
 approaches the edge. See the stability notes in [`heom_operator`](@ref).
 
-`rate` is a heuristic, not a proven bound. In the package's tests and in the
-`prototypes/box_edge` study, it was never below the spectral abscissa of the complete
+`rate` is a heuristic, not a proven bound. In the package's tests and in a study of the
+box-edge instability, it was never below the spectral abscissa of the complete
 generator, but it can lie far above it. The kinetic term carries modes through the
 unstable region, so a box that extends only a little beyond `radius` can still be
 stable. A rate of zero, to rounding, means that no local mode grows. A positive rate

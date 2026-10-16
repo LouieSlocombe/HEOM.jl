@@ -37,7 +37,7 @@ ecosystem integrates it in time.
 - [Scope and limitations](#scope-and-limitations)
 - [Troubleshooting](#troubleshooting)
 - [References](#references)
-- [Development](#development), with contributing notes and exploratory prototypes
+- [Development](#development), with contributing notes
 - [Project layout](#project-layout)
 
 ## Requirements
@@ -587,7 +587,7 @@ sol = solve(heom_problem(W0, (0.0, 30.0), op), Vern7();
 sol.retcode                 # ReturnCode.Unstable once the limit is reached
 ```
 
-`rate` is a heuristic, not a bound. In the package tests and in the box-edge study it
+`rate` is a heuristic, not a bound. In the package tests and in the studies below it
 was never below the spectral abscissa of the complete generator, but it can lie well
 above it, because the kinetic term carries modes out of a narrow unstable band before
 they grow. A positive rate means the hard cutoff may diverge over times of order
@@ -601,8 +601,17 @@ unit harmonic oscillator on a ±8, 64-point grid has second moments wrong by `1e
 `t = 5` at depth 2, and exceeds `10³` times its initial amplitude at `t ≈ 12.5`, `7.6`
 and `5.9` for depths 2, 4 and 6. A warm bath (`λ = 0.2`, `γ = kT = 1`, `pade = 1`)
 reaches an error of `1e-3` near `t = 10` and diverges near `t = 40`. The test suite
-records the cold case as a known defect with `@test_broken`. No remedy evaluated so far
-repairs the cold, strong regime; see [Exploratory prototypes](#exploratory-prototypes).
+records the cold case as a known defect with `@test_broken`.
+
+No remedy evaluated so far repairs the cold, strong regime, where the truncated
+hierarchy is locally unstable from `|q| ≈ 1`, inside the physical state. Absorbing or
+tapered box edges only cap the growth there, and the transformed hierarchy of Gatto et
+al. has a worse frozen symbol than the package form. The Nakajima–Zwanzig terminator of
+Fay (2022) destabilises the hierarchy, and at a fixed depth gains at most 2.4× in
+accuracy for 9–64× the cost per evaluation, while one extra depth level gains 2–18×.
+Warm and weak baths can be stabilised by not oversizing the box, or by a scalar Markov
+closure of the final tier fed by every parent, which is not part of the package. The
+scripts and logs of these studies remain in the Git history (`git log -- prototypes`).
 
 ### Compressing bath decompositions
 
@@ -1446,25 +1455,6 @@ packages are distributed as source; there is no wheel-building step.
   the analytic benchmarks in `test/` show the pattern.
 - Run the formatter before committing; the pre-commit hook enforces it.
 
-### Exploratory prototypes
-
-[`prototypes/`](prototypes) holds studies that informed the package but are not part of
-it. They are not tested, not covered and not loaded by `using HEOM`. Each has its own
-environment that develops the package from the repository root, so run a script with
-`julia --project=prototypes/<study> prototypes/<study>/<script>.jl`.
-
-- [`nz_terminator`](prototypes/nz_terminator/README.md) asked whether the
-  Nakajima–Zwanzig terminator of Fay (2022) or a scalar Markov closure should replace
-  the hard depth cutoff. Neither was adopted. The terminator gains at most 2.4× at a
-  fixed depth, costs 9–64× per evaluation and destabilises the hierarchy, while one
-  extra depth level gains 2–18×. The only useful variant was the scalar closure fed by
-  all parents, and the study also uncovered the box-edge instability.
-- [`box_edge`](prototypes/box_edge/README.md) characterised that instability across
-  baths, depths, boxes, discretisations and scalings, derived the frozen-coefficient
-  symbol that became `hierarchy_stability`, and tested absorbers, tapers, closures and
-  the transformed hierarchy of Gatto et al. None repaired the cold, strong regime; warm
-  and weak baths can be stabilised by the scalar closure or by not oversizing the box.
-
 ## Project layout
 
 ```text
@@ -1477,9 +1467,6 @@ environment that develops the package from the repository root, so run a script 
 ├── ext/
 │   ├── HEOMKernelAbstractionsExt.jl  # batched and stencil kernels for GPUs and the CPU backend
 │   └── HEOMPlotsExt.jl            # Plots-only animation implementation
-├── prototypes/                    # exploratory studies, not part of the package
-│   ├── box_edge/                  # box-edge instability characterisation and remedies
-│   └── nz_terminator/             # final-tier closure benchmarks
 ├── src/
 │   ├── HEOM.jl                    # package module and public exports
 │   ├── grid.jl                    # periodic phase-space grid
