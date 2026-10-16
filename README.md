@@ -1426,12 +1426,12 @@ julia --project=build_tools build_tools/coverage.jl
 ```
 
 The gate requires 100% coverage of executable lines in `src/` and `ext/` and writes
-`lcov.info`. Julia reports line coverage, so this is not the Python template's
-branch-coverage metric. Clearing previous coverage first prevents stale runs
-from hiding missing tests. Coverage reports do not require a hosted service or
-secret token.
+`lcov.info`. Julia reports line coverage, not branch coverage. Clearing previous
+coverage first prevents stale runs from hiding missing tests. Coverage reports do not
+require a hosted service or secret token.
 
-Install the optional Git hooks once, then run them on all files:
+Install [pre-commit](https://pre-commit.com/#installation) and the optional Git hooks
+once, then run them on all files:
 
 ```bash
 pre-commit install
@@ -1439,11 +1439,11 @@ pre-commit run --all-files
 ```
 
 The hooks check file hygiene and Julia formatting. They require `julia` on your
-`PATH` and the tooling environment instantiated as above. See
-[build_tools/README.md](build_tools/README.md) for environment maintenance.
+`PATH` and the tooling environment instantiated as above. Update the tools within
+their compatibility bounds with `julia --project=build_tools -e 'using Pkg; Pkg.update()'`,
+then review any formatting changes.
 
-CI also tests loading this package from a fresh consumer environment. Julia
-packages are distributed as source; there is no wheel-building step.
+CI also tests loading this package from a fresh consumer environment.
 
 ### Contributing
 
@@ -1454,6 +1454,10 @@ packages are distributed as source; there is no wheel-building step.
 - Validate numerics against a closed form or an independent reference where one exists;
   the analytic benchmarks in `test/` show the pattern.
 - Run the formatter before committing; the pre-commit hook enforces it.
+- Give new runtime dependencies `[compat]` bounds, and change the supported Julia
+  versions in `[compat]` and the CI matrix together.
+- Manifests are ignored because this is a reusable library: tests resolve
+  dependencies within the declared compatibility bounds.
 
 ## Project layout
 
@@ -1503,22 +1507,6 @@ packages are distributed as source; there is no wheel-building step.
 ├── .pre-commit-config.yaml        # file hygiene and formatting hooks
 └── Project.toml                   # package metadata, compatibility, test dependencies
 ```
-
-## Development starting point
-
-The scaffold comes from `LouieSlocombe/template_julia` at commit
-`98142bfc232b5efc2d19d7362a36c7d6a9b05b3e`, adapted to the `HEOM` package name
-and existing package UUID.
-
-Keep the quality checks passing as functionality is added. Add runtime
-dependencies with `Pkg.add` and give them explicit compatibility bounds that
-still resolve on the oldest supported Julia. Update the supported Julia versions
-in `[compat]` and the CI matrix together.
-
-Manifests are ignored because this is a reusable library: its tests
-resolve dependencies within the declared compatibility bounds. If you turn it
-into an application that needs a fixed environment, commit the relevant
-`Manifest.toml` and update `.gitignore` accordingly.
 
 ## License
 
