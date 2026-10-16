@@ -36,7 +36,7 @@ ecosystem integrates it in time.
 - [GPU and single precision](#gpu-and-single-precision)
 - [Scope and limitations](#scope-and-limitations)
 - [Troubleshooting](#troubleshooting)
-- [References and background notes](#references-and-background-notes)
+- [References](#references)
 - [Development](#development), with contributing notes and exploratory prototypes
 - [Project layout](#project-layout)
 
@@ -1355,28 +1355,12 @@ real device; see [Development](#development).
   ForwardDiff, so `V` must be generic in its argument type. Use `moyal_terms = nothing`
   with `Spectral()` to avoid derivatives entirely.
 
-## References and background notes
-
-The [`references/`](references) directory holds implementation notes written for this
-package. They record conventions, derivations, measured errors and open problems, and
-they separate what each paper states from what the implementation derives.
-
-- [`cabrera_2015_wigner_implementation.md`](references/cabrera_2015_wigner_implementation.md):
-  notes on Cabrera, Bondar, Jacobs and Rabitz, *Phys. Rev. A* **92**, 042122 (2015), the
-  spectral Wigner propagation scheme and Caldeira–Leggett terms that the Hamiltonian
-  operator follows.
-- [`tanimura_2020_heom_implementation_notes.md`](references/tanimura_2020_heom_implementation_notes.md):
-  notes on Tanimura, *J. Chem. Phys.* **153**, 020901 (2020), the HEOM review that
-  supplies the density-operator hierarchy, its Wigner form and the Brownian-oscillator
-  acceptance tests.
-- [`stabilized_heom_implementation.md`](references/stabilized_heom_implementation.md):
-  notes on Gatto, Rudge, Hou, Rabani and Thoss, arXiv:2609.35484 (2026), a transformed
-  bosonic hierarchy with improved truncation stability. It is not implemented; the
-  box-edge study found its frozen symbol worse than the package form in the cold,
-  strong case.
+## References
 
 Methods used by the package, with the links cited in the sections above:
 
+- Spectral Wigner propagation and Caldeira–Leggett terms: [Cabrera, Bondar, Jacobs and Rabitz, *Phys. Rev. A* **92**, 042122 (2015)](https://arxiv.org/pdf/1212.3406).
+- Density-operator HEOM: [Tanimura, *J. Chem. Phys.* **153**, 020901 (2020)](https://arxiv.org/pdf/2006.05501).
 - Wigner-space HEOM and its harmonic benchmarks: [Tanimura, *J. Chem. Phys.* **142**, 144110 (2015)](https://arxiv.org/pdf/1502.04077).
 - Factorial and amplitude scaling of auxiliaries: Shi et al., *J. Chem. Phys.* **130**, 084105 (2009), [doi:10.1063/1.3077918](https://doi.org/10.1063/1.3077918).
 - Bose Padé decomposition: Hu et al., *J. Chem. Phys.* **134**, 244106 (2011), [doi:10.1063/1.3602466](https://doi.org/10.1063/1.3602466), and [Ding et al., *J. Chem. Phys.* **135**, 164107 (2011)](https://arxiv.org/pdf/1107.0249).
@@ -1385,7 +1369,7 @@ Methods used by the package, with the links cited in the sections above:
 - Truncated Padé decomposition and balanced compression: [Takahashi and Tanimura, *J. Chem. Phys.* **158**, 044115 (2023)](https://doi.org/10.1063/5.0135725); on the limits of spectral residuals, [Tokieda, *Phys. Rev. Research* **7**, 043178 (2025)](https://doi.org/10.1103/bv19-dtb1).
 - Free-pole HEOM with AAA fits: [Xu et al., *Phys. Rev. Lett.* **129**, 230601 (2022)](https://doi.org/10.1103/PhysRevLett.129.230601).
 - Caldeira–Leggett coefficients: [García-Palacios and Zueco](https://arxiv.org/pdf/cond-mat/0407454). Two-state rate equations: [Lindoy, Mandal and Reichman, *Nat. Commun.* (2023)](https://www.nature.com/articles/s41467-023-38368-x).
-- Nakajima–Zwanzig terminators, evaluated and not adopted: [Fay, *J. Chem. Phys.* **157**, 054108 (2022)](https://arxiv.org/abs/2205.09270).
+- Evaluated and not adopted: Nakajima–Zwanzig terminators, [Fay, *J. Chem. Phys.* **157**, 054108 (2022)](https://arxiv.org/abs/2205.09270); the transformed hierarchy of Gatto, Rudge, Hou, Rabani and Thoss, arXiv:2609.35484 (2026).
 
 There is no registered release or archived DOI yet. When citing the package, give the
 repository URL and the commit used, together with the method papers above.
@@ -1496,7 +1480,6 @@ environment that develops the package from the repository root, so run a script 
 ├── prototypes/                    # exploratory studies, not part of the package
 │   ├── box_edge/                  # box-edge instability characterisation and remedies
 │   └── nz_terminator/             # final-tier closure benchmarks
-├── references/                    # paper implementation notes
 ├── src/
 │   ├── HEOM.jl                    # package module and public exports
 │   ├── grid.jl                    # periodic phase-space grid
