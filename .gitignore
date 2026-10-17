@@ -40,3 +40,6 @@ coverage/
 *~
 .DS_Store
 Thumbs.db
+
+# Local agent instructions
+CLAUDE.md
