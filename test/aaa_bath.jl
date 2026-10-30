@@ -1,5 +1,4 @@
-# Uses drude_fdt_covariance and cold_memory_reference from cold_strong_benchmarks.jl,
-# and static_correlation from bath_compression.jl.
+# Uses the independent harmonic and correlation references in references.jl.
 
 # The exact thermal noise spectrum fitted by aaa_bath, at either sign of frequency.
 thermal_spectrum(J, ω; kT, hbar = 1.0) =

@@ -39,11 +39,27 @@ jobs:
         with:
           delete-old-caches: "false"
 
-      - name: Instantiate and precompile the package
-        run: julia --startup-file=no --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.precompile()'
+      - name: Install development tools
+        run: julia --startup-file=no --project=build_tools -e 'using Pkg; Pkg.instantiate()'
 
-      - name: Test the package and check package quality
-        run: julia --startup-file=no --project=. -e 'using Pkg; Pkg.test()'
+      - name: Check formatting
+        run: julia --startup-file=no --project=build_tools build_tools/format.jl --check
+
+      - name: Clear previous coverage
+        run: julia --startup-file=no --project=build_tools -e 'using Coverage; foreach(clean_folder, ("src", "ext"))'
+
+      - name: Test the package and check package quality with coverage
+        run: julia --startup-file=no --project=. -e 'using Pkg; Pkg.test(coverage=true, test_args=["--timings"])'
+
+      - name: Require full source line coverage
+        run: julia --startup-file=no --project=build_tools build_tools/coverage.jl
+
+      - name: Save the coverage report
+        if: always() && hashFiles('lcov.info') != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: lcov.info
 
       - name: Smoke test the package from a separate environment
         run: |
@@ -67,43 +83,3 @@ jobs:
             @assert eltype(single.W) == Float32
             println(prob.p)
           '
-
-  quality:
-    name: Formatting and coverage
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Check out the repository
-        uses: actions/checkout@v7
-
-      - name: Set up Julia
-        uses: julia-actions/setup-julia@v3
-        with:
-          version: "1.13"
-
-      - name: Cache Julia dependencies
-        uses: julia-actions/cache@v3
-        with:
-          delete-old-caches: "false"
-
-      - name: Install development tools
-        run: julia --startup-file=no --project=build_tools -e 'using Pkg; Pkg.instantiate()'
-
-      - name: Check formatting
-        run: julia --startup-file=no --project=build_tools build_tools/format.jl --check
-
-      - name: Clear previous coverage
-        run: julia --startup-file=no --project=build_tools -e 'using Coverage; foreach(clean_folder, ("src", "ext"))'
-
-      - name: Test with coverage
-        run: julia --startup-file=no --project=. -e 'using Pkg; Pkg.test(coverage=true)'
-
-      - name: Require full source line coverage
-        run: julia --startup-file=no --project=build_tools build_tools/coverage.jl
-
-      - name: Save the coverage report
-        if: always() && hashFiles('lcov.info') != ''
-        uses: actions/upload-artifact@v7
-        with:
-          name: coverage
-          path: lcov.info

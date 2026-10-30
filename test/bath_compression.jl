@@ -1,5 +1,4 @@
-# Uses cold_memory_matrices, cold_memory_reference and drude_fdt_covariance from
-# cold_strong_benchmarks.jl as independent harmonic references.
+# Uses the independent harmonic references in references.jl.
 
 # The same correlation in another real basis, x' = Q*x for orthogonal Q.
 function rotate_bath(bath, Q)
@@ -18,10 +17,6 @@ end
 
 # A deterministic orthogonal matrix close to the identity.
 rotation(n, angle) = exp(angle * [sign(j - i) / (i + j) for i in 1:n, j in 1:n])
-
-# ∫₀^∞ C(t) dt of the retained exponentials, from the definition of the basis.
-static_correlation(bath) =
-    dot(bath.weights, (Diagonal(bath.rates) + Matrix(bath.mixing)) \ bath.coefficients)
 
 # Frequencies spanning every rate of the decomposition, including ω = 0.
 function spectral_samples(bath)

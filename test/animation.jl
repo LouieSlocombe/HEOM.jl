@@ -1,3 +1,6 @@
+ENV["GKSwstype"] = "100"
+using Plots
+
 @testset "Animation helpers" begin
     extension = Base.get_extension(HEOM, :HEOMPlotsExt)
 

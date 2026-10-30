@@ -59,27 +59,29 @@ include("jlarray_shim.jl")
         # The kernels do not branch on the bath: one diagonal bath with a terminator and
         # one with Jordan and rotation blocks cover them.
         for name in ("Drude with terminator", "Jordan and rotation blocks"),
-            scaled in (false, true),
-            device in (Array, JLArray)
+            scaled in (false, true)
 
             bath = baths[name]
             kwargs = (; mass = 1.2, potential = V, bath, depth = 2, scaled)
             loop = heom_operator(grid; kwargs...)
-            batched = heom_operator(grid; kwargs..., device, batched = true)
-            @test batched.batch isa HEOM.BatchedHierarchy
             U = randn(size(grid)..., length(loop.indices))
             expected = hierarchy_rhs(loop, U)
-            dU = similar(device_state(device, Float64, U))
-            heom!(dU, device_state(device, Float64, U), batched, 0.0)
-            @test dU isa device
-            @test relative(dU, expected) < 1e-13
-            # Float32, rounded once from the Float64 setup, on each device's default path.
-            batched32 = heom_operator(grid; kwargs..., device, float_type = Float32)
-            U32 = device_state(device, Float32, U)
-            dU32 = similar(U32)
-            heom!(dU32, U32, batched32, 0.0f0)
-            @test eltype(dU32) === Float32
-            @test relative(dU32, expected) < 1e-5
+            for device in (Array, JLArray)
+                batched = heom_operator(grid; kwargs..., device, batched = true)
+                @test batched.batch isa HEOM.BatchedHierarchy
+                Ud = device_state(device, Float64, U)
+                dU = similar(Ud)
+                heom!(dU, Ud, batched, 0.0)
+                @test dU isa device
+                @test relative(dU, expected) < 1e-13
+                # Float32, rounded once from the Float64 setup, on each device's default path.
+                batched32 = heom_operator(grid; kwargs..., device, float_type = Float32)
+                U32 = device_state(device, Float32, U)
+                dU32 = similar(U32)
+                heom!(dU32, U32, batched32, 0.0f0)
+                @test eltype(dU32) === Float32
+                @test relative(dU32, expected) < 1e-5
+            end
         end
         # The loop path also runs on a device array, one member at a time.
         loop =
@@ -105,30 +107,32 @@ include("jlarray_shim.jl")
     @testset "Driven hierarchies on a device" begin
         field(t) = 0.3 * sin(1.3t)
         for potential in (
-                DrivenPotential(V, field, q -> q),
-                TimeDependentPotential((q, t) -> 0.5q^2 + 0.2 * sin(t) * q),
-            ),
-            device in (Array, JLArray),
-            T in (Float64, Float32)
-
+            DrivenPotential(V, field, q -> q),
+            TimeDependentPotential((q, t) -> 0.5q^2 + 0.2 * sin(t) * q),
+        )
             kwargs =
                 (; mass = 1.2, potential, bath = baths["Padé"], depth = 2, scaled = true)
             loop = heom_operator(grid; kwargs...)
-            batched = heom_operator(grid; kwargs..., device, float_type = T, batched = true)
             U = randn(size(grid)..., length(loop.indices))
-            tolerance = T === Float64 ? 1e-13 : 1e-5
             # The generator is refreshed at every call, also when time runs backwards.
-            for t in (0.0, 0.7, 0.2)
-                expected = similar(U)
+            references = map((0.0, 0.7, 0.2)) do t
+                expected, tgrad_expected = similar(U), similar(U)
                 heom!(expected, U, loop, t)
-                Ud = device_state(device, T, U)
-                dU = similar(Ud)
-                heom!(dU, Ud, batched, T(t))
-                @test relative(dU, expected) < tolerance
-                tgrad, tgrad_expected = similar(Ud), similar(U)
-                HEOM.heom_tgrad!(tgrad, Ud, batched, T(t))
                 HEOM.heom_tgrad!(tgrad_expected, U, loop, t)
-                @test relative(tgrad, tgrad_expected) < tolerance
+                return (; t, expected, tgrad_expected)
+            end
+            for device in (Array, JLArray), T in (Float64, Float32)
+                batched =
+                    heom_operator(grid; kwargs..., device, float_type = T, batched = true)
+                tolerance = T === Float64 ? 1e-13 : 1e-5
+                Ud = device_state(device, T, U)
+                dU, tgrad = similar(Ud), similar(Ud)
+                for (; t, expected, tgrad_expected) in references
+                    heom!(dU, Ud, batched, T(t))
+                    @test relative(dU, expected) < tolerance
+                    HEOM.heom_tgrad!(tgrad, Ud, batched, T(t))
+                    @test relative(tgrad, tgrad_expected) < tolerance
+                end
             end
         end
         # A static hierarchy has no time derivative.
@@ -206,25 +210,28 @@ include("jlarray_shim.jl")
         bath = baths["Drude with terminator"]
         kwargs = (; mass = 1.2, potential = V, bath, depth = 3, scaled = true)
         host = heom_operator(grid; kwargs...)
+        prob_host = heom_problem(W0, (0.0, 0.5), host)
+        options = (; saveat = 0.25, abstol = 1e-10, reltol = 1e-10)
+        sol_host = solve(prob_host, Vern7(); options...)
+        Wh = physical_wigner(sol_host)
+        expected = diagnostics(sol_host; potential = V)
+        stability_rate = hierarchy_stability(host).rate
+        unscaled_host = rescale_hierarchy(sol_host.u[end], host; scaled = false)
         for device in (Array, JLArray)
             op = heom_operator(grid; kwargs..., device, batched = true)
-            prob_host = heom_problem(W0, (0.0, 0.5), host)
             prob = heom_problem(W0, (0.0, 0.5), op)
             @test prob.u0 isa device{Float64,3}
-            options = (; saveat = 0.25, abstol = 1e-10, reltol = 1e-10)
-            sol_host = solve(prob_host, Vern7(); options...)
             sol = solve(prob, Vern7(); options...)
             @test relative(sol.u[end], sol_host.u[end]) < 1e-9
-            @test relative(physical_wigner(sol), physical_wigner(sol_host)) < 1e-9
+            @test relative(physical_wigner(sol), Wh) < 1e-9
 
             # Saving only the physical member keeps device memory small.
             reduced =
                 solve(prob, Vern7(); options..., save_idxs = HEOM.physical_save_idxs(op))
             @test size(reduced.u[end]) == (prod(size(grid)),)
-            @test relative(physical_wigner(reduced), physical_wigner(sol_host)) < 1e-9
+            @test relative(physical_wigner(reduced), Wh) < 1e-9
             @test HEOM.physical_state(reduced.u[end], op) isa Matrix{Float64}
-            measured, expected =
-                diagnostics(reduced; potential = V), diagnostics(sol_host; potential = V)
+            measured = diagnostics(reduced; potential = V)
             @test all(
                 maximum(abs, a - b) < 1e-8 for
                 (a, b) in zip(values(measured), values(expected))
@@ -232,7 +239,6 @@ include("jlarray_shim.jl")
 
             # Observables take device states and return host Float64 results.
             W = physical_wigner(sol)
-            Wh = physical_wigner(sol_host)
             @test phase_space_integral(W, grid) ≈ phase_space_integral(Wh, grid)
             @test expectation((q, p) -> q^2 + p, W, grid) ≈
                   expectation((q, p) -> q^2 + p, Wh, grid)
@@ -254,15 +260,12 @@ include("jlarray_shim.jl")
                   probability_current(Wh, grid; mass = 1.2)
             @test eltype(HEOM.plotting_state(W, grid)[1]) === Float64
             @test !(HEOM.plotting_state(W, grid)[1] isa JLArray)
-            @test hierarchy_stability(op).rate ≈ hierarchy_stability(host).rate
+            @test hierarchy_stability(op).rate ≈ stability_rate
 
             # Rescaling returns an array of the input's type.
             unscaled = rescale_hierarchy(sol.u[end], op; scaled = false)
             @test unscaled isa typeof(sol.u[end])
-            @test relative(
-                unscaled,
-                rescale_hierarchy(sol_host.u[end], host; scaled = false),
-            ) < 1e-12
+            @test relative(unscaled, unscaled_host) < 1e-12
             @test Array(rescale_hierarchy(sol.u[end], op; scaled = true)) ==
                   Array(sol.u[end])
         end
@@ -281,6 +284,13 @@ include("jlarray_shim.jl")
             Vern7();
             stationarity_abstol = 1e-3,
             options...,
+        )
+        expected = linear_response(
+            equilibrium_host.hierarchy,
+            (0.0, 0.5),
+            host,
+            Vern7();
+            response_options...,
         )
         for device in (Array, JLArray)
             op = heom_operator(grid; kwargs..., device, batched = true)
@@ -302,13 +312,6 @@ include("jlarray_shim.jl")
             @test physical_wigner(equilibrium) isa AbstractMatrix
             @test heom_problem(equilibrium, (0.0, 0.1)).u0 isa device{Float64,3}
 
-            expected = linear_response(
-                equilibrium_host.hierarchy,
-                (0.0, 0.5),
-                host,
-                Vern7();
-                response_options...,
-            )
             response = linear_response(
                 equilibrium.hierarchy,
                 (0.0, 0.5),
@@ -335,9 +338,20 @@ include("jlarray_shim.jl")
     @testset "Finite differences as stencils" begin
         fd = (; discretization = FiniteDifference(4), moyal_terms = 2)
         quartic(q) = V(q) + 0.05q^4
+        host = wigner_moyal_operator(grid; mass = 1.2, potential = quartic, fd...)
+        expected = rhs(host, W0)
+        damped = caldeira_leggett_operator(
+            grid;
+            mass = 1.2,
+            potential = quartic,
+            friction = 0.1,
+            kT = 0.5,
+            fd...,
+        )
+        expected_damped = similar(W0)
+        caldeira_leggett!(expected_damped, W0, damped, 0.0)
         for (device, T) in ((JLArray, Float64), (JLArray, Float32), (Array, Float32))
             tolerance = T === Float64 ? 1e-13 : 1e-5
-            host = wigner_moyal_operator(grid; mass = 1.2, potential = quartic, fd...)
             stencil = wigner_moyal_operator(
                 grid;
                 mass = 1.2,
@@ -351,21 +365,12 @@ include("jlarray_shim.jl")
             W = device_state(device, T, W0)
             dW = similar(W)
             wigner_moyal!(dW, W, stencil, T(0))
-            @test relative(dW, rhs(host, W0)) < tolerance
+            @test relative(dW, expected) < tolerance
             # The same operator acts on a view into a hierarchy.
             U = device_state(device, T, cat(W0, 2 .* W0; dims = 3))
             slice = similar(U, size(grid)...)
             wigner_moyal!(slice, view(U, :, :, 2), stencil, T(0))
-            @test relative(slice, 2 .* rhs(host, W0)) < tolerance
-
-            damped = caldeira_leggett_operator(
-                grid;
-                mass = 1.2,
-                potential = quartic,
-                friction = 0.1,
-                kT = 0.5,
-                fd...,
-            )
+            @test relative(slice, 2 .* expected) < tolerance
             damped_stencil = caldeira_leggett_operator(
                 grid;
                 mass = 1.2,
@@ -377,10 +382,8 @@ include("jlarray_shim.jl")
                 float_type = T,
             )
             @test occursin("StencilCaldeiraLeggett", sprint(show, damped_stencil))
-            expected = similar(W0)
-            caldeira_leggett!(expected, W0, damped, 0.0)
             caldeira_leggett!(dW, W, damped_stencil, T(0))
-            @test relative(dW, expected) < tolerance
+            @test relative(dW, expected_damped) < tolerance
             prob = caldeira_leggett_problem(W0, (0.0, 0.1), damped_stencil)
             @test eltype(prob.u0) === T
             @test_throws ArgumentError sparse(stencil)
@@ -406,6 +409,12 @@ include("jlarray_shim.jl")
             )
             loop = heom_operator(grid; kwargs...)
             U = randn(size(grid)..., length(loop.indices))
+            references = map((0.0, 0.7)) do t
+                expected, tgrad_expected = similar(U), similar(U)
+                heom!(expected, U, loop, t)
+                HEOM.heom_tgrad!(tgrad_expected, U, loop, t)
+                return (; t, expected, tgrad_expected)
+            end
             for (device, T, batched) in (
                 (JLArray, Float64, true),
                 (JLArray, Float64, false),
@@ -417,15 +426,11 @@ include("jlarray_shim.jl")
                 @test (op.batch isa HEOM.BatchedStencilHierarchy) == batched
                 tolerance = T === Float64 ? 1e-13 : 1e-5
                 Ud = device_state(device, T, U)
-                for t in (0.0, 0.7)
-                    expected = similar(U)
-                    heom!(expected, U, loop, t)
-                    dU = similar(Ud)
+                dU, tgrad = similar(Ud), similar(Ud)
+                for (; t, expected, tgrad_expected) in references
                     heom!(dU, Ud, op, T(t))
                     @test relative(dU, expected) < tolerance
-                    tgrad, tgrad_expected = similar(Ud), similar(U)
                     HEOM.heom_tgrad!(tgrad, Ud, op, T(t))
-                    HEOM.heom_tgrad!(tgrad_expected, U, loop, t)
                     HEOM.is_time_dependent(loop) &&
                         @test relative(tgrad, tgrad_expected) < tolerance
                 end

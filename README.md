@@ -1401,7 +1401,16 @@ julia --project=. -e 'using Pkg; Pkg.test()'
 and `Plots`. It runs the numerical and plotting tests, selected type-inference and
 allocation checks, and Aqua's package quality checks. Aqua checks issues such as
 method ambiguities, undefined exports, stale dependencies, and missing compatibility
-bounds.
+bounds. Run selected files by their names (without `.jl`); `quality` selects Aqua:
+
+```bash
+julia --project=. -e 'using Pkg; Pkg.test(test_args=["grid", "heom_solvers"])'
+julia --project=. -e 'using Pkg; Pkg.test(test_args=["--timings"])'
+```
+
+`--timings` reports elapsed time for each selected file, including its compilation time.
+With no file names, all tests run. Shared reference helpers load independently, so a
+focused run does not need to execute other test files first.
 
 Apply formatting changes with:
 
@@ -1442,7 +1451,8 @@ The hooks check file hygiene and Julia formatting. They require `julia` on your
 their compatibility bounds with `julia --project=build_tools -e 'using Pkg; Pkg.update()'`,
 then review any formatting changes.
 
-CI also tests loading this package from a fresh consumer environment.
+CI runs the complete suite once with coverage, then checks loading the package from a
+fresh consumer environment.
 
 ### Contributing
 

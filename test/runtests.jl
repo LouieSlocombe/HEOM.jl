@@ -1,4 +1,51 @@
-using Aqua
+# Select files with Pkg.test(test_args = ["grid", "heom_solvers"]).
+# With no file names, run everything, including the package quality checks.
+const TEST_FILES = [
+    "grid",
+    "derivatives",
+    "wigner_moyal_rhs",
+    "harmonic_oscillator",
+    "initial_states",
+    "caldeira_leggett",
+    "heom",
+    "pade_bath",
+    "brownian_bath",
+    "composite_bath",
+    "bath_diagnostics",
+    "bath_degeneracy",
+    "heom_scaling",
+    "generalized_heom",
+    "heom_solvers",
+    "driven",
+    "spectroscopy",
+    "spectroscopy_benchmarks",
+    "equilibrium",
+    "analytic_benchmarks",
+    "cold_strong_benchmarks",
+    "hierarchy_stability",
+    "equilibrium_harmonic",
+    "bath_compression",
+    "aaa_bath",
+    "observables",
+    "diagnostics",
+    "populations",
+    "tunnelling",
+    "plotting",
+    "animation",
+    "float32",
+    "device_backend",
+    "quality",
+]
+const TEST_TIMINGS = "--timings" in ARGS
+requested_tests = unique(replace(arg, r"\.jl$" => "") for arg in ARGS if arg != "--timings")
+unknown_tests = setdiff(requested_tests, TEST_FILES)
+isempty(unknown_tests) || throw(
+    ArgumentError(
+        "Unknown test selection: $(join(unknown_tests, ", ")). Choose from: $(join(TEST_FILES, ", ")).",
+    ),
+)
+selected_tests = isempty(requested_tests) ? TEST_FILES : requested_tests
+
 using ADTypes
 using HEOM
 using JLArrays
@@ -11,72 +58,17 @@ using SciMLBase: ODEProblem
 using SparseArrays
 using Test
 
-"""
-Maximum absolute difference between two arrays.
-"""
-max_error(a, b) = maximum(abs, a - b)
-
-"""
-Normalised Gaussian Wigner function with the given mean and covariance.
-"""
-function gaussian_wigner(q, p; mean, covariance)
-    δ = [q, p] - collect(mean)
-    return exp(-dot(δ, covariance \ δ) / 2) / (2π * sqrt(det(covariance)))
-end
-
-"""
-Evaluate the Wigner–Moyal right-hand side of `op` at `W` into a new matrix.
-"""
-function rhs(op, W)
-    dW = similar(W)
-    wigner_moyal!(dW, W, op, 0.0)
-    return dW
-end
-
-"""
-Bytes allocated by one evaluation of the right-hand side, after a warm-up call.
-"""
-function rhs_allocations(dW, W, op)
-    wigner_moyal!(dW, W, op, 0.0)
-    return @allocated wigner_moyal!(dW, W, op, 0.0)
-end
+include("helpers.jl")
+include("references.jl")
 
 @testset "HEOM" begin
-    include("grid.jl")
-    include("derivatives.jl")
-    include("wigner_moyal_rhs.jl")
-    include("harmonic_oscillator.jl")
-    include("initial_states.jl")
-    include("caldeira_leggett.jl")
-    include("heom.jl")
-    include("pade_bath.jl")
-    include("brownian_bath.jl")
-    include("composite_bath.jl")
-    include("bath_diagnostics.jl")
-    include("bath_degeneracy.jl")
-    include("heom_scaling.jl")
-    include("generalized_heom.jl")
-    include("heom_solvers.jl")
-    include("driven.jl")
-    include("spectroscopy.jl")
-    include("spectroscopy_benchmarks.jl")
-    include("equilibrium.jl")
-    include("analytic_benchmarks.jl")
-    include("cold_strong_benchmarks.jl")
-    include("hierarchy_stability.jl")
-    include("equilibrium_harmonic.jl")
-    include("bath_compression.jl")
-    include("aaa_bath.jl")
-    include("observables.jl")
-    include("diagnostics.jl")
-    include("populations.jl")
-    include("tunnelling.jl")
-    include("plotting.jl")
-    include("animation.jl")
-    include("float32.jl")
-    include("device_backend.jl")
-
-    @testset "Package quality" begin
-        Aqua.test_all(HEOM)
+    for name in selected_tests
+        elapsed = @elapsed @testset "$name" begin
+            include("$name.jl")
+        end
+        if TEST_TIMINGS
+            println("Test file ", rpad(name, 26), " ", round(elapsed; digits = 3), " s")
+            flush(stdout)
+        end
     end
 end

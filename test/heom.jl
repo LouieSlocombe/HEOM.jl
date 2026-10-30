@@ -1,12 +1,3 @@
-"""
-Evaluate the full Wigner hierarchy into a fresh state array.
-"""
-function hierarchy_rhs(op, U)
-    dU = similar(U)
-    heom!(dU, U, op, 0.0)
-    return dU
-end
-
 @testset "Exponential bath and Drude–Lorentz decomposition" begin
     coefficients = [0.4 - 0.2im, -0.1 + 0.03im]
     rates = [0.6, 1.7]
